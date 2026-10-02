@@ -1,0 +1,364 @@
+/* ===== Общие ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #0f0f1a;
+  color: #e0e0e0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Главная страница (index) ===== */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  gap: 0;
+}
+
+.main-header {
+  grid-column: 1 / -1;
+  background: #1a1a2e;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.main-header h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #a0a0ff;
+}
+
+.main-header .tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.main-header button {
+  background: #2a2a4a;
+  color: #ccc;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.main-header button.active {
+  background: #4a4aff;
+  color: white;
+}
+
+.main-header button:hover {
+  background: #3a3a6a;
+}
+
+.iframe-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.iframe-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #12121f;
+}
+
+/* ===== Редактор ===== */
+.editor-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #12121f;
+}
+
+.editor-toolbar {
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.editor-toolbar button {
+  background: #2a2a4a;
+  color: #ddd;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.editor-toolbar button:hover {
+  background: #3a3a6a;
+}
+
+.editor-toolbar .hint {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+#script-editor {
+  flex: 1;
+  width: 100%;
+  background: #0d0d18;
+  color: #e0e0e0;
+  border: none;
+  padding: 16px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  tab-size: 2;
+}
+
+#script-editor::placeholder {
+  color: #444;
+}
+
+/* ===== Плеер ===== */
+.player-page {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a12;
+}
+
+.vn-stage {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+
+.vn-background {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: #1a1a2e;
+  transition: background-image 0.4s ease;
+}
+
+.vn-characters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vn-char {
+  position: absolute;
+  bottom: 0;
+  width: 180px;
+  height: 70%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.35s ease;
+}
+
+.vn-char.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.vn-char.pos-left { left: 8%; }
+.vn-char.pos-center { left: 50%; transform: translateX(-50%); }
+.vn-char.pos-right { right: 8%; }
+
+.vn-char.visible.pos-center {
+  transform: translateX(-50%) translateY(0);
+}
+
+.vn-char-sprite {
+  width: 140px;
+  height: 200px;
+  background: linear-gradient(180deg, #5a5aff 0%, #3a3aaa 100%);
+  border-radius: 12px 12px 4px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.vn-char-name {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #ccc;
+  text-shadow: 0 1px 3px #000;
+}
+
+.vn-textbox {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 4%;
+  background: rgba(10, 10, 25, 0.88);
+  border: 1px solid rgba(100, 100, 200, 0.3);
+  border-radius: 10px;
+  padding: 14px 20px 18px;
+  min-height: 110px;
+  backdrop-filter: blur(6px);
+  transition: opacity 0.2s;
+}
+
+.vn-textbox.dimmed {
+  opacity: 0.4;
+}
+
+.vn-textbox.hidden {
+  display: none;
+}
+
+.vn-speaker {
+  font-weight: 600;
+  color: #a0a0ff;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.vn-text {
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: #f0f0f0;
+  min-height: 1.5em;
+}
+
+.vn-continue {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  color: #888;
+  font-size: 0.8rem;
+  animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.vn-menu {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 280px;
+  z-index: 10;
+}
+
+.vn-menu.hidden {
+  display: none;
+}
+
+.vn-choice {
+  background: rgba(30, 30, 60, 0.95);
+  color: #eee;
+  border: 1px solid #5a5aff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.vn-choice:hover {
+  background: #4a4aff;
+  border-color: #8a8aff;
+  transform: translateX(4px);
+}
+
+.vn-end-screen {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 20;
+}
+
+.vn-end-screen.hidden {
+  display: none;
+}
+
+.vn-end-screen h2 {
+  font-size: 2rem;
+  color: #a0a0ff;
+}
+
+.vn-restart {
+  background: #4a4aff;
+  color: white;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.vn-restart:hover {
+  background: #6a6aff;
+}
+
+/* ===== Предпросмотр (граф) ===== */
+.preview-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0d0d18;
+}
+
+.preview-toolbar {
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border-bottom: 1px solid #2a2a4a;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+#graph-canvas {
+  flex: 1;
+  width: 100%;
+  background: #0d0d18;
+}
+
+.graph-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #444;
+  font-size: 1.1rem;
+}

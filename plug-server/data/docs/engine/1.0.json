@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "title": "VN Engine API 1.0",
+  "apis": [
+    {
+      "name": "VNCore",
+      "type": "class"
+    },
+    {
+      "name": "variables",
+      "type": "state"
+    },
+    {
+      "name": "runtime",
+      "type": "service"
+    }
+  ]
+}

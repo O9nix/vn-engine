@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Визуальная новелла — Редактор</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .main-layout {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 48px 1fr;
+    }
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #2a2a4a;
+      min-height: 0;
+    }
+    .right-tabs {
+      display: flex;
+      background: #1a1a2e;
+      border-bottom: 1px solid #2a2a4a;
+      flex-shrink: 0;
+    }
+    .right-tabs button {
+      flex: 1;
+      background: transparent;
+      color: #888;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border-bottom: 2px solid transparent;
+    }
+    .right-tabs button.active {
+      color: #a0a0ff;
+      border-bottom-color: #4a4aff;
+    }
+    .right-content {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+    .right-content iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+      background: #0a0a12;
+    }
+    .right-content iframe.active {
+      display: block;
+    }
+    .iframe-container {
+      min-height: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-layout">
+    <header class="main-header">
+      <h1>✦ Visual Novel Studio</h1>
+      <div class="tabs" data-vn-slot="app.toolbar">
+        <button id="btn-fullscreen-player" title="Открыть только плеер">▶ Только игра</button>
+      </div>
+    </header>
+
+    <div class="iframe-container">
+      <iframe id="editor-frame" src="editor.html" title="Редактор"></iframe>
+    </div>
+
+    <div class="right-panel">
+      <div class="right-tabs">
+        <button class="active" data-tab="player">Игра (предпросмотр)</button>
+        <button data-tab="graph">Граф сцен</button>
+      </div>
+      <div class="right-content">
+        <iframe id="player-frame" class="active" src="player.html" title="Плеер"></iframe>
+        <iframe id="preview-frame" src="preview.html" title="Граф"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/plugin-sdk.js"></script>
+  <script src="js/plugin-manager.js"></script>
+  <script>
+    VN.plugins.loadInstalled().catch(err => console.error('[VN plugins]', err));
+
+    const editorFrame = document.getElementById('editor-frame');
+    const playerFrame = document.getElementById('player-frame');
+    const previewFrame = document.getElementById('preview-frame');
+
+    function broadcast(data) {
+      try { playerFrame.contentWindow.postMessage(data, '*'); } catch (e) {}
+      try { previewFrame.contentWindow.postMessage(data, '*'); } catch (e) {}
+    }
+
+    function askEditorForScript() {
+      try { editorFrame.contentWindow.postMessage({ type: 'request-script' }, '*'); } catch (e) {}
+    }
+
+    document.querySelectorAll('.right-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.right-tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        playerFrame.classList.toggle('active', tab === 'player');
+        previewFrame.classList.toggle('active', tab === 'graph');
+        // при переключении на граф — обновить
+        if (tab === 'graph') {
+          askEditorForScript();
+        }
+      });
+    });
+
+    window.addEventListener('message', (e) => {
+      if (!e.data) return;
+      if (e.data.type === 'script-updated') {
+        broadcast(e.data);
+      }
+      if (e.data.type === 'request-script') {
+        askEditorForScript();
+      }
+    });
+
+    // После загрузки iframe — запросить скрипт
+    editorFrame.addEventListener('load', () => {
+      setTimeout(askEditorForScript, 100);
+      setTimeout(askEditorForScript, 600);
+    });
+    playerFrame.addEventListener('load', () => {
+      setTimeout(askEditorForScript, 200);
+    });
+    previewFrame.addEventListener('load', () => {
+      setTimeout(askEditorForScript, 200);
+    });
+
+    document.getElementById('btn-fullscreen-player').addEventListener('click', () => {
+      window.open('player.html', '_blank');
+    });
+  </script>
+</body>
+</html>

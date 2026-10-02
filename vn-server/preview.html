@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Предпросмотр сцен</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-vn-context="preview">
+  <div class="preview-page">
+    <div class="preview-toolbar" data-vn-slot="preview.toolbar">
+      Граф сцен • обновляется автоматически при изменении сценария
+    </div>
+    <canvas id="graph-canvas"></canvas>
+  </div>
+
+  <script src="js/plugin-sdk.js"></script>
+  <script src="js/parser.js"></script>
+  <script>
+    const canvas = document.getElementById('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    const parser = new VNParser();
+
+    let nodes = [];
+    let edges = [];
+
+    function resize() {
+      canvas.width = canvas.clientWidth * devicePixelRatio;
+      canvas.height = canvas.clientHeight * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      draw();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function layoutNodes() {
+      // Простая раскладка: слева направо, сверху вниз
+      const cols = Math.ceil(Math.sqrt(nodes.length)) || 1;
+      const gapX = 180;
+      const gapY = 100;
+      const startX = 80;
+      const startY = 60;
+
+      nodes.forEach((n, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        n.x = startX + col * gapX;
+        n.y = startY + row * gapY;
+        n.w = 140;
+        n.h = 44;
+      });
+    }
+
+    function draw() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      if (nodes.length === 0) {
+        ctx.fillStyle = '#444';
+        ctx.font = '16px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('Напиши сценарий слева — здесь появится граф сцен', w / 2, h / 2);
+        return;
+      }
+
+      // рёбра
+      ctx.strokeStyle = '#4a4a8a';
+      ctx.lineWidth = 1.5;
+      edges.forEach(e => {
+        const from = nodes.find(n => n.id === e.from);
+        const to = nodes.find(n => n.id === e.to);
+        if (!from || !to) return;
+
+        const x1 = from.x + from.w / 2;
+        const y1 = from.y + from.h;
+        const x2 = to.x + to.w / 2;
+        const y2 = to.y;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        // простая кривая
+        const midY = (y1 + y2) / 2;
+        ctx.bezierCurveTo(x1, midY, x2, midY, x2, y2);
+        ctx.stroke();
+
+        // стрелка
+        const angle = Math.atan2(y2 - midY, x2 - x1);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 8 * Math.cos(angle - 0.4), y2 - 8 * Math.sin(angle - 0.4));
+        ctx.lineTo(x2 - 8 * Math.cos(angle + 0.4), y2 - 8 * Math.sin(angle + 0.4));
+        ctx.closePath();
+        ctx.fillStyle = '#4a4a8a';
+        ctx.fill();
+
+        // подпись выбора
+        if (e.label && e.label !== '→') {
+          ctx.fillStyle = '#888';
+          ctx.font = '11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.fillText(e.label, (x1 + x2) / 2, midY - 4);
+        }
+      });
+
+      // узлы
+      nodes.forEach(n => {
+        // тень
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        roundRect(ctx, n.x + 2, n.y + 3, n.w, n.h, 8);
+        ctx.fill();
+
+        // тело
+        const grad = ctx.createLinearGradient(n.x, n.y, n.x, n.y + n.h);
+        grad.addColorStop(0, '#3a3a7a');
+        grad.addColorStop(1, '#2a2a5a');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        roundRect(ctx, n.x, n.y, n.w, n.h, 8);
+        ctx.fill();
+
+        ctx.strokeStyle = '#6a6aff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // текст
+        ctx.fillStyle = '#e0e0ff';
+        ctx.font = '13px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const label = n.label.length > 16 ? n.label.slice(0, 14) + '…' : n.label;
+        ctx.fillText(label, n.x + n.w / 2, n.y + n.h / 2);
+      });
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function updateFromScript(text) {
+      if (!text || !text.trim()) {
+        nodes = [];
+        edges = [];
+        draw();
+        return;
+      }
+      const parsed = parser.parse(text);
+      const graph = parser.buildGraph(parsed);
+      nodes = graph.nodes;
+      edges = graph.edges;
+      layoutNodes();
+      draw();
+    }
+
+    // слушаем
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'vn_script') updateFromScript(e.newValue);
+    });
+
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'script-updated') {
+        updateFromScript(e.data.text);
+      }
+      if (e.data && e.data.type === 'reload-script') {
+        try { updateFromScript(localStorage.getItem('vn_script')); } catch (err) {}
+      }
+    });
+
+    // первая загрузка + запрос у родителя
+    try {
+      const initial = localStorage.getItem('vn_script');
+      if (initial) updateFromScript(initial);
+    } catch (e) {}
+
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'request-script' }, '*');
+    }
+    setTimeout(() => {
+      try {
+        const t = localStorage.getItem('vn_script');
+        if (t) updateFromScript(t);
+      } catch (e) {}
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'request-script' }, '*');
+      }
+    }, 500);
+  </script>
+  <script>
+    VN.plugins.loadInstalled().catch(err => console.error('[VN plugins]', err));
+  </script>
+</body>
+</html>

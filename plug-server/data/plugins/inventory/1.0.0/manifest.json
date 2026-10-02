@@ -1,0 +1,26 @@
+{
+  "id": "inventory",
+  "name": "Инвентарь",
+  "version": "1.0.0",
+  "description": "Система предметов для сценария с панелью инвентаря в плеере.",
+  "author": {
+    "name": "Developer"
+  },
+  "category": "gameplay",
+  "tags": [
+    "items",
+    "inventory",
+    "player"
+  ],
+  "engine": {
+    "min": "0.3.0"
+  },
+  "sdk": {
+    "min": "1.0.0"
+  },
+  "targets": [
+    "player",
+    "app"
+  ],
+  "entry": "/plugins/inventory/1.0.0/extension.js"
+}

@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "title": "VN Plugin SDK 1.0",
+  "apis": [
+    {
+      "name": "VN.plugin",
+      "type": "function"
+    },
+    {
+      "name": "api.ui",
+      "type": "object"
+    },
+    {
+      "name": "api.events",
+      "type": "object"
+    },
+    {
+      "name": "api.storage",
+      "type": "object"
+    },
+    {
+      "name": "api.variables",
+      "type": "object"
+    }
+  ]
+}
