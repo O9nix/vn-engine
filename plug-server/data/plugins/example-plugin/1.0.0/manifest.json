@@ -1,0 +1,14 @@
+{
+  "id": "example-plugin",
+  "name": "Пример плагина",
+  "version": "1.0.0",
+  "description": "Небольшой официальный пример для разработчиков: собственная команда, событие и UI-кнопка.",
+  "author": { "name": "VN Engine" },
+  "category": "developer",
+  "tags": ["example", "sdk", "developer", "tutorial"],
+  "engine": { "min": "0.3.0" },
+  "sdk": { "min": "1.0.0" },
+  "targets": ["player"],
+  "preinstalled": true,
+  "entry": "/plugins/example-plugin/1.0.0/extension.js"
+}
