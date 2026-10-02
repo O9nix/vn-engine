@@ -244,3 +244,4 @@
   global.VNDefaultUI = VNDefaultUI;
   global.createVN = createVN;
 })(typeof window !== 'undefined' ? window : globalThis);
+

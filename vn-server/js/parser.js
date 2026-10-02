@@ -122,19 +122,6 @@ class VNParser {
         continue;
       }
 
-      // --- расширения (VN.extension → command.match) ---
-      if (typeof VN !== 'undefined' && typeof VN._matchExtensionLine === 'function') {
-        // матчеры могли ещё не повесить на этот инстанс
-        if (typeof VN.applyExtensionsToParser === 'function') {
-          VN.applyExtensionsToParser(this);
-        }
-        const extCmd = VN._matchExtensionLine(this, line);
-        if (extCmd) {
-          this.lines.push(extCmd);
-          continue;
-        }
-      }
-
       // диалог: Имя: текст   или   "текст"   или просто текст
       const dialogMatch = line.match(/^([^:：]+)[:：]\s*(.+)$/);
       if (dialogMatch) {
@@ -218,3 +205,4 @@ class VNParser {
 
 // экспорт для браузера
 window.VNParser = VNParser;
+

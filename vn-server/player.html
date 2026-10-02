@@ -12,11 +12,6 @@
       display: flex;
       background: #0a0a12;
     }
-    .player-page { position: relative; }
-    .vn-player-plugin-top, .vn-player-plugin-bottom { position: absolute; z-index: 50; left: 0; right: 0; pointer-events: none; display: flex; gap: 8px; padding: 8px; }
-    .vn-player-plugin-top { top: 0; justify-content: flex-end; }
-    .vn-player-plugin-bottom { bottom: 0; justify-content: center; }
-    .vn-player-plugin-top > *, .vn-player-plugin-bottom > * { pointer-events: auto; }
     #game {
       flex: 1;
       width: 100%;
@@ -40,11 +35,10 @@
       padding: 20px;
     }
   </style>
+  <script>window.addEventListener('DOMContentLoaded', () => { if (window.VN?.plugins?.loadInstalled) VN.plugins.loadInstalled().catch(console.error); }, {once:true});</script>
 </head>
-<body data-vn-context="player">
+<body>
   <div class="player-page">
-    <div class="vn-plugin-slot vn-player-plugin-top" data-vn-slot="player.top"></div>
-    <div class="vn-plugin-slot vn-player-plugin-bottom" data-vn-slot="player.bottom"></div>
     <div id="game">
       <div class="vn-waiting">Ожидание сценария…<br>
         <small>Напиши текст слева или нажми «Вставить пример»</small>
@@ -52,40 +46,30 @@
     </div>
   </div>
 
-  <!-- SDK → parser → host → расширения → core → ui -->
+  <!-- Порядок: parser → core → ui -->
   <script src="js/plugin-sdk.js"></script>
-  <script src="js/parser.js"></script>
-  <script src="js/extensions-host.js"></script>
-  <script src="extensions/camera-shake/extension.js"></script>
-  <script src="extensions/wait/extension.js"></script>
+<script src="js/parser.js"></script>
   <script src="js/core.js"></script>
   <script src="js/ui.js"></script>
   <script>
     let vn = null;
     let lastText = '';
-    const pluginsReady = VN.plugins.loadInstalled();
 
     function ensureVN() {
       if (vn) return vn;
       document.getElementById('game').innerHTML = '';
-      // createVN сам создаёт core; расширения подхватываются в конструкторе VNCore
       vn = createVN('#game', {
         typingSpeed: 25,
         assetsPath: 'assets/'
       });
-      // на случай, если расширения подключили после core
-      if (window.VN && VN.applyExtensionsToCore) {
-        VN.applyExtensionsToCore(vn);
-      }
       return vn;
     }
 
-    async function loadScript(text) {
+    function loadScript(text) {
       if (!text || !String(text).trim()) return;
       if (text === lastText) return;
+      lastText = text;
       try {
-        await pluginsReady;
-        lastText = text;
         ensureVN().load(text);
       } catch (err) {
         console.error('Ошибка загрузки сценария:', err);
@@ -124,3 +108,4 @@
   </script>
 </body>
 </html>
+

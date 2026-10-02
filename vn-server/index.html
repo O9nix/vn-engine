@@ -62,7 +62,12 @@
   <div class="main-layout">
     <header class="main-header">
       <h1>✦ Visual Novel Studio</h1>
-      <div class="tabs" data-vn-slot="app.toolbar">
+      <div class="tabs">
+        <span id="auth-user" style="color:#aaa;font-size:12px"></span>
+        <div data-vn-slot="app.toolbar" style="display:flex;align-items:center;gap:8px"></div>
+        <a id="auth-login" href="/login?next=/" style="background:#2a2a4a;color:#ddd;border:1px solid #4a4a7a;border-radius:6px;padding:6px 12px;text-decoration:none;font-size:13px">Войти</a>
+        <a id="auth-register" href="/register?next=/" style="background:#2a2a4a;color:#ddd;border:1px solid #4a4a7a;border-radius:6px;padding:6px 12px;text-decoration:none;font-size:13px">Регистрация</a>
+        <button id="auth-logout" style="display:none" title="Выйти">Выйти</button>
         <button id="btn-fullscreen-player" title="Открыть только плеер">▶ Только игра</button>
       </div>
     </header>
@@ -83,10 +88,38 @@
     </div>
   </div>
 
-  <script src="js/plugin-sdk.js"></script>
-  <script src="js/plugin-manager.js"></script>
+  <script src="/js/plugin-sdk.js"></script>
+  <script src="/js/plugin-manager.js"></script>
+  <script src="/js/auth-client.js"></script>
   <script>
-    VN.plugins.loadInstalled().catch(err => console.error('[VN plugins]', err));
+    const authUser = document.getElementById('auth-user');
+    const authLogin = document.getElementById('auth-login');
+    const authRegister = document.getElementById('auth-register');
+    const authLogout = document.getElementById('auth-logout');
+
+    function renderAuth(user) {
+      const logged = !!user;
+      authUser.textContent = logged ? (user.displayName || user.username) : '';
+      authLogin.style.display = logged ? 'none' : 'inline-flex';
+      authRegister.style.display = logged ? 'none' : 'inline-flex';
+      authLogout.style.display = logged ? 'inline-flex' : 'none';
+    }
+
+    authLogout.addEventListener('click', async () => {
+      authLogout.disabled = true;
+      await VNAuth.logout();
+      renderAuth(null);
+      authLogout.disabled = false;
+    });
+
+    window.addEventListener('vn-auth-changed', e => renderAuth(e.detail));
+    renderAuth(VNAuth.getUser());
+
+    // Загружаем установленные плагины в контексте приложения.
+    if (window.VN?.plugins?.loadInstalled) {
+      VN.plugins.loadInstalled().catch(err => console.error('[VN.plugins]', err));
+    }
+    VNAuth.me().then(renderAuth).catch(() => renderAuth(null));
 
     const editorFrame = document.getElementById('editor-frame');
     const playerFrame = document.getElementById('player-frame');
@@ -143,3 +176,4 @@
   </script>
 </body>
 </html>
+

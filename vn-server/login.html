@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Вход — VN Studio</title>
+<style>
+body{margin:0;min-height:100vh;background:#0f0f1a;color:#e0e0e0;font:14px Segoe UI,system-ui,sans-serif;display:grid;place-items:center}
+.card{width:min(390px,calc(100% - 32px));background:#1a1a2e;border:1px solid #2a2a4a;border-radius:12px;padding:24px;box-sizing:border-box}
+h1{margin:0 0 6px;color:#a0a0ff;font-size:22px}p{color:#999;margin:0 0 20px}.row{margin:12px 0}label{display:block;color:#aaa;font-size:12px;margin-bottom:5px}input{width:100%;box-sizing:border-box;padding:10px;background:#10101b;color:#eee;border:1px solid #38385c;border-radius:7px}button{width:100%;padding:10px;margin-top:8px;background:#2a2a4a;color:#ddd;border:1px solid #4a4a7a;border-radius:7px;cursor:pointer}button:hover{border-color:#8888ff}.links{margin-top:16px;text-align:center;color:#888}.links a{color:#a0a0ff}.err{min-height:20px;color:#ff8f9b;margin-top:10px}.back{display:inline-block;margin-bottom:18px;color:#888;text-decoration:none}
+</style></head><body><div class="card"><a class="back" href="/">← Назад</a><h1>Вход</h1><p>VN Studio — аккаунт автора</p><form id="form"><div class="row"><label>Логин</label><input id="username" autocomplete="username" required></div><div class="row"><label>Пароль</label><input id="password" type="password" autocomplete="current-password" required></div><button id="submit">Войти</button><div class="err" id="err"></div></form><div class="links">Нет аккаунта? <a href="/register">Регистрация</a></div></div><script src="/js/auth-client.js"></script><script>
+const next=new URLSearchParams(location.search).get('next');
+if(VNAuth.getUser()) location.replace(next&&next.startsWith('/')?next:'/');
+document.getElementById('form').addEventListener('submit',async e=>{e.preventDefault();const err=document.getElementById('err'),btn=document.getElementById('submit');err.textContent='';btn.disabled=true;try{await VNAuth.login(document.getElementById('username').value,document.getElementById('password').value);location.replace(next&&next.startsWith('/')?next:'/')}catch(x){err.textContent=x.message||'Ошибка входа'}finally{btn.disabled=false}});
+</script></body></html>

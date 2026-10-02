@@ -10,8 +10,6 @@
   'use strict';
 
   const VN = global.VN || (global.VN = {});
-  const SDK_VERSION = '1.0.0';
-  VN.PluginSDKVersion = SDK_VERSION;
   const plugins = VN._plugins || (VN._plugins = []);
   const pendingEventSubscriptions = [];
 
@@ -283,7 +281,6 @@
   }
 
   VN.plugins = VN.plugins || {};
-  const loadedInstalledPlugins = new Set();
 
   VN.plugins.listInstalled = function () {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -304,9 +301,6 @@
       description: plugin.description || '',
       targets: Array.isArray(plugin.targets) ? plugin.targets.slice() : [],
       enabled: plugin.enabled !== false,
-      registry: plugin.registry || '',
-      registryVersion: plugin.registryVersion || '',
-      manifest: plugin.manifest || null,
     };
     list.push(item);
     saveInstalled(list); // бросает ошибку, если сохранить не удалось
@@ -345,7 +339,6 @@
   VN.plugins.loadInstalled = async function () {
     const list = VN.plugins.listInstalled().filter((p) => p.enabled !== false);
     for (const item of list) {
-      if (loadedInstalledPlugins.has(item.id)) continue;
       try {
         if (item.code) {
           const blob = new Blob([String(item.code)], { type: 'text/javascript' });
@@ -355,7 +348,6 @@
         } else if (item.src) {
           await VN.plugins.load(item.src);
         }
-        loadedInstalledPlugins.add(item.id);
       } catch (err) {
         console.error('[VN.plugins] load failed:', item.id, err);
       }

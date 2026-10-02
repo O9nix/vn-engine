@@ -1,0 +1,15 @@
+const crypto = require('crypto');
+const DEFAULT_ISSUER = process.env.OIDC_ISSUER || 'http://127.0.0.1:8090/realms/vn';
+const DEFAULT_CLIENT_ID = process.env.OIDC_CLIENT_ID || 'vn-web';
+const JWKS_URL = process.env.OIDC_JWKS_URL || (DEFAULT_ISSUER + '/protocol/openid-connect/certs');
+let jwksCache = { keys: [], expiresAt: 0 };
+function base64urlDecode(value) { const s=String(value).replace(/-/g,'+').replace(/_/g,'/'); return Buffer.from(s+'='.repeat((4-s.length%4)%4),'base64'); }
+function decodePart(value) { return JSON.parse(base64urlDecode(value).toString('utf8')); }
+async function loadJwks(force=false) { if(!force&&jwksCache.keys.length&&Date.now()<jwksCache.expiresAt)return jwksCache.keys; const r=await fetch(JWKS_URL,{headers:{Accept:'application/json'}}); if(!r.ok)throw new Error('OIDC JWKS HTTP '+r.status); const d=await r.json(); if(!Array.isArray(d.keys))throw new Error('OIDC JWKS has no keys'); jwksCache={keys:d.keys,expiresAt:Date.now()+300000}; return d.keys; }
+function getBearer(req){const v=req.headers.authorization||'';const m=v.match(/^Bearer\s+(.+)$/i);return m?m[1].trim():'';}
+async function verifyToken(token){ if(!token) return null; const p=token.split('.'); if(p.length!==3)throw new Error('Invalid JWT'); const h=decodePart(p[0]), payload=decodePart(p[1]); if(h.alg!=='RS256')throw new Error('Unsupported JWT algorithm'); if(payload.iss!==DEFAULT_ISSUER)throw new Error('Invalid JWT issuer'); const now=Math.floor(Date.now()/1000); if(!payload.sub)throw new Error('JWT has no subject'); if(payload.exp&&now>=Number(payload.exp))throw new Error('JWT expired'); if(payload.nbf&&now<Number(payload.nbf))throw new Error('JWT not active'); const aud=Array.isArray(payload.aud)?payload.aud:(payload.aud?[payload.aud]:[]); if(payload.azp!==DEFAULT_CLIENT_ID&&!aud.includes(DEFAULT_CLIENT_ID))throw new Error('JWT client mismatch'); let keys=await loadJwks(false),jwk=keys.find(k=>k.kid===h.kid); if(!jwk){keys=await loadJwks(true);jwk=keys.find(k=>k.kid===h.kid);} if(!jwk)throw new Error('JWT signing key not found'); const key=crypto.createPublicKey({key:jwk,format:'jwk'}); const v=crypto.createVerify('RSA-SHA256'); v.update(p[0]+'.'+p[1]); v.end(); if(!v.verify(key,base64urlDecode(p[2])))throw new Error('Invalid JWT signature'); return payload; }
+async function authenticate(req){const token=getBearer(req);return token?verifyToken(token):null;}
+function authUser(c){if(!c)return null;return {userId:String(c.sub),username:c.preferred_username||null,email:c.email||null,name:c.name||[c.given_name,c.family_name].filter(Boolean).join(' ')||null,roles:Array.isArray(c.realm_access?.roles)?c.realm_access.roles.slice():[],issuer:c.iss};}
+async function requireAuth(req){const c=await authenticate(req);if(!c){const e=new Error('Authentication required');e.statusCode=401;throw e;}return authUser(c);}
+function authHeaders(){return {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,PUT,PATCH,DELETE,OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'};}
+module.exports={authenticate,requireAuth,authUser,authHeaders,issuer:DEFAULT_ISSUER,clientId:DEFAULT_CLIENT_ID};

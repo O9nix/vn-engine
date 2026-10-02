@@ -1,0 +1,18 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.5
+    container_name: vn-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: 127.0.0.1:8090
+      KC_HTTP_PORT: 8090
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./realm-vn.json:/opt/keycloak/data/import/realm-vn.json:ro
+      - keycloak_data:/opt/keycloak/data
+
+volumes:
+  keycloak_data:

@@ -4,17 +4,18 @@
   <meta charset="UTF-8">
   <title>Предпросмотр сцен</title>
   <link rel="stylesheet" href="css/style.css">
+  <script>window.addEventListener('DOMContentLoaded', () => { if (window.VN?.plugins?.loadInstalled) VN.plugins.loadInstalled().catch(console.error); }, {once:true});</script>
 </head>
-<body data-vn-context="preview">
+<body>
   <div class="preview-page">
-    <div class="preview-toolbar" data-vn-slot="preview.toolbar">
+    <div class="preview-toolbar">
       Граф сцен • обновляется автоматически при изменении сценария
     </div>
     <canvas id="graph-canvas"></canvas>
   </div>
 
   <script src="js/plugin-sdk.js"></script>
-  <script src="js/parser.js"></script>
+<script src="js/parser.js"></script>
   <script>
     const canvas = document.getElementById('graph-canvas');
     const ctx = canvas.getContext('2d');
@@ -190,8 +191,6 @@
       }
     }, 500);
   </script>
-  <script>
-    VN.plugins.loadInstalled().catch(err => console.error('[VN plugins]', err));
-  </script>
 </body>
 </html>
+

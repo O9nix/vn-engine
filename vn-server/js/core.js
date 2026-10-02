@@ -16,7 +16,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '0.3.0';
+  const VERSION = '0.2.0';
 
   // ---------------------------------------------------------------------------
   // Утилиты
@@ -108,7 +108,7 @@
       this.options = Object.assign(
         {
           assetsPath: 'assets/',
-          typingSpeed: 30,
+          typingSpeed: 0,
           autoAdvance: false,
           initialVariables: {},
         },
@@ -151,27 +151,11 @@
       /** Опциональный UI-адаптер */
       this.renderer = null;
 
-      // Публичный SDK получает активное ядро через VN._activeCore.
-      // Это позволяет плагинам работать с engine API без доступа к внутреннему DOM.
-      if (global.VN) global.VN._activeCore = this;
-
       /** Флаг печатной машинки (логика; UI может игнорировать) */
       this.isTyping = false;
       this.skipTyping = false;
 
       this._registerBuiltinCommands();
-
-      // Автоподключение VN.extension(...), если host уже загружен
-      if (
-        typeof VN !== 'undefined' &&
-        typeof VN.applyExtensionsToCore === 'function'
-      ) {
-        VN.applyExtensionsToCore(this);
-      }
-
-      if (global.VN && typeof global.VN._notifyCoreReady === 'function') {
-        global.VN._notifyCoreReady(this);
-      }
     }
 
     // -----------------------------------------------------------------------
@@ -569,3 +553,4 @@
   global.VNCore = VNCore;
   global.VNCoreVersion = VERSION;
 })(typeof window !== 'undefined' ? window : globalThis);
+

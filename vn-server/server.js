@@ -34,6 +34,8 @@ const MIME = {
 const server = http.createServer((req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
   if (urlPath === '/') urlPath = '/index.html';
+  if (urlPath === '/login') urlPath = '/login.html';
+  if (urlPath === '/register') urlPath = '/register.html';
 
   const filePath = path.join(DIR, urlPath);
 

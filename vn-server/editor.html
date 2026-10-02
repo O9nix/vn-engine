@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <title>Редактор сценария</title>
   <link rel="stylesheet" href="css/style.css">
+  <script>window.addEventListener('DOMContentLoaded', () => { if (window.VN?.plugins?.loadInstalled) VN.plugins.loadInstalled().catch(console.error); }, {once:true});</script>
 </head>
-<body data-vn-context="editor">
+<body>
   <div class="editor-page">
-    <div class="editor-toolbar" data-vn-slot="editor.toolbar">
+    <div class="editor-toolbar">
       <button id="btn-example">Вставить пример</button>
       <button id="btn-clear">Очистить</button>
       <span class="hint">Пиши обычным текстом • изменения сразу видны справа</span>
@@ -16,9 +17,7 @@
   </div>
 
   <script src="js/plugin-sdk.js"></script>
-  <script>
-    VN.plugins.loadInstalled().catch(err => console.error('[VN plugins]', err));
-
+<script>
     const DEFAULT_SCRIPT = `# Начало
 фон парк
 показать Алиса счастливая слева
@@ -33,14 +32,11 @@
 показать Алиса серьёзная слева
 Алиса: Я живу в этом городе уже много лет.
 Алиса: Здесь происходят странные вещи...
-тряска 14 0.6
-Алиса: Ты это тоже почувствовал?
 перейти прощание
 
 # прощание
 показать Алиса счастливая слева
 Алиса: Ладно, ещё увидимся!
-ждать 0.5
 конец`;
 
     const editor = document.getElementById('script-editor');
@@ -105,3 +101,4 @@
   </script>
 </body>
 </html>
+

@@ -1,10 +1,11 @@
 const http=require('http');
 const fs=require('fs');
 const path=require('path');
+const { requireAuth, authenticate, authUser, authHeaders, issuer } = require('../shared/auth');
 const ROOT=__dirname,DATA=path.join(ROOT,'data'),PUBLIC=path.join(ROOT,'public'),PLUGINS=path.join(DATA,'plugins'),DOCS=path.join(DATA,'docs');
 for(const d of [PLUGINS,DOCS])fs.mkdirSync(d,{recursive:true});
 const PORT=Number(process.env.PORT||8787),HOST=process.env.HOST||'127.0.0.1';
-function send(res,status,body,type='application/json; charset=utf-8'){res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});res.end(type.startsWith('application/json')?JSON.stringify(body,null,2):body);return true}
+function send(res,status,body,type='application/json; charset=utf-8'){res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store',...authHeaders()});res.end(type.startsWith('application/json')?JSON.stringify(body,null,2):body);return true}
 function readJson(f,fb){try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch{return fb}}
 function writeJson(f,v){fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,JSON.stringify(v,null,2)+'\n')}
 function safe(s){return String(s||'').toLowerCase().replace(/[^a-z0-9._-]/g,'-').slice(0,100)}
@@ -14,11 +15,13 @@ function index(){const a=[];if(!fs.existsSync(PLUGINS))return a;for(const id of 
 function latest(a){const m=new Map();for(const p of a){const o=m.get(p.id);if(!o||String(p.version).localeCompare(String(o.version),undefined,{numeric:true})>0)m.set(p.id,p)}return [...m.values()]}
 function validate(m){if(!m||!m.id||!m.name||!m.version||!m.entry)throw Error('manifest требует id, name, version и entry');if(!/^[a-z0-9][a-z0-9._-]{1,99}$/.test(m.id))throw Error('некорректный id');return {...m,publishedAt:m.publishedAt||new Date().toISOString()}}
 async function api(req,res,u){
- if(req.method==='GET'&&u.pathname==='/api/health')return send(res,200,{ok:true,service:'vn-extension-hub'});
+ if(req.method==='GET'&&u.pathname==='/api/health')return send(res,200,{ok:true,service:'vn-extension-hub',issuer});
+ if(req.method==='GET'&&u.pathname==='/api/auth/me'){try{return send(res,200,{authenticated:true,user:await requireAuth(req)})}catch(e){return send(res,e.statusCode||401,{authenticated:false,error:e.message})}}
+ if(req.method==='GET'&&u.pathname==='/api/auth/status'){try{const c=await authenticate(req);return send(res,200,{authenticated:!!c,user:c?authUser(c):null})}catch(e){return send(res,401,{authenticated:false,error:e.message})}}
  if(req.method==='GET'&&u.pathname==='/api/plugins'){let a=latest(index()),q=(u.searchParams.get('q')||'').toLowerCase();if(q)a=a.filter(x=>JSON.stringify(x).toLowerCase().includes(q));return send(res,200,a)}
  let m=u.pathname.match(/^\/api\/plugins\/([^/]+)$/);if(req.method==='GET'&&m){const a=index().filter(x=>x.id===safe(m[1]));if(!a.length)return send(res,404,{error:'plugin_not_found'});return send(res,200,{latest:latest(a)[0],versions:a})}
  m=u.pathname.match(/^\/api\/plugins\/([^/]+)\/([^/]+)$/);if(req.method==='GET'&&m){const f=mp(m[1],m[2]);if(!fs.existsSync(f))return send(res,404,{error:'version_not_found'});return send(res,200,readJson(f,{}))}
- if(req.method==='POST'&&u.pathname==='/api/plugins')return body(req).then(b=>{const man=validate(b.manifest||b),d=path.dirname(mp(man.id,man.version));fs.mkdirSync(d,{recursive:true});writeJson(path.join(d,'manifest.json'),man);if(typeof b.code==='string')fs.writeFileSync(path.join(d,'extension.js'),b.code);send(res,201,man)}).catch(e=>send(res,400,{error:e.message}));
+ if(req.method==='POST'&&u.pathname==='/api/plugins')return requireAuth(req).then(user=>body(req).then(b=>{const man=validate(b.manifest||b);man.ownerId=user.userId;man.ownerUsername=user.username;const d=path.dirname(mp(man.id,man.version));fs.mkdirSync(d,{recursive:true});writeJson(path.join(d,'manifest.json'),man);if(typeof b.code==='string')fs.writeFileSync(path.join(d,'extension.js'),b.code);send(res,201,man)})).catch(e=>send(res,e.statusCode||400,{error:e.message}));
  if(req.method==='GET'&&u.pathname.startsWith('/api/docs/')){let rel=u.pathname.slice(10),f=path.join(DOCS,rel.endsWith('.json')?rel:rel+'.json');if(!f.startsWith(DOCS)||!fs.existsSync(f))return send(res,404,{error:'doc_not_found'});return send(res,200,readJson(f,{}))}
  return false}
 function staticFile(req,res,u){
@@ -34,4 +37,4 @@ function staticFile(req,res,u){
  if(!fs.existsSync(f)||!fs.statSync(f).isFile())return send(res,404,{error:'not_found'});
  const t={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css'}[path.extname(f)]||'application/octet-stream';res.writeHead(200,{'Content-Type':t,'Access-Control-Allow-Origin':'*'});fs.createReadStream(f).pipe(res);return true
 }
-http.createServer(async(req,res)=>{const u=new URL(req.url,`http://${req.headers.host||HOST}`);try{if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});return res.end()}if(await api(req,res,u))return;staticFile(req,res,u)}catch(e){send(res,500,{error:e.message})}}).listen(PORT,HOST,()=>console.log(`VN Extension Hub: http://${HOST}:${PORT}`));
+http.createServer(async(req,res)=>{const u=new URL(req.url,`http://${req.headers.host||HOST}`);try{if(req.method==='OPTIONS'){res.writeHead(204,authHeaders());return res.end()}if(await api(req,res,u))return;staticFile(req,res,u)}catch(e){send(res,500,{error:e.message})}}).listen(PORT,HOST,()=>console.log(`VN Extension Hub: http://${HOST}:${PORT}`));
