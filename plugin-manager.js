@@ -2,7 +2,7 @@ export class PluginManager {
     #plugins = new Map();
     #api;
 
-    constructor(bus, game, player, blocks) {
+    constructor(bus, game, player, blocks,conditions) {
         this.#api = {
             events: {
                 on: (event, handler) => {
@@ -70,7 +70,10 @@ export class PluginManager {
                     return player.isVisible(name);
                 }
             },
-
+            conditions: {
+    evaluate: (condition, state) =>
+        conditions.evaluate(condition, state)
+},
             blocks
         };
     }

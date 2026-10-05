@@ -2,10 +2,12 @@ import { EventBus } from './events.js';
 
 export class VN {
     #bus = new EventBus();
-    #script = [];
+
+    #project = null;
     #state = {};
-    #currentIndex = 0;
+    #currentNodeId = null;
     #isWaiting = false;
+
     #nodeTypes = new Map();
 
     constructor() {
@@ -24,7 +26,9 @@ export class VN {
 
     registerNodeType(type, handler) {
         if (this.#nodeTypes.has(type)) {
-            throw new Error(`Тип узла "${type}" уже зарегистрирован`);
+            throw new Error(
+                `Тип узла "${type}" уже зарегистрирован`
+            );
         }
 
         if (typeof handler !== 'function') {
@@ -36,18 +40,35 @@ export class VN {
         this.#nodeTypes.set(type, handler);
     }
 
-    loadScript(script) {
-        this.#script = script;
-        this.#state = {};
-        this.#currentIndex = 0;
+    loadProject(project) {
+        this.#project = project;
+        this.#state = {
+            health: 7
+        };
+        this.#currentNodeId = null;
         this.#isWaiting = false;
 
         this.#bus.emit('story:loaded');
 
+        const scenes = project.getScenes();
+
         console.log(
-            'Сценарий загружен, узлов:',
-            this.#script.length
+            'Проект загружен, сцен:',
+            scenes.length
         );
+
+        const firstScene = scenes[0];
+
+        if (!firstScene?.nodes?.length) {
+            console.warn(
+                'Проект не содержит узлов'
+            );
+
+            return;
+        }
+
+        this.#currentNodeId =
+            firstScene.nodes[0].id;
 
         this.next();
     }
@@ -57,32 +78,51 @@ export class VN {
             return;
         }
 
-        while (this.#currentIndex < this.#script.length) {
-            const node = this.#script[this.#currentIndex];
+        const node = this.#project?.getNode(
+            this.#currentNodeId
+        );
 
-            this.#processNode(node);
+        if (!node) {
+            this.#bus.emit('story:end');
 
-            if (this.#isWaiting) {
-                return;
-            }
+            console.log(
+                'История завершена'
+            );
 
-            this.#currentIndex++;
+            return;
         }
 
-        this.#bus.emit('story:end');
+        this.#processNode(node);
+    }
+#goto(nodeId) {
+    const node = this.#project.getNode(nodeId);
 
-        console.log('История завершена');
+    if (!node) {
+        console.warn(
+            `VN.goto(): узел "${nodeId}" не найден`
+        );
+
+        return;
     }
 
+    this.#currentNodeId = nodeId;
+    this.#isWaiting = false;
+
+    this.next();
+}
     #processNode(node) {
         this.#bus.emit('node:start', node);
 
-        const handler = this.#nodeTypes.get(node.type);
+        const handler =
+            this.#nodeTypes.get(node.type);
 
         if (!handler) {
             console.warn(
                 `Неизвестный тип узла: ${node.type}`
             );
+
+            this.#moveToNextNode(node);
+
             return;
         }
 
@@ -97,9 +137,49 @@ export class VN {
 
             getState: () => {
                 return this.getState();
-            }
+            },
+            goto: (nodeId) => {
+    this.#goto(nodeId);
+},
         });
+
+        if (!this.#isWaiting) {
+            this.#moveToNextNode(node);
+        }
     }
+
+    #moveToNextNode(node) {
+    if (node.end === true) {
+        this.#currentNodeId = null;
+
+        this.#bus.emit('story:end');
+
+        console.log(
+            'История завершена'
+        );
+
+        return;
+    }
+
+    const nextNode =
+        this.#project.getNextNode(node.id);
+
+    if (!nextNode) {
+        this.#currentNodeId = null;
+
+        this.#bus.emit('story:end');
+
+        console.log(
+            'История завершена'
+        );
+
+        return;
+    }
+
+    this.#currentNodeId = nextNode.id;
+
+    this.next();
+}
 
     #continue() {
         if (!this.#isWaiting) {
@@ -108,8 +188,15 @@ export class VN {
 
         this.#isWaiting = false;
 
-        this.#currentIndex++;
+        const node =
+            this.#project.getNode(
+                this.#currentNodeId
+            );
 
-        this.next();
+        if (!node) {
+            return;
+        }
+
+        this.#moveToNextNode(node);
     }
 }

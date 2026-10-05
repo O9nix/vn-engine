@@ -2,6 +2,8 @@ import { VN } from './core.js';
 import { Player } from './player.js';
 import { BlockManager } from './block-manager.js';
 import { Project } from './project.js';
+import { FlowResolver } from './flow.js';
+import { ConditionEvaluator } from './core/condition-evaluator.js';
 
 
 import { PluginManager }
@@ -18,6 +20,10 @@ import { BackgroundPlugin }
 
 import { WaitPlugin }
     from './plugins/wait-plugin.js';
+import { ChoicePlugin }
+    from './plugins/choice-plugin.js';
+
+
 
 const game = new VN();
 
@@ -28,18 +34,22 @@ const player = new Player();
 const blocks = new BlockManager(
     player.getPluginLayer()
 );
-
+const conditions = new ConditionEvaluator();
 const plugins = new PluginManager(
     bus,
     game,
     player,
-    blocks
+    blocks,
+    conditions
 );
 
 plugins.use(DialoguePlugin);
 plugins.use(NarrationPlugin);
 plugins.use(BackgroundPlugin);
 plugins.use(WaitPlugin);
+plugins.use(ChoicePlugin);
+
+
 
 document.addEventListener(
     'click',
@@ -56,40 +66,83 @@ document.addEventListener(
 );
 
 const project = new Project({
-    story: [
+    scenes: [
         {
-            type: 'background',
-            image: 'bg_room.jpg'
-        },
+            id: 'scene-1',
 
-        {
-            type: 'dialogue',
-            character: 'Аня',
-            text: 'Привет!'
-        },
+            nodes: [
+                {
+                    id: 'start',
 
-        {
-            type: 'wait',
-            duration: 2000
-        },
+                    type: 'dialogue',
 
-        {
-            type: 'narration',
-            text: 'Прошло две секунды...'
-        },
+                    character: 'Аня',
 
-        {
-            type: 'dialogue',
-            character: 'Аня',
-            text: 'Теперь сценарий находится внутри Project!'
+                    text: 'Как себя чувствуешь?'
+                },
+
+                {
+                    id: 'choice-1',
+
+                    type: 'choice',
+
+                    text: 'Куда пойдём?',
+
+                    options: [
+                        {
+                            id: 'go',
+
+                            variants: [
+                                {
+                                    condition: {
+                                        variable: 'health',
+                                        operator: '<=',
+                                        value: 5
+                                    },
+
+                                    text: 'Сначала в больницу',
+
+                                    goto: 'hospital'
+                                },
+
+                                {
+                                   
+                                    text: 'Пойдём домой',
+
+                                    goto: 'home'
+                                }
+                            ]
+                        }
+                    ]
+                },
+
+                {
+                    id: 'hospital',
+
+                    type: 'dialogue',
+
+                    character: 'Аня',
+
+                    text: 'Хорошо, сначала в больницу.',
+
+                    end: true
+                },
+
+                {
+                    id: 'home',
+
+                    type: 'dialogue',
+
+                    character: 'Аня',
+
+                    text: 'Тогда идём домой.',
+
+                    end: true
+                }
+            ]
         }
-    ],
-
-    config: {},
-
-    assets: {}
+    ]
 });
-console.log(project.getStory())
-game.loadScript(
-    project.getStory()
-);
+
+
+game.loadProject(project);
