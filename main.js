@@ -1,6 +1,8 @@
 import { VN } from './core.js';
 import { Player } from './player.js';
 import { BlockManager } from './block-manager.js';
+import { Project } from './project.js';
+
 
 import { PluginManager }
     from './plugin-manager.js';
@@ -53,33 +55,41 @@ document.addEventListener(
     }
 );
 
-const testStory = [
-    {
-        type: 'background',
-        image: 'bg_room.jpg'
-    },
+const project = new Project({
+    story: [
+        {
+            type: 'background',
+            image: 'bg_room.jpg'
+        },
 
-    {
-        type: 'dialogue',
-        character: 'Аня',
-        text: 'Привет!'
-    },
+        {
+            type: 'dialogue',
+            character: 'Аня',
+            text: 'Привет!'
+        },
 
-    {
-        type: 'wait',
-        duration: 2000
-    },
+        {
+            type: 'wait',
+            duration: 2000
+        },
 
-    {
-        type: 'narration',
-        text: 'Прошло две секунды...'
-    },
+        {
+            type: 'narration',
+            text: 'Прошло две секунды...'
+        },
 
-    {
-        type: 'dialogue',
-        character: 'Аня',
-        text: 'Теперь dialogue и narration являются плагинами!'
-    }
-];
+        {
+            type: 'dialogue',
+            character: 'Аня',
+            text: 'Теперь сценарий находится внутри Project!'
+        }
+    ],
 
-game.loadScript(testStory);
+    config: {},
+
+    assets: {}
+});
+console.log(project.getStory())
+game.loadScript(
+    project.getStory()
+);
