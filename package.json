@@ -1,0 +1,21 @@
+{
+  "name": "vn-server",
+  "version": "1.1.0",
+  "description": "VN Studio hosting — files + MariaDB auth",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node scripts/migrate.js",
+    "migrate:projects": "node scripts/migrate-projects.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.11.0"
+  },
+  "license": "MIT"
+}

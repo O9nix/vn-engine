@@ -1,0 +1,256 @@
+    if(!inlineStage.future.length) return;
+    const cur=inlineSnapshot(); const next=inlineStage.future.pop(); if(cur) inlineStage.history.push(cur); inlineRestore(next);
+  }
+  function inlineEnsureStyle(doc){
+    if(doc.getElementById('vnInlineStageStyle')) return;
+    const style=doc.createElement('style'); style.id='vnInlineStageStyle';
+    style.textContent=`
+      #stage.vn-inline-stage-edit{cursor:default!important;user-select:none!important}
+      #stage.vn-inline-stage-edit #box,#stage.vn-inline-stage-edit #choices,#stage.vn-inline-stage-edit .sprite{cursor:move!important;pointer-events:auto!important}
+      #stage.vn-inline-stage-edit #continue,#stage.vn-inline-stage-edit .choice{pointer-events:none!important}
+      #stage.vn-inline-stage-edit #box{box-sizing:border-box;min-height:0!important}
+      #stage.vn-inline-stage-edit #box #name,#stage.vn-inline-stage-edit #box #text{position:absolute!important;margin:0!important;cursor:move!important;max-width:none!important;min-height:0!important}
+      #stage.vn-inline-stage-edit #box #name{z-index:3}
+      #stage.vn-inline-stage-edit #box #text{z-index:2}
+      #stage.vn-inline-stage-edit .vn-ie-text-selected{outline:1px dashed rgba(201,162,75,.9)!important;outline-offset:4px}
+      #stage.vn-inline-stage-edit .sprite{outline:1px dashed rgba(201,162,75,.28);outline-offset:2px}
+      #stage.vn-inline-stage-edit .vn-ie-selected{outline:2px solid #c9a24b!important;outline-offset:3px;box-shadow:0 0 0 1px rgba(201,162,75,.22),0 10px 32px rgba(0,0,0,.3)!important}
+      #stage.vn-inline-stage-edit .vn-ie-handle{display:none;position:absolute;width:10px;height:10px;border-radius:2px;background:#c9a24b;border:2px solid #17131d;z-index:90;box-shadow:0 1px 5px rgba(0,0,0,.45);pointer-events:auto}
+      #stage.vn-inline-stage-edit .vn-ie-single .vn-ie-handle{display:block}
+      #stage.vn-inline-stage-edit .vn-ie-handle.se{right:-6px;bottom:-6px;cursor:nwse-resize}.vn-ie-handle.sw{left:-6px;bottom:-6px;cursor:nesw-resize}.vn-ie-handle.ne{right:-6px;top:-6px;cursor:nesw-resize}.vn-ie-handle.nw{left:-6px;top:-6px;cursor:nwse-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.e{right:-6px;top:50%;transform:translateY(-50%);cursor:ew-resize}.vn-ie-handle.w{left:-6px;top:50%;transform:translateY(-50%);cursor:ew-resize}.vn-ie-handle.s{left:50%;bottom:-6px;transform:translateX(-50%);cursor:ns-resize}.vn-ie-handle.n{left:50%;top:-6px;transform:translateX(-50%);cursor:ns-resize}
+      #stage.vn-inline-stage-edit.vn-ie-grid{background-image:linear-gradient(rgba(255,255,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.09) 1px,transparent 1px)!important;background-size:5% 5%!important}
+      #stage .vn-ie-hud{position:absolute;left:12px;top:12px;z-index:100;padding:7px 9px;border:1px solid rgba(201,162,75,.42);border-radius:8px;background:rgba(18,16,24,.84);backdrop-filter:blur(8px);color:#efe7d6;font:600 10px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+      #stage .vn-ie-hud span{color:#8f8797;font-weight:500;letter-spacing:.02em;text-transform:none}
+      #stage .vn-ie-tip{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:100;padding:6px 9px;border-radius:7px;background:rgba(18,16,24,.72);color:#9f98a7;font:10px/1.2 ui-sans-serif,system-ui,sans-serif;white-space:nowrap;pointer-events:none}
+    `;
+    doc.head.appendChild(style);
+  }
+  function inlineKey(type,id){ return type+(id?':'+id:''); }
+  function inlineFindEl(doc,key){
+    if(key==='box') return doc.getElementById('box');
+    if(key==='name') return doc.getElementById('name');
+    if(key==='text') return doc.getElementById('text');
+    if(key==='choices') return doc.getElementById('choices');
+    if(key==='background') return doc.getElementById('stage');
+    if(key.startsWith('sprite:')) return doc.querySelector('.sprite[data-vn-editor-sid="'+CSS.escape(key.slice(7))+'"]');
+    return null;
+  }
+  function inlineLayerEntries(node){
+    const sprites=(node?.sprites||[]);
+    const out=[{key:'background',type:'background',label:'Фон',locked:true}];
+    // Runtime draws sprites in array order, so reverse the list for a top-first layer panel.
+    sprites.slice().reverse().forEach(s=>out.push({key:inlineKey('sprite',s.id),type:'sprite',id:s.id,label:s.id||'Персонаж',sprite:s}));
+    out.push({key:'box',type:'box',label:'Диалоговое окно',locked:false});
+    out.push({key:'name',type:'text',label:'Имя / заголовок',locked:false});
+    out.push({key:'text',type:'text',label:'Текст реплики',locked:false});
+    if((node?.choices||[]).length) out.push({key:'choices',type:'choices',label:'Варианты выбора',locked:false});
+    return out;
+  }
+  function inlineSelectedKeys(){ return inlineStage.selected.slice(); }
+  function inlineSelectKey(key, additive){
+    if(!additive) inlineStage.selected=[];
+    if(key!=='background'){
+      const i=inlineStage.selected.indexOf(key);
+      if(i>=0 && additive) inlineStage.selected.splice(i,1); else inlineStage.selected.push(key);
+    }
+    inlinePaintSelection(); inlineRenderFrameEditorSide();
+  }
+  function inlinePaintSelection(){
+    const doc=previewDoc(); if(!doc) return;
+    doc.querySelectorAll('.vn-ie-selected').forEach(x=>x.classList.remove('vn-ie-selected','vn-ie-single'));
+    inlineStage.selected.forEach(k=>{ const el=inlineFindEl(doc,k); if(el) el.classList.add('vn-ie-selected'); });
+    if(inlineStage.selected.length===1){ const el=inlineFindEl(doc,inlineStage.selected[0]); if(el) el.classList.add('vn-ie-single'); }
+    const hud=doc.querySelector('.vn-ie-hud span');
+    if(hud) hud.textContent=inlineStage.selected.length ? (inlineStage.selected.length+' объект'+(inlineStage.selected.length===1?'':'а')) : 'выберите элемент';
+  }
+  function inlineAttachHandles(doc,el){
+    if(el.querySelector('.vn-ie-handle')) return;
+    ['nw','n','ne','w','e','sw','s','se'].forEach(kind=>{
+      const h=doc.createElement('div'); h.className='vn-ie-handle '+kind; h.dataset.handle=kind;
+      el.appendChild(h); h.addEventListener('pointerdown',e=>inlineStartResize(e,el,kind));
+    });
+  }
+  function inlineMatchSprites(node,doc){
+    const source=(node?.sprites||[]).filter(s=>!s.hide);
+    const dom=[...doc.querySelectorAll('#sprites .sprite.show')], used=new Set();
+    dom.forEach((el,idx)=>{
+      let match=null;
+      for(const s of source){
+        if(used.has(String(s.id))) continue;
+        const img=el.querySelector('img');
+        let abs=''; try{abs=s.src?new URL(s.src,doc.baseURI).href:'';}catch(_){}
+        if((s.src&&img&&(img.src===abs||img.getAttribute('src')===s.src))||(!s.src&&!img&&(el.textContent||'').trim()===(s.emoji||'🙂'))){match=s;break;}
+      }
+      // Fallback to render order. This makes the editor robust when two sprites
+      // use the same image or when the preview is still finishing its animation.
+      if(!match) match=source.find(s=>!used.has(String(s.id)))||null;
+      if(match){used.add(String(match.id));el.dataset.vnEditorSid=String(match.id);inlineAttachHandles(doc,el);}
+    });
+  }
+  function inlineBind(doc){
+    const stage=doc.getElementById('stage'); if(!stage) return false;
+    const node=currentPreviewNode(); inlineEnsureStyle(doc); stage.classList.add('vn-inline-stage-edit');
+    inlineMatchSprites(node,doc); inlineAttachHandles(doc,doc.getElementById('box')); if(doc.getElementById('choices')) inlineAttachHandles(doc,doc.getElementById('choices'));
+    let hud=stage.querySelector('.vn-ie-hud'); if(!hud){hud=doc.createElement('div');hud.className='vn-ie-hud';hud.innerHTML='<b>КАДР</b><span>выберите элемент</span>';stage.appendChild(hud);}
+    let tip=stage.querySelector('.vn-ie-tip'); if(!tip){tip=doc.createElement('div');tip.className='vn-ie-tip';stage.appendChild(tip);}
+    tip.textContent='Перетаскивание · Shift — несколько · ручки — размер';
+    const down=e=>{
+      if(!inlineStage.active || e.target.closest('.vn-ie-hud,.vn-ie-tip,.vn-ie-handle')) return;
+      const el=e.target.closest('#name,#text,.sprite,#choices,#box');
+      if(!el){ if(e.target===stage){inlineStage.selected=[];inlinePaintSelection();inlineRenderProperties();} return; }
+      const key=el.classList.contains('sprite')?inlineKey('sprite',el.dataset.vnEditorSid):el.id;
+      inlineStartDrag(e,el,key);
+    };
+    stage.addEventListener('pointerdown',down,true);
+    const click=e=>{if(inlineStage.active){e.preventDefault();e.stopPropagation();}};
+    stage.addEventListener('click',click,true);
+    inlineStage.cleanup=()=>{stage.removeEventListener('pointerdown',down,true);stage.removeEventListener('click',click,true);stage.classList.remove('vn-inline-stage-edit','vn-ie-grid');stage.querySelectorAll('.vn-ie-selected').forEach(x=>x.classList.remove('vn-ie-selected','vn-ie-single'));stage.querySelectorAll('.vn-ie-handle,.vn-ie-hud,.vn-ie-tip').forEach(x=>x.remove());};
+    inlinePaintSelection(); return true;
+  }
+  function inlineStartDrag(e,el,key){
+    if(!inlineStage.active||e.button!==0||inlineStage.locked.has(key)) return;
+    const node=currentPreviewNode(),doc=el.ownerDocument,stage=doc.getElementById('stage'); if(!node||!stage) return;
+    e.preventDefault();e.stopPropagation();
+    inlineSelectKey(key,e.shiftKey);
+    const keys=inlineSelectedKeys().filter(k=>!inlineStage.locked.has(k)); if(!keys.length) return;
+    inlinePushHistory();
+    const rect=stage.getBoundingClientRect(),sx=e.clientX,sy=e.clientY;
+    const initial=keys.map(k=>({key:k,el:inlineFindEl(doc,k),data:inlineReadPosition(node,k)}));
+    const move=ev=>{
+      const dx=(ev.clientX-sx)/rect.width*100, dy=(ev.clientY-sy)/rect.height*100;
+      initial.forEach(item=>inlineWritePosition(node,item.key,item.data,dx,dy));
+      inlineApplyNodeToDom(node,doc); inlinePaintSelection(); inlineRenderProperties(false); inlineMarkDirty();
+    };
+    const up=()=>{doc.removeEventListener('pointermove',move);doc.removeEventListener('pointerup',up);inlineRefreshTree();};
+    doc.addEventListener('pointermove',move);doc.addEventListener('pointerup',up,{once:true});
+  }
+  function inlineReadPosition(node,key){
+    if(key.startsWith('sprite:')){const s=(node.sprites||[]).find(x=>String(x.id)===key.slice(7));if(!s)return null;const xy=s.x!=null&&s.y!=null?{x:Number(s.x),y:Number(s.y)}:(typeof window.slotXY==='function'?window.slotXY(s.pos||'bottom'):{x:50,y:0});return {type:'sprite',x:xy.x,y:xy.y};}
+    const lay=node.layout||{}; if(key==='box'){const b=lay.box||{left:50,bottom:4,width:92,height:24};return {type:'box',x:Number(b.left),y:Number(b.bottom),width:Number(b.width),height:Number(b.height||24)};}
+    if(key==='name'){const t=lay.box?.name||{x:3,y:8,width:92};return {type:'text',x:Number(t.x||0),y:Number(t.y||0),width:Number(t.width||92)};}
+    if(key==='text'){const t=lay.box?.text||{x:3,y:28,width:94};return {type:'text',x:Number(t.x||0),y:Number(t.y||0),width:Number(t.width||94)};}
+    if(key==='choices'){const c=lay.choices||{left:50,top:42,width:56};return {type:'choices',x:Number(c.left),y:Number(c.top),width:Number(c.width)};}
+    return null;
+  }
+  function snap(v){return inlineStage.snap?Math.round(v):v;}
+  function inlineWritePosition(node,key,data,dx,dy){
+    if(!data)return;
+    if(data.type==='sprite'){const s=node.sprites.find(x=>String(x.id)===key.slice(7));if(!s)return;s.x=Math.max(-20,Math.min(120,snap(data.x+dx)));s.y=Math.max(-20,Math.min(120,snap(data.y-dy)));s.pos='custom';return;}
+    node.layout=node.layout||{};
+    if(data.type==='box'){node.layout.box={...(node.layout.box||{}),left:Math.max(5,Math.min(95,snap(data.x+dx))),bottom:Math.max(0,Math.min(90,snap(data.y-dy))),width:data.width,height:data.height};}
+    if(data.type==='text'){const prop=key==='name'?'name':'text';const box=node.layout.box||{};const cur=box[prop]||{};node.layout.box={...box,[prop]:{...cur,x:Math.max(-20,Math.min(120,snap(data.x+dx))),y:Math.max(-20,Math.min(120,snap(data.y+dy))),width:data.width}};}
+    if(data.type==='choices'){node.layout.choices={...(node.layout.choices||{}),left:Math.max(5,Math.min(95,snap(data.x+dx))),top:Math.max(5,Math.min(90,snap(data.y+dy))),width:data.width};}
+  }
+  function inlineStartResize(e,el,handle){
+    if(!inlineStage.active||e.button!==0) return; const key=el.classList.contains('sprite')?inlineKey('sprite',el.dataset.vnEditorSid):el.id;
+    if(inlineStage.locked.has(key)) return;
+    const node=currentPreviewNode(),stage=el.ownerDocument.getElementById('stage'); if(!node||!stage)return;
+    e.preventDefault();e.stopPropagation();inlineSelectKey(key,false);inlinePushHistory();
+    const rect=stage.getBoundingClientRect(), startX=e.clientX,startY=e.clientY;
+    if(key.startsWith('sprite:')){
+      const sp=node.sprites.find(s=>String(s.id)===key.slice(7));if(!sp)return;const er=el.getBoundingClientRect(),cx=er.left+er.width/2,cy=er.top+er.height/2,startDist=Math.max(8,Math.hypot(startX-cx,startY-cy)),startScale=Number(sp.scale||100);
+      const move=ev=>{let factor=Math.hypot(ev.clientX-cx,ev.clientY-cy)/startDist;if(handle==='e'||handle==='w')factor=Math.abs(ev.clientX-cx)/Math.max(8,Math.abs(startX-cx));if(handle==='n'||handle==='s')factor=Math.abs(ev.clientY-cy)/Math.max(8,Math.abs(startY-cy));sp.scale=Math.max(15,Math.min(300,Math.round(startScale*factor)));inlineApplyNodeToDom(node,el.ownerDocument);inlineRenderProperties(false);inlineMarkDirty();};
+      const up=()=>{el.ownerDocument.removeEventListener('pointermove',move);el.ownerDocument.removeEventListener('pointerup',up);inlineRefreshTree();};el.ownerDocument.addEventListener('pointermove',move);el.ownerDocument.addEventListener('pointerup',up,{once:true});return;
+    }
+    const base=inlineReadPosition(node,key); if(!base)return;
+    const move=ev=>{const dx=(ev.clientX-startX)/rect.width*100,dy=(ev.clientY-startY)/rect.height*100;node.layout=node.layout||{};if(key==='box'){const b={...(node.layout.box||{}),width:base.width,height:base.height};if(handle==='e'||handle==='w')b.width=Math.max(30,Math.min(95,base.width+(handle==='e'?dx:-dx)));if(handle==='n'||handle==='s')b.height=Math.max(10,Math.min(80,base.height+(handle==='n'?-dy:dy)));node.layout.box=b;}else if(key==='name'||key==='text'){const prop=key==='name'?'name':'text',t={...(node.layout.box?.[prop]||{}),width:base.width};if(handle==='e'||handle==='w')t.width=Math.max(15,Math.min(120,base.width+(handle==='e'?dx:-dx)));node.layout.box={...(node.layout.box||{}),[prop]:t};}else{let width=base.width;if(handle==='e'||handle==='w')width=Math.max(20,Math.min(90,base.width+(handle==='e'?dx:-dx)));node.layout.choices={...(node.layout.choices||{}),width};}inlineApplyNodeToDom(node,el.ownerDocument);inlineRenderProperties(false);inlineMarkDirty();};
+    const up=()=>{el.ownerDocument.removeEventListener('pointermove',move);el.ownerDocument.removeEventListener('pointerup',up);inlineRefreshTree();};el.ownerDocument.addEventListener('pointermove',move);el.ownerDocument.addEventListener('pointerup',up,{once:true});
+  }
+  function inlineApplyNodeToDom(node,doc){
+    if(!node||!doc)return;
+    const lay=node.layout||{};
+    inlineMatchSprites(node,doc);
+    const domSprites=[...doc.querySelectorAll('#sprites .sprite.show')];
+    (node.sprites||[]).filter(s=>!s.hide).forEach((s,idx)=>{
+      let el=doc.querySelector('.sprite[data-vn-editor-sid="'+CSS.escape(String(s.id))+'"]');
+      if(!el) el=domSprites[idx]||null;
+      if(!el)return;
+      el.dataset.vnEditorSid=String(s.id);
+      const xy=s.x!=null&&s.y!=null?{x:Number(s.x),y:Number(s.y)}:(typeof window.slotXY==='function'?window.slotXY(s.pos||'bottom'):{x:50,y:0});
+      const sc=Number(s.scale||100)/100;
+      const floor=typeof window.isFloorAnchor==='function'?window.isFloorAnchor(s.pos,xy.y):xy.y<=4;
+      el.style.setProperty('left',xy.x+'%','important');
+      el.style.setProperty('bottom',xy.y+'%','important');
+      el.style.setProperty('right','auto','important');
+      el.style.setProperty('--sx',String(sc));
+      el.style.setProperty('transform-origin',floor?'center bottom':'center center','important');
+      el.style.setProperty('transform',floor?'translateX(-50%) scale(var(--sx))':'translate(-50%, 50%) scale(var(--sx))','important');
+      el.style.setProperty('animation','none','important');
+    });
+    const b=lay.box||{left:50,bottom:4,width:92,height:24},be=doc.getElementById('box');
+    if(be){be.style.setProperty('left',b.left+'%','important');be.style.setProperty('bottom',b.bottom+'%','important');be.style.setProperty('width',b.width+'%','important');if(b.height!=null)be.style.setProperty('height',b.height+'%','important');be.style.setProperty('top','auto','important');be.style.setProperty('transform','translateX(-50%)','important');be.style.setProperty('box-sizing','border-box','important');const defs={name:{x:3,y:8,width:92},text:{x:3,y:28,width:94}};for(const prop of ['name','text']){const el=doc.getElementById(prop);if(!el)continue;const st={...defs[prop],...(b[prop]||{})};el.style.setProperty('left',Number(st.x||0)+'%','important');el.style.setProperty('top',Number(st.y||0)+'%','important');el.style.setProperty('width',Number(st.width||defs[prop].width)+'%','important');el.style.setProperty('right','auto','important');el.style.setProperty('bottom','auto','important');el.style.setProperty('margin','0','important');el.style.setProperty('max-width','none','important');el.style.setProperty('min-height','0','important');if(st.color)el.style.setProperty('color',st.color,'important');if(st.fontSize)el.style.setProperty('font-size',st.fontSize+'px','important');if(st.fontFamily)el.style.setProperty('font-family',st.fontFamily,'important');if(st.fontWeight)el.style.setProperty('font-weight',st.fontWeight,'important');if(st.fontStyle)el.style.setProperty('font-style',st.fontStyle,'important');if(st.lineHeight)el.style.setProperty('line-height',st.lineHeight,'important');}if(b.background)be.style.setProperty('background',b.background,'important');if(b.borderColor)be.style.setProperty('border-color',b.borderColor,'important');if(b.borderRadius!=null)be.style.setProperty('border-radius',b.borderRadius+'px','important');if(b.opacity!=null)be.style.setProperty('opacity',b.opacity,'important');}
+    const c=lay.choices||{left:50,top:42,width:56},ce=doc.getElementById('choices');
+    if(ce){ce.style.setProperty('left',c.left+'%','important');ce.style.setProperty('top',c.top+'%','important');ce.style.setProperty('width',c.width+'%','important');ce.style.setProperty('bottom','auto','important');ce.style.setProperty('transform','translateX(-50%)','important');const it=c.item||{};ce.querySelectorAll('.choice').forEach(ch=>{if(it.background)ch.style.setProperty('background',it.background,'important');if(it.color)ch.style.setProperty('color',it.color,'important');if(it.borderColor)ch.style.setProperty('border-color',it.borderColor,'important');if(it.borderRadius!=null)ch.style.setProperty('border-radius',it.borderRadius+'px','important');if(it.fontSize)ch.style.setProperty('font-size',it.fontSize+'px','important');if(it.fontFamily)ch.style.setProperty('font-family',it.fontFamily,'important');if(it.fontWeight)ch.style.setProperty('font-weight',it.fontWeight,'important');if(it.padding!=null)ch.style.setProperty('padding',it.padding+'px','important');});}
+    inlinePaintSelection();
+  }
+  function inlineRenderProperties(refresh=true){
+    const body=$('playEditBody'); if(!body)return; const node=currentPreviewNode();if(!node)return;
+    const keys=inlineSelectedKeys();
+    if(!keys.length){body.innerHTML='<div class="fe-empty">Выберите объект на кадре или в слоях.</div>';return;}
+    if(keys.length>1){body.innerHTML='<div class="fe-selection-count">Выбрано объектов: <b>'+keys.length+'</b></div><div class="fe-actions"><button class="tb" data-fe="group-left">По левому краю</button><button class="tb" data-fe="group-center">По центру</button></div>';body.querySelectorAll('[data-fe]').forEach(b=>b.onclick=()=>inlineGroupAction(b.dataset.fe));return;}
+    const key=keys[0];
+    if(key==='background'){body.innerHTML='<div class="fe-empty">Фон сцены<br><span>Фон не перемещается как объект.</span></div>';return;}
+    if(key.startsWith('sprite:')){
+      const s=node.sprites.find(x=>String(x.id)===key.slice(7));if(!s)return;
+      const xy=s.x!=null&&s.y!=null?{x:s.x,y:s.y}:(typeof window.slotXY==='function'?window.slotXY(s.pos||'bottom'):{x:50,y:0});
+      body.innerHTML='<div class="fe-prop-title">'+esc(s.id||'Персонаж')+'</div><label>X</label><input data-fe="sx" type="number" step="0.1" value="'+xy.x+'"><label>Y</label><input data-fe="sy" type="number" step="0.1" value="'+xy.y+'"><label>Масштаб</label><input data-fe="ss" type="number" min="15" max="300" step="1" value="'+(s.scale||100)+'"><div class="fe-actions"><button class="tb" data-fe="dup">Дублировать</button><button class="tb" data-fe="del">Удалить</button></div>';
+      const set=(fn)=>{body.querySelectorAll('input').forEach(i=>i.addEventListener('change',()=>{inlinePushHistory();fn(i);inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();}));};
+      body.querySelector('[data-fe="sx"]').onchange=e=>{inlinePushHistory();s.x=Number(e.target.value);s.pos='custom';inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};
+      body.querySelector('[data-fe="sy"]').onchange=e=>{inlinePushHistory();s.y=Number(e.target.value);s.pos='custom';inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};
+      body.querySelector('[data-fe="ss"]').onchange=e=>{inlinePushHistory();s.scale=Number(e.target.value)||100;inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};
+      body.querySelector('[data-fe="dup"]').onclick=()=>inlineDuplicateSprite(s.id);
+      body.querySelector('[data-fe="del"]').onclick=()=>inlineDeleteSelected();
+      return;
+    }
+    const lay=node.layout||{};
+    if(key==='box'){const b=lay.box||{left:50,bottom:4,width:92};body.innerHTML='<div class="fe-prop-title">Диалоговое окно</div><label>X</label><input data-fe="x" type="number" step="0.1" value="'+b.left+'"><label>Y</label><input data-fe="y" type="number" step="0.1" value="'+b.bottom+'"><label>Ширина</label><input data-fe="w" type="number" min="30" max="95" step="0.5" value="'+b.width+'">';inlineWireBoxProps(body,node);return;}
+    if(key==='choices'){const c=lay.choices||{left:50,top:42,width:56};body.innerHTML='<div class="fe-prop-title">Варианты выбора</div><label>X</label><input data-fe="x" type="number" step="0.1" value="'+c.left+'"><label>Y</label><input data-fe="y" type="number" step="0.1" value="'+c.top+'"><label>Ширина</label><input data-fe="w" type="number" min="20" max="90" step="0.5" value="'+c.width+'">';inlineWireChoiceProps(body,node);}
+  }
+  function inlineWireBoxProps(body,node){const b=node.layout?.box||{left:50,bottom:4,width:92,height:24};[['x','left'],['y','bottom'],['w','width'],['h','height'],['bg','background'],['bc','borderColor'],['br','borderRadius']].forEach(([a,k])=>{const el=body.querySelector('[data-p="'+a+'"]');if(el)el.onchange=()=>{inlinePushHistory();b[k]=(a==='x'||a==='y'||a==='w'||a==='h'||a==='br')?Number(el.value):el.value;node.layout=node.layout||{};node.layout.box={...b};inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};});}
+  function inlineWireChoiceProps(body,node){const c=node.layout?.choices||{left:50,top:42,width:56};[['x','left'],['y','top'],['w','width']].forEach(([a,k])=>{const el=body.querySelector('[data-fe="'+a+'"]');if(el)el.onchange=()=>{inlinePushHistory();c[k]=Number(el.value);node.layout=node.layout||{};node.layout.choices={...c};inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};});}
+  function inlineMoveSpriteLayer(id,delta){const node=currentPreviewNode();if(!node)return;const i=node.sprites.findIndex(s=>String(s.id)===String(id));if(i<0)return;const j=Math.max(0,Math.min(node.sprites.length-1,i+delta));if(i===j)return;inlinePushHistory();const [sp]=node.sprites.splice(i,1);node.sprites.splice(j,0,sp);inlineMarkDirty();inlineReloadPreviewFrame();}
+  function inlineDuplicateSprite(id){const node=currentPreviewNode();if(!node)return;const s=node.sprites.find(x=>String(x.id)===String(id));if(!s)return;inlinePushHistory();const copy=JSON.parse(JSON.stringify(s));copy.id=String(s.id||'sprite')+'_copy_'+Date.now().toString(36).slice(-4);copy.x=Math.min(120,Number(s.x??50)+4);copy.y=Math.min(120,Number(s.y??0)+2);copy.pos='custom';node.sprites.push(copy);inlineMarkDirty();inlineReloadPreviewFrame();}
+  function inlineDeleteSelected(){const node=currentPreviewNode();if(!node)return;const ids=inlineSelectedKeys().filter(k=>k.startsWith('sprite:')).map(k=>k.slice(7));if(!ids.length)return;inlinePushHistory();node.sprites=node.sprites.filter(s=>!ids.includes(String(s.id)));inlineStage.selected=[];inlineMarkDirty();inlineReloadPreviewFrame();}
+  function inlineGroupAction(action){const node=currentPreviewNode();if(!node||inlineStage.selected.length<2)return;inlinePushHistory();const pos=inlineStage.selected.map(k=>({k,d:inlineReadPosition(node,k)})).filter(x=>x.d);if(action==='group-left'){const min=Math.min(...pos.map(x=>x.d.x));pos.forEach(x=>{if(x.d.type==='sprite'){const s=node.sprites.find(s=>String(s.id)===x.k.slice(7));if(s){s.x=min;s.pos='custom';}}});}else if(action==='group-center'){const avg=pos.reduce((a,x)=>a+x.d.x,0)/pos.length;pos.forEach(x=>{if(x.d.type==='sprite'){const s=node.sprites.find(s=>String(s.id)===x.k.slice(7));if(s){s.x=avg;s.pos='custom';}}});}inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();}
+  function inlineRenderLayers(){
+    const body=$('playEditBody');if(!body)return;const node=currentPreviewNode();if(!node)return;
+    const entries=inlineLayerEntries(node);
+    body.innerHTML='<div class="fe-layer-head"><span>СЛОИ</span><span>'+entries.length+'</span></div><div class="fe-layers">'+entries.map(e=>'<div class="fe-layer '+(inlineStage.selected.includes(e.key)?'selected':'')+' '+(e.locked?'locked':'')+'" data-layer="'+esc(e.key)+'"><span class="fe-eye">'+(e.type==='sprite'&&e.sprite?.hide?'○':'●')+'</span><span class="fe-layer-name">'+esc(e.label)+'</span><span class="fe-layer-type">'+(e.type==='sprite'?'IMG':e.type==='box'?'TXT':e.type==='choices'?'CHO':'BG')+'</span></div>').join('')+'</div><div class="fe-tools"><button class="tb" data-fe="undo" '+(!inlineStage.history.length?'disabled':'')+'>↶</button><button class="tb" data-fe="redo" '+(!inlineStage.future.length?'disabled':'')+'>↷</button><button class="tb" data-fe="grid">▦ Сетка</button><button class="tb" data-fe="snap">⊞ Привязка</button></div>';
+    body.querySelectorAll('.fe-layer').forEach(el=>el.onclick=e=>{const k=el.dataset.layer;if(k.startsWith('sprite:')&&e.target.closest('.fe-eye')){const s=node.sprites.find(x=>String(x.id)===k.slice(7));if(s){inlinePushHistory();s.hide=!s.hide;inlineMarkDirty();inlineReloadPreviewFrame();}return;}inlineSelectKey(k,e.shiftKey);inlineRenderFrameEditorSide();});
+    body.querySelector('[data-fe="undo"]').onclick=inlineUndo;body.querySelector('[data-fe="redo"]').onclick=inlineRedo;body.querySelector('[data-fe="grid"]').onclick=()=>{inlineStage.grid=!inlineStage.grid;const d=previewDoc();if(d)d.getElementById('stage')?.classList.toggle('vn-ie-grid',inlineStage.grid);};body.querySelector('[data-fe="snap"]').onclick=()=>{inlineStage.snap=!inlineStage.snap;inlineRenderFrameEditorSide();};
+  }
+  function inlineRenderFrameEditorSide(){
+    const side=$('playEditSide'),body=$('playEditBody'),hint=$('playEditHint');if(!side||!body)return;const n=currentPreviewNode();
+    side.classList.add('open','frame-editor');if(hint)hint.textContent=n?('Блок «'+(n.title||n.id)+'» · композиция кадра'):'Выберите блок';
+    inlineRenderLayers();
+    const props=document.createElement('div');props.className='fe-properties';body.appendChild(props); // layer list remains above properties
+    inlineRenderPropertiesInto(props);
+  }
+  function inlineRenderPropertiesInto(target){
+    const old=$('playEditBody');if(!target)return;const node=currentPreviewNode();if(!node)return;const keys=inlineSelectedKeys();
+    if(!keys.length){target.innerHTML='<div class="fe-empty">Выберите объект в кадре или в слоях.</div>';return;}
+    if(keys.length>1){target.innerHTML='<div class="fe-selection-count">Выбрано: <b>'+keys.length+'</b></div><div class="fe-actions"><button class="tb" data-fe="group-left">По левому краю</button><button class="tb" data-fe="group-center">По центру</button></div>';target.querySelector('[data-fe="group-left"]').onclick=()=>inlineGroupAction('group-left');target.querySelector('[data-fe="group-center"]').onclick=()=>inlineGroupAction('group-center');return;}
+    const k=keys[0];if(k==='background'){target.innerHTML='<div class="fe-empty"><b>Фон</b><br>Фон сцены используется как нижний слой.</div>';return;}
+    if(k.startsWith('sprite:')){const s=node.sprites.find(x=>String(x.id)===k.slice(7));if(!s)return;const xy=s.x!=null&&s.y!=null?{x:s.x,y:s.y}:(typeof window.slotXY==='function'?window.slotXY(s.pos||'bottom'):{x:50,y:0});target.innerHTML='<div class="fe-prop-title">'+esc(s.id||'Персонаж')+'</div><label>X</label><input data-p="sx" type="number" step="0.1" value="'+xy.x+'"><label>Y</label><input data-p="sy" type="number" step="0.1" value="'+xy.y+'"><label>Масштаб</label><input data-p="ss" type="number" min="15" max="300" step="1" value="'+(s.scale||100)+'"><div class="fe-actions"><button class="tb" data-p="up">↑ Выше</button><button class="tb" data-p="down">↓ Ниже</button></div><div class="fe-actions"><button class="tb" data-p="dup">Дублировать</button><button class="tb" data-p="del">Удалить</button></div>';target.querySelector('[data-p="sx"]').onchange=e=>{inlinePushHistory();s.x=Number(e.target.value);s.pos='custom';inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};target.querySelector('[data-p="sy"]').onchange=e=>{inlinePushHistory();s.y=Number(e.target.value);s.pos='custom';inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};target.querySelector('[data-p="ss"]').onchange=e=>{inlinePushHistory();s.scale=Number(e.target.value)||100;inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();inlineRefreshTree();};target.querySelector('[data-p="up"]').onclick=()=>inlineMoveSpriteLayer(s.id,1);target.querySelector('[data-p="down"]').onclick=()=>inlineMoveSpriteLayer(s.id,-1);target.querySelector('[data-p="dup"]').onclick=()=>inlineDuplicateSprite(s.id);target.querySelector('[data-p="del"]').onclick=inlineDeleteSelected;return;}
+    const lay=node.layout||{};
+    if(k==='box'){const b=lay.box||{left:50,bottom:4,width:92,height:24};target.innerHTML='<div class="fe-prop-title">Диалоговое окно</div><label>X</label><input data-p="x" type="number" step="0.1" value="'+(b.left??50)+'"><label>Y</label><input data-p="y" type="number" step="0.1" value="'+(b.bottom??4)+'"><label>Ширина</label><input data-p="w" type="number" min="30" max="95" step="0.5" value="'+(b.width??92)+'"><label>Высота</label><input data-p="h" type="number" min="10" max="80" step="0.5" value="'+(b.height??24)+'"><label>Фон</label><input data-p="bg" type="text" value="'+esc(b.background||'rgba(31,26,46,.92)')+'"><label>Рамка</label><input data-p="bc" type="text" value="'+esc(b.borderColor||'')+'"><label>Скругление, px</label><input data-p="br" type="number" min="0" max="48" step="1" value="'+(b.borderRadius??10)+'">';inlineWireBoxProps(target,node);return;}
+    if(k==='name'||k==='text'){const prop=k==='name'?'name':'text',d=k==='name'?{x:3,y:8,width:92,color:'#d9a0b7',fontSize:15,fontFamily:'Georgia, Times New Roman, serif',fontWeight:400,fontStyle:'italic'}:{x:3,y:28,width:94,color:'#efe7d6',fontSize:16.5,fontFamily:'ui-sans-serif, system-ui, sans-serif',fontWeight:400,fontStyle:'normal',lineHeight:1.55},st={...d,...(lay.box?.[prop]||{})};target.innerHTML='<div class="fe-prop-title">'+(k==='name'?'Имя / заголовок':'Текст реплики')+'</div><label>X внутри окна</label><input data-p="tx" type="number" step="0.5" value="'+st.x+'"><label>Y внутри окна</label><input data-p="ty" type="number" step="0.5" value="'+st.y+'"><label>Ширина</label><input data-p="tw" type="number" min="10" max="120" step="0.5" value="'+st.width+'"><label>Размер, px</label><input data-p="fs" type="number" min="6" max="96" step="0.5" value="'+st.fontSize+'"><label>Цвет текста</label><div class="fe-color-row"><input data-p="color" type="color" value="'+(String(st.color).match(/^#[0-9a-f]{6}$/i)?st.color:'#efe7d6')+'"><input data-p="colorText" type="text" value="'+esc(st.color)+'"></div><label>Шрифт</label><input data-p="ff" type="text" value="'+esc(st.fontFamily)+'"><label>Насыщенность</label><select data-p="fw"><option value="400">Обычный</option><option value="500">Средний</option><option value="600">Полужирный</option><option value="700">Жирный</option></select><label>Начертание</label><select data-p="fi"><option value="normal">Обычный</option><option value="italic">Курсив</option></select>'+(k==='text'?'<label>Межстрочный интервал</label><input data-p="lh" type="number" min="0.8" max="3" step="0.05" value="'+(st.lineHeight||1.55)+'">':'');target.querySelector('[data-p="fw"]').value=String(st.fontWeight||400);target.querySelector('[data-p="fi"]').value=st.fontStyle||'normal';target.querySelector('[data-p="color"]').oninput=e=>{target.querySelector('[data-p="colorText"]').value=e.target.value;target.querySelector('[data-p="colorText"]').dispatchEvent(new Event('change'));};['tx','ty','tw','fs','colorText','ff','fw','fi','lh'].forEach(a=>{const el=target.querySelector('[data-p="'+a+'"]');if(el)el.onchange=()=>{inlinePushHistory();const box={...(node.layout?.box||{}),[prop]:{...d,...(node.layout?.box?.[prop]||{})}},t=box[prop];if(a==='tx')t.x=Number(el.value);if(a==='ty')t.y=Number(el.value);if(a==='tw')t.width=Number(el.value);if(a==='fs')t.fontSize=Number(el.value);if(a==='colorText')t.color=el.value.trim();if(a==='ff')t.fontFamily=el.value;if(a==='fw')t.fontWeight=Number(el.value);if(a==='fi')t.fontStyle=el.value;if(a==='lh')t.lineHeight=Number(el.value);node.layout=node.layout||{};node.layout.box=box;inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();};});return;}
+    if(k==='choices'){const c=lay.choices||{left:50,top:42,width:56},it=c.item||{};target.innerHTML='<div class="fe-prop-title">Варианты выбора</div><label>X</label><input data-p="x" type="number" step="0.1" value="'+c.left+'"><label>Y</label><input data-p="y" type="number" step="0.1" value="'+c.top+'"><label>Ширина</label><input data-p="w" type="number" min="20" max="90" step="0.5" value="'+c.width+'"><label>Фон кнопок</label><input data-p="cbg" type="text" value="'+esc(it.background||'rgba(31,26,46,.95)')+'"><label>Цвет текста</label><input data-p="cc" type="text" value="'+esc(it.color||'#efe7d6')+'"><label>Размер текста</label><input data-p="cfs" type="number" min="8" max="48" step="0.5" value="'+(it.fontSize||15)+'"><label>Скругление</label><input data-p="cbr" type="number" min="0" max="40" step="1" value="'+(it.borderRadius??8)+'">';[['x','left'],['y','top'],['w','width']].forEach(([a,key])=>target.querySelector('[data-p="'+a+'"]').onchange=e=>{inlinePushHistory();const nc={...(node.layout?.choices||c),[key]:Number(e.target.value)};node.layout=node.layout||{};node.layout.choices=nc;inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();});[['cbg','background'],['cc','color'],['cfs','fontSize'],['cbr','borderRadius']].forEach(([a,key])=>target.querySelector('[data-p="'+a+'"]').onchange=e=>{inlinePushHistory();const nc={...(node.layout?.choices||c),item:{...(node.layout?.choices?.item||it),[key]:(key==='fontSize'||key==='borderRadius')?Number(e.target.value):e.target.value}};node.layout=node.layout||{};node.layout.choices=nc;inlineApplyNodeToDom(node,previewDoc());inlineMarkDirty();});}
+  }
+  function inlineReloadPreviewFrame(){
+    const n=currentPreviewNode();if(!n)return;
+    try{openPlayPreview(n.id);}catch(_){ }
+    setTimeout(()=>{if(inlineStage.active)setInlineStageMode(true);},160);
+  }
+  function inlineRenderFrame(){const d=previewDoc();if(!d)return;inlineBind(d);inlineApplyNodeToDom(currentPreviewNode(),d);}
+  function setInlineStageMode(on){
+    const frame=$('playPreviewFrame'),btn=$('playPreviewStageBtn');if(!frame)return;
+    if(!on){try{inlineStage.cleanup?.();}catch(_){} inlineStage.active=false;inlineStage.cleanup=null;inlineStage.selected=[];document.getElementById('playPreviewBody')?.classList.remove('vn-inline-active');$('playEditSide')?.classList.remove('frame-editor');if(btn){btn.classList.remove('active');btn.textContent='✦ Редактор кадра';}return;}
+    const doc=previewDoc();if(!doc||!doc.getElementById('stage')){if(typeof window.notify==='function')window.notify('Превью ещё загружается — попробуйте ещё раз','err');return;}
+    try{inlineStage.cleanup?.();}catch(_){}
+    inlineStage.active=true;inlineStage.iframe=frame;document.getElementById('playPreviewBody')?.classList.add('vn-inline-active');inlineBind(doc);inlineRenderFrameEditorSide();
+    if(btn){btn.classList.add('active');btn.textContent='✓ Редактор кадра';}
+  }
+  // Compatibility with the legacy Preview settings button. The new Frame Editor
+  // owns the frame layout, but older core builds still call this global handler.

@@ -1,0 +1,18 @@
+# Опционально: локальная MariaDB
+# docker compose up -d
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: vn_studio
+      MARIADB_USER: vn
+      MARIADB_PASSWORD: vn_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - vn_mariadb_data:/var/lib/mysql
+
+volumes:
+  vn_mariadb_data:

@@ -1,83 +1,101 @@
-# VN Engine + Plug Server
+# VN Server
 
-Полный проект VN Engine с отдельным Plug Server — каталогом и сервером расширений.
-
-## Структура
-
-```text
-vn-project/
-├── vn-server/
-│   ├── css/
-│   ├── extensions/
-│   │   ├── camera-shake/
-│   │   └── wait/
-│   ├── js/
-│   │   ├── core.js
-│   │   ├── engine.js
-│   │   ├── extensions-host.js
-│   │   ├── parser.js
-│   │   ├── plugin-sdk.js
-│   │   ├── plugin-manager.js
-│   │   └── ui.js
-│   ├── editor.html
-│   ├── index.html
-│   ├── player.html
-│   ├── preview.html
-│   └── server.js
-│
-└── plug-server/
-    ├── data/
-    │   ├── docs/
-    │   └── plugins/
-    │       ├── editor-sync/1.0.0/
-    │       ├── inventory/1.0.0/
-    │       └── multi-window/1.0.0/
-    ├── public/
-    ├── package.json
-    └── server.js
-```
-
-Пользовательские плагины находятся в `plug-server/data/plugins` и устанавливаются из каталога. В `vn-server/extensions` остаются только встроенные расширения движка.
+Простой Node.js-сервис для VN Studio: хранение проектов, загрузка картинок, публикация игры по ссылке.
 
 ## Запуск
-
-Сначала запустите каталог:
-
-```bash
-cd plug-server
-npm start
-```
-
-По умолчанию: `http://127.0.0.1:8787`.
-
-Затем запустите движок:
 
 ```bash
 cd vn-server
 node server.js
+# или
+npm start
 ```
 
-По умолчанию: `http://localhost:8080`.
+Открой http://localhost:3000
 
-## Каталог плагинов
+Порт: `PORT=8080 node server.js`
 
-Кнопка `⚙ Плагины` в приложении открывает три режима:
+## Возможности
 
-- **Каталог** — плагины из Plug Server, поиск, детали, установка и обновление;
-- **Установленные** — включение, выключение, удаление и детали;
-- **Локальная установка** — `.js` файл или произвольный URL для разработки.
+| URL | Описание |
+|-----|----------|
+| `GET /` | Главная — список проектов |
+| `GET /editor?id=` | Редактор проекта |
+| `GET /studio` | Студия (плеер+редактор) |
+| `GET /play/:id` | Игра проекта (JSON подставляется автоматически) |
+| `GET /api/projects` | Список проектов |
+| `POST /api/projects` | Создать/сохранить проект (JSON body) |
+| `GET /api/projects/:id` | Получить проект |
+| `PUT /api/projects/:id` | Обновить |
+| `DELETE /api/projects/:id` | Удалить |
+| `POST /api/assets` | Загрузить картинку |
+| `GET /api/assets/:projectId` | Список файлов |
+| `GET /assets/:projectId/:file` | Отдать картинку |
 
-Адрес каталога по умолчанию — `http://127.0.0.1:8787`. Его можно изменить прямо в окне менеджера. После изменения списка плагинов приложение перезапускается, чтобы новый код загрузился во все нужные контексты.
+## Загрузка ассета
 
-## API Plug Server
+**multipart:**
 
-- `GET /api/health`
-- `GET /api/plugins`
-- `GET /api/plugins/:id`
-- `GET /api/plugins/:id/:version`
-- `POST /api/plugins`
-- `GET /api/docs/sdk/:version`
-- `GET /api/docs/engine/:version`
-- `/plugins/:id/:version/extension.js` — код расширения.
+```bash
+curl -F "file=@yuki.png" -F "projectId=demo" http://localhost:3000/api/assets
+```
 
-Plug Server разрешает CORS для локального клиента VN Engine.
+**JSON (data URL из редактора):**
+
+```bash
+curl -X POST http://localhost:3000/api/assets \
+  -H "Content-Type: application/json" \
+  -d '{"projectId":"demo","name":"yuki.png","dataUrl":"data:image/png;base64,..."}'
+```
+
+Ответ:
+
+```json
+{ "ok": true, "url": "/assets/demo/xxxx.png", "projectId": "demo" }
+```
+
+В сценарии указывай `"src": "/assets/demo/xxxx.png"` — плеер и AssetCache грузят с того же origin.
+
+## Сохранение проекта
+
+```bash
+curl -X POST http://localhost:3000/api/projects \
+  -H "Content-Type: application/json" \
+  -d @my-game.json
+```
+
+Ответ: `{ "id": "...", "url": "/play/..." }`
+
+## Структура данных
+
+```
+vn-server/
+  server.js
+  public/                 # index.html, editor.html
+  data/
+    projects/
+      <projectId>/
+        project.json      # сценарий
+        assets/           # картинки этого проекта
+          photo.webp
+```
+
+Публичный URL картинки (как в JSON): `/assets/<projectId>/<file>`  
+(файл лежит в `data/projects/<projectId>/assets/`).
+
+При старте сервер один раз переносит старый формат
+`data/projects/*.json` + `data/assets/<id>/` в новую схему.
+
+Без внешних зависимостей — только Node.js ≥ 18.
+
+
+## Auth (MariaDB) — phase 1
+
+1. Copy `.env.example` → `.env` and set `DB_*`
+2. Start DB: `docker compose up -d` (optional)
+3. `npm install`
+4. `npm run migrate`
+5. `npm start`
+6. Open `/register` and `/login`
+
+Without `DB_HOST`, file-based projects still work; auth API returns 503.

@@ -1,0 +1,16 @@
+{
+  "id": "demo",
+  "title": "Demo",
+  "updatedAt": "2026-09-25T03:09:02.884Z",
+  "version": 2,
+  "variables": [],
+  "assets": [],
+  "scenes": [],
+  "nodes": [
+    {
+      "id": "start",
+      "text": "Hello",
+      "next": ""
+    }
+  ]
+}

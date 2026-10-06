@@ -1,0 +1,314 @@
+{
+  "id": "123-b180",
+  "title": "Последний поезд",
+  "version": 2,
+  "bgm": "",
+  "bgmVol": 0.55,
+  "sfxVol": 1,
+  "masterVol": 1,
+  "published": true,
+  "variables": [
+    {
+      "id": "trust_yuki",
+      "name": "trust_yuki",
+      "type": "number",
+      "default": 0
+    },
+    {
+      "id": "met_yuki",
+      "name": "met_yuki",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "id": "met_yuki",
+      "name": "met_yuki",
+      "type": "bool",
+      "default": true
+    }
+  ],
+  "assets": [
+    {
+      "id": "yuki",
+      "name": "yuki",
+      "type": "char",
+      "src": "/assets/123-b180/yuki_muus6ck3.jpg",
+      "folder": ""
+    },
+    {
+      "id": "station",
+      "name": "station",
+      "type": "bg",
+      "src": "/assets/123-b180/station_muus6e20.jpg",
+      "folder": ""
+    },
+    {
+      "id": "night",
+      "name": "night",
+      "type": "bg",
+      "src": "/assets/123-b180/night_muus6f5p.jpg",
+      "folder": ""
+    },
+    {
+      "id": "theme",
+      "name": "theme",
+      "type": "music",
+      "src": "/assets/123-b180/theme_muus6gs8.mp3",
+      "folder": ""
+    },
+    {
+      "id": "rain",
+      "name": "rain",
+      "type": "sfx",
+      "src": "/assets/123-b180/rain_muus6iih.ogg",
+      "folder": ""
+    }
+  ],
+  "assetFolders": [],
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "Вокзал",
+      "color": "#5b7fa6",
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "bgVariants": [],
+      "layout": null,
+      "bgm": "",
+      "x": 24,
+      "y": 32,
+      "w": 1648.7530629522525,
+      "h": 448.61181851378603
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start",
+      "speaker": "",
+      "text": "Дождь стучит по крыше вокзала. Через минуту прибудет последний поезд.",
+      "x": 76.51765555480831,
+      "y": 131.71759136292326,
+      "title": "start",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "arrive"
+    },
+    {
+      "id": "arrive",
+      "speaker": "",
+      "text": "На платформе появляется фигура — это Юки.",
+      "x": 340,
+      "y": 240,
+      "title": "arrive",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "sprites": [
+        {
+          "id": "yuki",
+          "src": "/assets/123-b180/yuki_muus6ck3.jpg",
+          "emoji": "🙂",
+          "pos": "right",
+          "hide": false,
+          "anim": "fade",
+          "animOut": "fade",
+          "condition": null,
+          "x": 82,
+          "y": 38
+        }
+      ],
+      "next": "meet"
+    },
+    {
+      "id": "meet",
+      "speaker": "Юки",
+      "text": "Ты тоже опоздала на автобус?",
+      "x": 605.9115960476373,
+      "y": 221.96776290457763,
+      "title": "meet",
+      "sceneId": "s1",
+      "layout": {
+        "box": {
+          "width": 52.949367088607595,
+          "height": 27.653846153846153,
+          "text": {
+            "x": 2.4936708860759493,
+            "y": 47.42307692307692,
+            "width": 94
+          },
+          "name": {
+            "x": 2.4936708860759493,
+            "y": 30.98076923076923,
+            "width": 92
+          },
+          "left": null,
+          "bottom": null
+        },
+        "choices": {
+          "width": 56,
+          "height": 11.538461538461537,
+          "left": null,
+          "top": null
+        }
+      },
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "sprites": [
+        {
+          "id": "yuki",
+          "src": "/assets/123-b180/yuki_muus6ck3.jpg",
+          "emoji": "🙂",
+          "pos": "custom",
+          "hide": false,
+          "anim": "fade",
+          "animOut": "fade",
+          "condition": null,
+          "x": 35.22784810126582,
+          "y": 68.67307692307693
+        }
+      ],
+      "choices": [
+        {
+          "label": "«Да, ужасно не повезло»",
+          "next": "friendly",
+          "condition": null,
+          "effects": [
+            {
+              "var": "trust_yuki",
+              "op": "add",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "label": "Промолчать и отвернуться",
+          "next": "cold",
+          "condition": null,
+          "effects": [
+            {
+              "var": "trust_yuki",
+              "op": "sub",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "friendly",
+      "speaker": "Юки",
+      "text": "Ха, значит не только мне сегодня не везёт.",
+      "x": 900,
+      "y": 240,
+      "title": "friendly",
+      "sceneId": "s1",
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "sprites": [
+        {
+          "id": "yuki",
+          "src": "/assets/123-b180/yuki_muus6ck3.jpg",
+          "emoji": "🙂",
+          "pos": "center",
+          "hide": false,
+          "anim": "fade",
+          "animOut": "fade",
+          "condition": null,
+          "x": 50,
+          "y": 38
+        }
+      ],
+      "next": "talk"
+    },
+    {
+      "id": "cold",
+      "speaker": "Юки",
+      "text": "...Ладно, извини за вопрос.",
+      "x": 872.9069154762257,
+      "y": 97.33957409521558,
+      "title": "cold",
+      "sceneId": "s1",
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center"
+    },
+    {
+      "id": "talk",
+      "speaker": "Юки",
+      "text": "Раз уж ждать всё равно долго... хочешь, посидим под навесом?",
+      "x": 1180,
+      "y": 80,
+      "title": "talk",
+      "sceneId": "s1",
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "texts": [
+        {
+          "text": "Раз уж ждать всё равно долго... хочешь, посидим под навесом?",
+          "condition": {
+            "var": "trust_yuki",
+            "op": "gte",
+            "value": 1
+          }
+        },
+        {
+          "text": "Ну, удачно добраться.",
+          "condition": {
+            "var": "trust_yuki",
+            "op": "lt",
+            "value": 1
+          }
+        }
+      ],
+      "next": "canopy"
+    },
+    {
+      "id": "canopy",
+      "speaker": "",
+      "text": "Дождь постепенно стихает. Поезда нет, и это даже к лучшему.",
+      "x": 1372.0481429591841,
+      "y": 246.907205942975,
+      "title": "canopy",
+      "sceneId": "s1",
+      "layout": {
+        "box": {
+          "width": 76.49367088607595,
+          "height": 13.134615384615385
+        }
+      },
+      "type": "narration",
+      "bg": "/assets/123-b180/night_muus6f5p.jpg",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "sprites": [
+        {
+          "id": "yuki",
+          "src": "/assets/123-b180/yuki_muus6ck3.jpg",
+          "emoji": "🙂",
+          "pos": "custom",
+          "hide": false,
+          "anim": "fade",
+          "animOut": "fade",
+          "condition": {
+            "var": "met_yuki",
+            "op": "eq",
+            "value": true
+          },
+          "x": 80.25316455696202,
+          "y": 67.42307692307692
+        }
+      ]
+    }
+  ],
+  "description": "",
+  "coverUrl": ""
+}

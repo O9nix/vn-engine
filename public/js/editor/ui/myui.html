@@ -1,0 +1,258 @@
+<div id="toolbar">
+  <div class="myui-brand"><a href="/" aria-label="Вернуться в студию">VN Studio</a><span>·</span><span class="myui-editor-label">Редактор</span></div>
+  <div class="myui-project">
+    <input id="projectTitleInput" type="text" placeholder="Название проекта" title="Название проекта">
+    <span id="editorUser"></span>
+  </div>
+  <div class="myui-primary">
+    <button class="tb tb-add" id="addBtn">+ Блок</button>
+    <button class="tb" id="addSceneBtn">+ Сцена</button>
+    <div class="myui-preview-wrap">
+      <button class="tb tb-preview" id="playBtn" title="Превью без публикации">▶ Предпросмотр</button>
+      <div id="playMenu">
+        <div class="pm-hint">Превью (без публикации)</div>
+        <button type="button" data-mode="all">▶ С начала проекта</button>
+        <button type="button" data-mode="scene">▶ С текущей сцены</button>
+        <button type="button" data-mode="node">▶ С выбранного блока</button>
+      </div>
+    </div>
+  </div>
+  <div class="myui-secondary" aria-hidden="true"></div>
+  <div class="myui-save">
+    <span id="saveStatus" aria-live="polite"></span>
+    <button class="tb" id="saveBtn" title="Сохранить черновик (Ctrl+S)">Сохранить</button>
+    <button class="tb tb-publish" id="publishBtn" title="Сохранить и открыть публичную ссылку">Опубликовать</button>
+  </div>
+  <div class="myui-settings">
+    <button class="tb myui-settings-trigger" type="button" aria-label="Настройки редактора" aria-expanded="false">Настройки</button>
+    <div class="myui-settings-panel" role="dialog" aria-label="Настройки производительности">
+      <div class="myui-settings-head">
+        <div>
+          <div class="myui-menu-group">Режим редактора</div>
+          <strong>Производительность</strong>
+        </div>
+        <span class="myui-settings-value" id="myuiPerfValue">Сбалансировано</span>
+      </div>
+      <div class="myui-perf-slider-row">
+        <span>Производительность</span>
+        <input id="myuiPerfSlider" type="range" min="0" max="100" step="1" value="50" list="myuiPerfModes" aria-label="Режим оптимизации от производительности до детализации">
+        <span>Детализация</span>
+      </div>
+      <datalist id="myuiPerfModes">
+        <option value="0"></option><option value="17"></option><option value="33"></option><option value="50"></option><option value="67"></option><option value="84"></option><option value="100"></option>
+      </datalist>
+      <div class="myui-perf-presets" aria-hidden="true">
+        <i title="Турбо"></i><i title="Быстро"></i><i title="Производительно"></i><i title="Баланс"></i><i title="Качественно"></i><i title="Детально"></i><i title="Максимум деталей"></i>
+      </div>
+      <div class="myui-settings-note" id="myuiPerfNote">Сбалансированный режим: интерфейс сохраняет детали и включает основные оптимизации.</div>
+    </div>
+  </div>
+  <div class="myui-more">
+    <button class="tb myui-more-trigger" type="button" aria-label="Инструменты и импорт">Ещё</button>
+    <div class="myui-more-menu">
+      <div class="myui-menu-group">Инструменты</div>
+      <button class="tb" id="dupBtn">Дублировать блок</button>
+            <button class="tb" id="assetBrowserBtn">Библиотека ассетов</button>
+      <button class="tb" id="varsBtn">Аудио и переменные</button>
+      <button class="tb" id="txtBtn">Импорт из текста</button>
+      <div class="myui-menu-sep"></div>
+      <div class="myui-menu-group">Данные</div>
+      <button class="tb" id="exportBtn">Экспорт JSON</button>
+      <button class="tb" id="importBtn">Импорт JSON</button>
+    </div>
+  </div>
+  <div class="myui-zoom">
+    <button class="tb" id="zoomOut" aria-label="Уменьшить">−</button>
+    <span id="zoomLabel">100%</span>
+    <button class="tb" id="zoomIn" aria-label="Увеличить">+</button>
+    <button class="tb" id="zoomReset">Сброс</button>
+  </div>
+</div>
+
+<button id="stageBtn" type="button" hidden aria-hidden="true" tabindex="-1"></button>
+
+<aside id="storyTree" aria-label="Сценарий">
+  <div class="story-head">
+    <div><div class="story-kicker">СЦЕНАРИЙ</div><strong>Структура истории</strong></div>
+    <button type="button" id="storyRefresh" title="Обновить дерево">↻</button>
+  </div>
+  <div class="story-actions">
+    <button type="button" data-proxy="addBtn">＋ Блок</button>
+    <button type="button" data-proxy="addSceneBtn">＋ Сцена</button>
+  </div>
+  <div id="storyTreeBody"></div>
+  <div class="story-foot"><span class="story-dot"></span><span id="storyHint">Холст синхронизирован</span></div>
+</aside>
+
+<div id="myui-rail" aria-label="Быстрые действия">
+  <button type="button" data-proxy="assetBrowserBtn">▧<span>Ассеты</span></button>
+  <button type="button" data-proxy="varsBtn">⌘<span>Переменные</span></button>
+  <button type="button" data-proxy="txtBtn">≡<span>Текст</span></button>
+</div>
+
+<div id="viewport">
+  <div id="canvas"><svg id="lines"></svg></div>
+</div>
+
+<div id="inspector">
+  <h2><span id="inspTitle">Блок</span><button class="close-insp" id="closeInsp">✕</button></h2>
+  <div id="inspBody"></div>
+</div>
+
+<div id="jsonPanel">
+  <div style="font-size:12px;color:var(--dim);margin-bottom:6px">JSON сценария (совместим с VN Engine)</div>
+  <textarea id="jsonArea" placeholder="Вставьте JSON..."></textarea>
+  <div class="row">
+    <button class="tb" id="loadBtn">Загрузить</button>
+    <button class="tb" id="copyBtn">Копировать</button>
+    <button class="tb" id="closeBtn">Закрыть</button>
+  </div>
+</div>
+
+
+
+<div id="stagePanel">
+  <div id="stageTop">
+    <h2>Конструктор кадра</h2>
+    <button class="tb" id="stagePrevBtn" title="Предыдущий блок">◀</button>
+    <select id="stageNodeSel" style="background:var(--panel);border:1px solid var(--edge);color:var(--ink);border-radius:6px;padding:6px 10px;font-size:12px;max-width:220px"></select>
+    <button class="tb" id="stageNextBtn" title="Следующий блок">▶</button>
+    <span style="color:var(--dim);font-size:12px;margin-left:4px">← → блоки · перетаскивайте элементы</span>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="tb" id="stageFsBtn" title="Превью как в игре (F)">⛶ На весь экран</button>
+      <button class="tb" id="stageApplyScene" title="Скопировать layout диалога и ответов на все блоки этой сцены">⧉ На сцену</button>
+      <button class="tb" id="stageApplyProject" title="Скопировать layout на все блоки проекта">⧉ На проект</button>
+      <button class="tb" id="stageResetBtn">Сброс layout</button>
+      <button class="tb" id="stageCloseBtn">Готово</button>
+    </div>
+  </div>
+  <div id="stageBody">
+    <div id="stageFrame"></div>
+    <div id="stageFsHint">Esc — выйти из полноэкранного превью · наведите вверх для панели</div>
+    <div id="stageSide">
+      <h3>Выбранный элемент</h3>
+      <div id="stageProps"><div class="hint">Кликните спрайт, окно диалога или блок выбора</div></div>
+      <h3 style="margin-top:16px">Подсказки</h3>
+      <p class="hint">• Фон берётся из сцены блока<br>
+      • Спрайты — из текущего блока<br>
+      • Layout окна и кнопок — <b>у выбранного блока</b><br>
+      • Позиции спрайтов — тоже у этого блока<br>
+      • Смена блока в списке сверху = другая компановка</p>
+    </div>
+  </div>
+</div>
+
+<div id="txtPanel">
+  <div style="font-size:13px;color:var(--gold);margin-bottom:6px;font-family:Georgia,serif;font-style:italic">Импорт из текста</div>
+  <p style="font-size:11px;color:var(--dim);margin:0 0 8px">Вставьте сценарий или загрузите .txt. <a href="/template-novel.txt" target="_blank" style="color:var(--gold)">Скачать шаблон</a></p>
+  <textarea id="txtArea" placeholder="=== start&#10;narration&#10;Текст...&#10;-> next"></textarea>
+  <div class="row">
+    <button class="tb" id="txtFileBtn">Файл .txt</button>
+    <input type="file" id="txtFile" accept=".txt,text/plain" style="display:none">
+    <button class="tb" id="txtParseBtn">▶ Собрать узлы</button>
+    <button class="tb" id="txtCloseBtn">Закрыть</button>
+  </div>
+  <p id="txtStatus" style="font-size:11px;color:var(--dim);margin:8px 0 0"></p>
+</div>
+<div id="varsPanel">
+  <div style="font-size:13px;color:var(--gold);margin-bottom:6px;font-family:Georgia,serif;font-style:italic">🎵 Аудио проекта</div>
+  <p style="font-size:11px;color:var(--dim);margin:0 0 8px">BGM по умолчанию. Можно перетащить трек из библиотеки на поле ниже.</p>
+  <label style="font-size:11px;color:var(--dim)">BGM проекта</label>
+  <input id="projBgmUrl" type="text" data-bgm-target="project" placeholder="URL или перетащите 🎵" style="width:100%;margin:4px 0 8px;background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:5px;padding:5px 7px;font-size:12px">
+  <label style="font-size:11px;color:var(--dim)">Громкость BGM: <span id="projBgmVolLbl">55</span>%</label>
+  <input id="projBgmVol" type="range" min="0" max="100" value="55" style="width:100%;margin-bottom:8px">
+  <label style="font-size:11px;color:var(--dim)">Громкость SFX: <span id="projSfxVolLbl">100</span>%</label>
+  <input id="projSfxVol" type="range" min="0" max="100" value="100" style="width:100%;margin-bottom:8px">
+  <label style="font-size:11px;color:var(--dim)">Общая громкость: <span id="projMasterVolLbl">100</span>%</label>
+  <input id="projMasterVol" type="range" min="0" max="100" value="100" style="width:100%;margin-bottom:12px">
+  <div style="border-top:1px solid var(--edge);margin:8px 0 10px"></div>
+  <div style="font-size:13px;color:var(--gold);margin-bottom:6px;font-family:Georgia,serif;font-style:italic">Переменные проекта</div>
+  <p style="font-size:11px;color:var(--dim);margin:0 0 8px">Используются в условиях и эффектах вариантов ответа.</p>
+  <div id="varsList"></div>
+  <button class="tb" id="addVarBtn" style="width:100%;margin-top:8px">+ Переменная</button>
+  <div class="row"><button class="tb" id="closeVarsBtn">Закрыть</button></div>
+</div>
+
+<div id="assetsPanel">
+  <div style="font-size:13px;color:var(--gold);margin-bottom:6px;font-family:Georgia,serif;font-style:italic">Библиотека ассетов</div>
+  <p style="font-size:11px;color:var(--dim);margin:0 0 8px">Фоны и персонажи. При работе с сервером файлы загружаются на диск, в JSON пишется относительный URL.</p>
+  <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+    <label style="font-size:11px;color:var(--dim);white-space:nowrap">projectId</label>
+    <input id="projectIdInput" value="" style="flex:1;margin:0;background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:5px;padding:5px 7px;font-size:12px">
+  </div>
+  <div class="upload-zone" id="uploadZone">Перетащите файлы или нажмите<input type="file" id="assetFile" accept="image/*" multiple></div>
+  <div style="display:flex;gap:6px;margin-bottom:8px">
+    <select id="assetType" style="flex:1;margin:0;background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:5px;padding:5px 7px;font-size:12.5px">
+      <option value="char">Персонаж</option>
+      <option value="bg">Фон</option>
+    </select>
+    <input id="assetUrl" type="text" placeholder="URL" style="flex:2;margin:0;background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:5px;padding:5px 7px;font-size:12.5px">
+    <button class="tb" id="addUrlBtn" style="padding:5px 10px">+</button>
+  </div>
+  <div id="assetGrid" class="asset-grid"></div>
+  <div class="row"><button class="tb" id="closeAssetsBtn">Закрыть</button></div>
+</div>
+
+<div id="playPreview">
+  <div id="playPreviewBar">
+    <strong style="color:var(--gold);font-size:13px">Превью</strong>
+    <span id="playPreviewInfo" style="color:var(--dim);font-size:12px"></span>
+    <span style="margin-left:auto;color:var(--dim);font-size:12px">сейчас:</span>
+    <span id="playPreviewNow" style="color:var(--ink);font-size:12px;max-width:28%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span>
+    <button class="tb" id="playPreviewEditBtn" title="Панель правки текущего блока/сцены">✎ Правка</button>
+    <button class="tb" id="playPreviewStageBtn" title="Редактор композиции текущего кадра">✦ Редактор кадра</button>
+    <button class="tb" id="playPreviewReload">↻ Заново</button>
+    <button class="tb" id="playPreviewClose">✕ Закрыть</button>
+  </div>
+  <div id="playPreviewBody">
+    <iframe id="playPreviewFrame" title="preview"></iframe>
+    <div id="playEditSide">
+      <h3>Правка на лету</h3>
+      <p class="pe-hint" id="playEditHint">Играйте — панель подстроится под текущий блок.</p>
+      <div id="playEditBody"><div class="pe-hint">Ожидание блока…</div></div>
+      <div class="pe-actions">
+        <button type="button" class="tb" id="playEditApply">Применить и продолжить с блока</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="assetBrowser">
+  <div id="abResize" title="Потяните, чтобы изменить высоту"></div>
+  <div id="abTop">
+    <h2>Библиотека ассетов</h2>
+    <span style="color:var(--dim);font-size:12px">папки · перетащите на блок или сцену</span>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="tb" id="abCloseBtn">Закрыть</button>
+    </div>
+  </div>
+  <div id="abBody">
+    <div id="abTree"></div>
+    <div id="abMain">
+      <div id="abPath"></div>
+      <div id="abToolbar">
+        <button class="tb" id="abNewFolder">+ Папка</button>
+        <button class="tb" id="abUpload">⬆ Файл</button>
+        <input type="file" id="abFile" accept="image/*,audio/*,.mp3,.ogg,.wav,.m4a" multiple style="display:none">
+        <select id="abAddType" title="Тип новых файлов" style="background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:6px;padding:6px 8px;font-size:12px">
+          <option value="char">Персонаж</option>
+          <option value="bg">Фон</option>
+          <option value="music">Музыка</option>
+          <option value="sfx">Звук</option>
+        </select>
+        <input id="abUrl" type="text" placeholder="URL картинки или звука" style="flex:1;min-width:140px;background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:6px;padding:6px 8px;font-size:12px">
+        <button class="tb" id="abAddUrl">+ URL</button>
+        <select id="abTypeFilter" style="background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:6px;padding:6px 8px;font-size:12px">
+          <option value="">Все типы</option>
+          <option value="char">Персонажи</option>
+          <option value="bg">Фоны</option>
+          <option value="music">Музыка</option>
+          <option value="sfx">Звуки</option>
+        </select>
+        <input id="abSearch" type="search" placeholder="Поиск…" style="min-width:90px;max-width:140px;background:#0f0c18;color:var(--ink);border:1px solid var(--edge);border-radius:6px;padding:6px 8px;font-size:12px">
+      </div>
+      <div id="abGrid"></div>
+    </div>
+  </div>
+</div>
+<div id="vnToastHost" aria-live="polite"></div>
+

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход — VN Studio</title>
+  <style>
+  :root{ --ink:#efe7d6; --bg:#161221; --panel:#1f1a2e; --edge:#3a3153; --gold:#c9a24b; --rose:#b0658a; --dim:#a79bc2; }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:28px}
+  h1{font-family:Georgia,serif;font-style:italic;color:var(--rose);font-weight:normal;font-size:22px;margin:0 0 6px}
+  .sub{color:var(--dim);font-size:13px;margin:0 0 20px}
+  label{display:block;font-size:12px;color:var(--dim);margin:12px 0 4px}
+  input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--edge);background:#0f0c18;color:var(--ink);font-size:14px}
+  button{width:100%;margin-top:18px;padding:11px;border-radius:8px;border:1px solid var(--gold);background:#2a1f14;color:var(--gold);font-size:14px;cursor:pointer}
+  button:hover{background:#3a2a18}
+  button:disabled{opacity:.5;cursor:default}
+  .err{color:#e88;font-size:13px;margin-top:12px;min-height:1.2em}
+  .links{margin-top:16px;font-size:13px;color:var(--dim);text-align:center}
+  a{color:var(--gold);text-decoration:none}
+  a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Вход</h1>
+    <p class="sub">VN Studio — аккаунт автора</p>
+    <form id="form">
+      <label>Email</label>
+      <input type="email" id="email" required autocomplete="username">
+      <label>Пароль</label>
+      <input type="password" id="password" required autocomplete="current-password" minlength="8">
+      <button type="submit" id="btn">Войти</button>
+      <div class="err" id="err"></div>
+    </form>
+    <div class="links">
+      Нет аккаунта? <a href="/register">Регистрация</a> · <a href="/">На главную</a>
+    </div>
+  </div>
+  <script>
+  document.getElementById('form').onsubmit = async (e) => {
+    e.preventDefault();
+    const err = document.getElementById('err');
+    const btn = document.getElementById('btn');
+    err.textContent = '';
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Ошибка входа');
+      const next = new URLSearchParams(location.search).get('next');
+      location.href = (next && next.startsWith('/')) ? next : '/';
+    } catch (ex) {
+      err.textContent = ex.message;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+  </script>
+</body>
+</html>

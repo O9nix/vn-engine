@@ -1,0 +1,620 @@
+/* My UI behavior. Loaded explicitly by the UI loader; not embedded in HTML. */
+(function myUiRuntime(){
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const escSel = v => {
+    const x = String(v ?? '');
+    try { return CSS.escape(x); } catch(_) { return x.replace(/[^a-zA-Z0-9_-]/g,'\\$&'); }
+  };
+
+  // User-facing performance profile. The slider snaps to 7 practical presets,
+  // from maximum performance to maximum detail.
+  const PERF_MODES = [
+    {level:0,  name:'Максимум производительности', short:'Турбо', note:'Максимально упрощённая отрисовка во время перемещения. Приоритет — плавность на больших проектах.'},
+    {level:17, name:'Высокая производительность', short:'Быстро', note:'Сильно снижает стоимость отрисовки при панорамировании и перетаскивании, сохраняя обычный вид в покое.'},
+    {level:33, name:'Производительность', short:'Производительно', note:'Заметно облегчает холст во время движения, но сохраняет большую часть визуальных деталей.'},
+    {level:50, name:'Сбалансировано', short:'Баланс', note:'Рекомендуемый средний режим: основные оптимизации активны, визуальные детали сохраняются.'},
+    {level:67, name:'Качество', short:'Качественно', note:'Оптимизации работают мягче, поэтому холст сохраняет больше деталей при перемещении.'},
+    {level:84, name:'Высокая детализация', short:'Детально', note:'Почти все визуальные детали сохраняются. Оптимизации применяются только там, где они мало заметны.'},
+    {level:100,name:'Максимальная детализация', short:'Максимум деталей', note:'Оптимизации редактора почти не вмешиваются в отрисовку. Максимум визуальных эффектов.'}
+  ];
+
+  function nearestPerfLevel(value){
+    const n = Math.max(0, Math.min(100, Number(value) || 0));
+    return PERF_MODES.reduce((best, mode) => Math.abs(mode.level-n) < Math.abs(best.level-n) ? mode : best, PERF_MODES[0]).level;
+  }
+
+  function getPerfMode(level){
+    const n = nearestPerfLevel(level);
+    return PERF_MODES.find(mode => mode.level === n) || PERF_MODES[3];
+  }
+
+  const perfState = {
+    level: (() => {
+      try {
+        const saved = Number(localStorage.getItem('vn_myui_perf_level'));
+        if(Number.isFinite(saved)) return nearestPerfLevel(saved);
+        const q = new URLSearchParams(location.search).get('perf');
+        if(q === '0' || q === 'off') return 100;
+        if(q === '2' || q === 'aggressive') return 0;
+      } catch(_) {}
+      return 50;
+    })(),
+    enabled: true,
+    flags: {
+      lightPan: true,
+      deferStoryTree: true,
+      rafGrid: true,
+      containNodes: true,
+      hideNodesDuringPan: false
+    },
+    stats: { panStarts:0, dragStarts:0, gridFrames:0, perfFrames:0, slowFrames:0, maxFrameMs:0, lineUpdates:0, skippedLineUpdates:0 },
+    applyLevel(level){
+      this.level = nearestPerfLevel(level);
+      // Each preset progressively relaxes the performance layer.
+      this.enabled = this.level < 100;
+      this.flags.hideNodesDuringPan = this.level <= 33;
+      this.flags.containNodes = this.level <= 84;
+      this.flags.deferStoryTree = this.level <= 67;
+      this.flags.rafGrid = this.level <= 84;
+      const root = document.documentElement;
+      root.classList.toggle('myui-perf', this.enabled);
+      root.classList.toggle('myui-perf-detail', this.level >= 86);
+      root.classList.toggle('myui-perf-aggressive', this.level <= 33);
+      root.classList.toggle('myui-perf-lite', this.level >= 67 && this.level < 100);
+      root.classList.toggle('myui-perf-quality', this.level >= 84 && this.level < 100);
+      if(!this.enabled) root.classList.remove('myui-perf-panning','myui-perf-dragging');
+      try { localStorage.setItem('vn_myui_perf_level', String(this.level)); } catch(_){}
+      this.updateSettingsUI();
+      return this.level;
+    },
+    set(on){ return this.applyLevel(on ? 50 : 100); },
+    toggle(){ return this.set(!this.enabled); },
+    get(){ return {level:this.level, enabled:this.enabled, flags:{...this.flags}, stats:{...this.stats}}; },
+    resetStats(){ this.stats = {panStarts:0, dragStarts:0, gridFrames:0, perfFrames:0, slowFrames:0, maxFrameMs:0, lineUpdates:0, skippedLineUpdates:0}; },
+    updateSettingsUI(){
+      const slider = $('myuiPerfSlider');
+      const value = $('myuiPerfValue');
+      const note = $('myuiPerfNote');
+      if(!slider) return;
+      slider.value = String(this.level);
+      const mode = getPerfMode(this.level);
+      if(value) value.textContent = mode.name;
+      if(note) note.textContent = mode.note;
+      document.querySelectorAll('.myui-perf-presets i').forEach((dot, i) => {
+        dot.classList.toggle('active', PERF_MODES[i]?.level === mode.level);
+      });
+    }
+  };
+
+  window.VN_MYUI_PERF = perfState;
+  perfState.applyLevel(perfState.level);
+
+
+  function callCore(name, ...args){
+    const fn = window[name];
+    if(typeof fn !== 'function') return false;
+    try { fn(...args); return true; } catch(e){ console.error('[myui]', name, e); return false; }
+  }
+
+  // These are our actual UI controls. We deliberately assign onclick after core is loaded,
+  // replacing the core's equivalent handler with the same core function. This makes the
+  // controls inspectable as real handlers and avoids duplicate actions.
+  function bindCoreButtons(){
+    const bindings = {
+      addBtn: 'addNode',
+      addSceneBtn: 'addScene',
+      dupBtn: 'duplicateNode',
+      stageBtn: 'openStageEditor',
+      txtBtn: 'openTextPanel',
+      assetBrowserBtn: 'openAssetBrowser',
+      varsBtn: 'openVarsPanel',
+      saveBtn: 'saveProject',
+    };
+
+    Object.entries(bindings).forEach(([id, fnName]) => {
+      const el = $(id);
+      if(!el || typeof window[fnName] !== 'function') return;
+      if(el.dataset.myuiBound === fnName) return;
+      el.onclick = (e) => {
+        if(fnName === 'saveProject') return window[fnName]({publish:false});
+        return window[fnName]();
+      };
+      el.dataset.myuiBound = fnName;
+    });
+
+    const publish = $('publishBtn');
+    if(publish && typeof window.saveProject === 'function' && publish.dataset.myuiBound !== 'savePublish'){
+      publish.onclick = () => window.saveProject({publish:true});
+      publish.dataset.myuiBound = 'savePublish';
+    }
+
+    const play = $('playBtn');
+    if(play && typeof window.togglePlayMenu === 'function' && play.dataset.myuiBound !== 'play'){
+      play.onclick = (e) => { e.stopPropagation(); window.togglePlayMenu(true); };
+      play.dataset.myuiBound = 'play';
+    }
+  }
+
+  // ---- Inline frame editor inside Preview --------------------------------
+  // The preview already renders the real game stage. Instead of opening a second
+  // Stage window, this layer turns that exact stage into a lightweight layout editor.
+  const inlineStage = {
+    active: false,
+    selected: null,
+    iframe: null,
+    cleanup: null,
+    resize: null
+  };
+
+  function previewDoc(){
+    const frame = $('playPreviewFrame');
+    if(!frame) return null;
+    try { return frame.contentDocument || frame.contentWindow?.document || null; } catch(_) { return null; }
+  }
+
+  function currentPreviewNode(){
+    let id = null, list = [];
+    try { id = typeof _previewCurrentNodeId !== 'undefined' ? _previewCurrentNodeId : null; } catch(_){}
+    try { list = typeof nodes !== 'undefined' && Array.isArray(nodes) ? nodes : []; } catch(_){}
+    return id ? list.find(n => n.id === id) || null : null;
+  }
+
+  function inlineMarkDirty(){
+    try { if(typeof window.markDirty === 'function') window.markDirty(); } catch(_){}
+  }
+
+  function inlineRefreshTree(){
+    try {
+      const n = currentPreviewNode();
+      if(n && typeof window.refreshNodeCard === 'function') window.refreshNodeCard(n);
+    } catch(_){}
+    try { if(window.VN_MYUI?.renderStoryTree) window.VN_MYUI.renderStoryTree(); } catch(_){}
+  }
+
+  function inlineEnsureStyle(doc){
+    if(doc.getElementById('vnInlineStageStyle')) return;
+    const style = doc.createElement('style');
+    style.id = 'vnInlineStageStyle';
+    style.textContent = `
+      #stage.vn-inline-stage-edit{cursor:default!important}
+      #stage.vn-inline-stage-edit #box,
+      #stage.vn-inline-stage-edit #choices,
+      #stage.vn-inline-stage-edit .sprite{cursor:move!important}
+      #stage.vn-inline-stage-edit #continue,
+      #stage.vn-inline-stage-edit .choice{pointer-events:none!important}
+      #stage.vn-inline-stage-edit .sprite{outline:1px dashed rgba(201,162,75,.32);outline-offset:2px;pointer-events:auto!important}
+      #stage.vn-inline-stage-edit .sprite.vn-ie-selected,
+      #stage.vn-inline-stage-edit #box.vn-ie-selected,
+      #stage.vn-inline-stage-edit #choices.vn-ie-selected{
+        outline:2px solid #c9a24b!important;outline-offset:3px;
+        box-shadow:0 0 0 1px rgba(201,162,75,.22),0 10px 32px rgba(0,0,0,.3)!important;
+      }
+      #stage.vn-inline-stage-edit .vn-ie-handle{
+        display:none;position:absolute;width:10px;height:10px;border-radius:2px;
+        background:#c9a24b;border:2px solid #17131d;z-index:50;
+        box-shadow:0 1px 5px rgba(0,0,0,.45);pointer-events:auto;
+      }
+      #stage.vn-inline-stage-edit .vn-ie-selected .vn-ie-handle{display:block}
+      #stage.vn-inline-stage-edit .vn-ie-handle.se{right:-6px;bottom:-6px;cursor:nwse-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.sw{left:-6px;bottom:-6px;cursor:nesw-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.ne{right:-6px;top:-6px;cursor:nesw-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.nw{left:-6px;top:-6px;cursor:nwse-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.e{right:-6px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.w{left:-6px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.s{left:50%;bottom:-6px;transform:translateX(-50%);cursor:ns-resize}
+      #stage.vn-inline-stage-edit .vn-ie-handle.n{left:50%;top:-6px;transform:translateX(-50%);cursor:ns-resize}
+      #stage .vn-ie-hud{
+        position:absolute;left:12px;top:12px;z-index:80;display:flex;align-items:center;gap:8px;
+        padding:7px 9px;border:1px solid rgba(201,162,75,.42);border-radius:8px;
+        background:rgba(18,16,24,.84);backdrop-filter:blur(8px);color:#efe7d6;
+        font:600 10px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;
+        pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.28)
+      }
+      #stage .vn-ie-hud span{color:#8f8797;font-weight:500;letter-spacing:.02em;text-transform:none}
+      #stage .vn-ie-tip{
+        position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:80;
+        padding:6px 9px;border-radius:7px;background:rgba(18,16,24,.72);color:#9f98a7;
+        font:10px/1.2 ui-sans-serif,system-ui,sans-serif;white-space:nowrap;pointer-events:none
+      }
+    `;
+    doc.head.appendChild(style);
+  }
+
+  function inlineClearSelection(doc){
+    if(!doc) return;
+    doc.querySelectorAll('.vn-ie-selected').forEach(el => el.classList.remove('vn-ie-selected'));
+    inlineStage.selected = null;
+    const hud = doc.querySelector('.vn-ie-hud span');
+    if(hud) hud.textContent = 'выберите элемент';
+  }
+
+  function inlineSelect(doc, el, type, sid){
+    doc.querySelectorAll('.vn-ie-selected').forEach(x => x.classList.remove('vn-ie-selected'));
+    inlineStage.selected = { type, id: sid || null, el };
+    el.classList.add('vn-ie-selected');
+    const hud = doc.querySelector('.vn-ie-hud span');
+    if(hud){
+      hud.textContent = type === 'sprite' ? ('персонаж · ' + (sid || ''))
+        : type === 'box' ? 'диалоговое окно' : 'варианты ответа';
+    }
+  }
+
+  function inlineAttachSpriteHandles(doc, el){
+    if(el.querySelector('.vn-ie-handle')) return;
+    ['nw','n','ne','w','e','sw','s','se'].forEach(kind => {
+      const h = doc.createElement('div');
+      h.className = 'vn-ie-handle ' + kind;
+      h.dataset.handle = kind;
+      el.appendChild(h);
+      h.addEventListener('pointerdown', e => inlineStartResize(e, el, kind));
+    });
+  }
+
+  function inlineSpriteList(node, doc){
+    const source = (node?.sprites || []).filter(s => !s.hide);
+    const dom = [...doc.querySelectorAll('#sprites .sprite.show')];
+    const used = new Set();
+    dom.forEach((el, idx) => {
+      let match = null;
+      // Prefer source/emoji matching; fall back to visible order for duplicate assets.
+      for(const s of source){
+        if(used.has(s.id)) continue;
+        const img = el.querySelector('img');
+        let absSrc = '';
+        try { absSrc = s.src ? new URL(s.src, doc.baseURI).href : ''; } catch(_){}
+        if((s.src && img && img.src === absSrc) || (!s.src && !img && (el.textContent||'').trim() === (s.emoji||'🙂'))){
+          match = s; break;
+        }
+      }
+      if(!match) match = source.find(s => !used.has(s.id)) || null;
+      if(match){
+        used.add(match.id);
+        el.dataset.vnEditorSid = match.id;
+        inlineAttachSpriteHandles(doc, el);
+      }
+    });
+  }
+
+  function inlineAttachLayoutHandle(doc, el, kind){
+    if(el.querySelector('.vn-ie-layout-handle')) return;
+    const h = doc.createElement('div');
+    h.className = 'vn-ie-handle vn-ie-layout-handle e';
+    h.dataset.layoutHandle = 'e';
+    el.appendChild(h);
+    h.addEventListener('pointerdown', e => inlineStartLayoutResize(e, el, kind));
+  }
+
+  function inlineStartLayoutResize(e, el, type){
+    if(!inlineStage.active || e.button !== 0) return;
+    const doc = el.ownerDocument, stage = doc.getElementById('stage'), node = currentPreviewNode();
+    if(!stage || !node) return;
+    e.preventDefault(); e.stopPropagation();
+    inlineSelect(doc, el, type);
+    let sceneLayout = null;
+    try {
+      if(node.sceneId && typeof scenes !== 'undefined' && Array.isArray(scenes)){
+        sceneLayout = scenes.find(s => s.id === node.sceneId)?.layout || null;
+      }
+    } catch(_){}
+    const key = type === 'box' ? 'box' : 'choices';
+    const lay = node.layout || sceneLayout || {};
+    const base = lay[key] || (type === 'box' ? {left:50,bottom:4,width:92} : {left:50,top:42,width:56});
+    const startWidth = Number(base.width ?? (type === 'box' ? 92 : 56));
+    const startX = e.clientX;
+    const rect = stage.getBoundingClientRect();
+    const move = ev => {
+      const dx = (ev.clientX - startX) / rect.width * 100;
+      node.layout = node.layout || {};
+      node.layout[key] = {...base, width:Math.max(type === 'box' ? 30 : 20, Math.min(type === 'box' ? 95 : 90, startWidth + dx))};
+      el.style.width = node.layout[key].width + '%';
+      inlineMarkDirty();
+    };
+    const up = () => { doc.removeEventListener('pointermove', move); inlineRefreshTree(); };
+    doc.addEventListener('pointermove', move);
+    doc.addEventListener('pointerup', up, {once:true});
+  }
+
+  function inlineElementFromEventTarget(target){
+    if(!target?.closest) return null;
+    return target.closest('.sprite, #box, #choices');
+  }
+
+  function inlineStartDrag(e, el, type, sid){
+    if(!inlineStage.active || e.button !== 0) return;
+    const doc = el.ownerDocument;
+    const stage = doc.getElementById('stage');
+    const node = currentPreviewNode();
+    if(!stage || !node) return;
+    e.preventDefault(); e.stopPropagation();
+    inlineSelect(doc, el, type, sid);
+    const rect = stage.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const start = el.getBoundingClientRect();
+
+    if(type === 'sprite'){
+      const sp = (node.sprites || []).find(s => String(s.id) === String(sid));
+      if(!sp) return;
+      const sx = sp.x != null ? Number(sp.x) : (typeof window.slotXY === 'function' ? window.slotXY(sp.pos || 'bottom').x : 50);
+      const sy = sp.y != null ? Number(sp.y) : (typeof window.slotXY === 'function' ? window.slotXY(sp.pos || 'bottom').y : 0);
+      const move = ev => {
+        const dx = (ev.clientX - startX) / rect.width * 100;
+        const dy = (ev.clientY - startY) / rect.height * 100;
+        sp.x = Math.max(-20, Math.min(120, sx + dx));
+        sp.y = Math.max(-20, Math.min(120, sy - dy));
+        sp.pos = 'custom';
+        el.style.left = sp.x + '%';
+        el.style.bottom = sp.y + '%';
+        el.style.right = 'auto';
+        const floor = sp.y <= 4;
+        el.style.transformOrigin = floor ? 'center bottom' : 'center center';
+        el.style.transform = floor ? 'translateX(-50%) scale(var(--sx))' : 'translate(-50%,50%) scale(var(--sx))';
+        inlineMarkDirty();
+      };
+      const up = () => {
+        doc.removeEventListener('pointermove', move);
+        doc.removeEventListener('pointerup', up);
+        inlineRefreshTree();
+      };
+      doc.addEventListener('pointermove', move);
+      doc.addEventListener('pointerup', up, {once:true});
+      return;
+    }
+
+    let sceneLayout = null;
+    try {
+      if(node.sceneId && typeof scenes !== 'undefined' && Array.isArray(scenes)){
+        sceneLayout = scenes.find(s => s.id === node.sceneId)?.layout || null;
+      }
+    } catch(_){}
+    const lay = node.layout || sceneLayout || {};
+    const key = type === 'box' ? 'box' : 'choices';
+    const base = lay[key] || (type === 'box' ? {left:50,bottom:4,width:92} : {left:50,top:42,width:56});
+    const startLeft = Number(base.left ?? 50);
+    const startVert = type === 'box' ? Number(base.bottom ?? 4) : Number(base.top ?? 42);
+    const move = ev => {
+      const dx = (ev.clientX - startX) / rect.width * 100;
+      const dy = (ev.clientY - startY) / rect.height * 100;
+      node.layout = node.layout || {};
+      node.layout[key] = {...base, left:Math.max(0,Math.min(100,startLeft+dx))};
+      if(type === 'box') node.layout[key].bottom = Math.max(0,Math.min(90,startVert-dy));
+      else node.layout[key].top = Math.max(0,Math.min(90,startVert+dy));
+      el.style.left = node.layout[key].left + '%';
+      if(type === 'box'){ el.style.bottom = node.layout[key].bottom + '%'; el.style.top='auto'; }
+      else { el.style.top = node.layout[key].top + '%'; el.style.bottom='auto'; }
+      inlineMarkDirty();
+    };
+    const up = () => { doc.removeEventListener('pointermove', move); inlineRefreshTree(); };
+    doc.addEventListener('pointermove', move);
+    doc.addEventListener('pointerup', up, {once:true});
+  }
+
+  function inlineStartResize(e, el, handle){
+    if(!inlineStage.active || e.button !== 0) return;
+    const doc = el.ownerDocument, stage = doc.getElementById('stage'), node = currentPreviewNode();
+    const sid = el.dataset.vnEditorSid;
+    const sp = node && (node.sprites || []).find(s => String(s.id) === String(sid));
+    if(!stage || !node || !sp) return;
+    e.preventDefault(); e.stopPropagation();
+    inlineSelect(doc, el, 'sprite', sid);
+    const r = stage.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    const cx = er.left + er.width/2, cy = er.top + er.height/2;
+    const startDist = Math.max(8, Math.hypot(e.clientX-cx,e.clientY-cy));
+    const startScale = sp.scale != null ? Number(sp.scale) : 100;
+    const move = ev => {
+      let dist = Math.hypot(ev.clientX-cx,ev.clientY-cy), factor = dist/startDist;
+      if(handle==='e') factor = Math.abs(ev.clientX-cx)/Math.max(8,Math.abs(e.clientX-cx));
+      if(handle==='s') factor = Math.abs(ev.clientY-cy)/Math.max(8,Math.abs(e.clientY-cy));
+      sp.scale = Math.max(15,Math.min(300,Math.round(startScale*factor)));
+      el.style.setProperty('--sx', String(sp.scale/100));
+      inlineMarkDirty();
+    };
+    const up = () => { doc.removeEventListener('pointermove', move); inlineRefreshTree(); };
+    doc.addEventListener('pointermove', move);
+    doc.addEventListener('pointerup', up, {once:true});
+  }
+
+  function inlineBind(doc){
+    const stage = doc.getElementById('stage');
+    if(!stage) return false;
+    const node = currentPreviewNode();
+    inlineEnsureStyle(doc);
+    stage.classList.add('vn-inline-stage-edit');
+    inlineSpriteList(node, doc);
+    const boxEl = doc.getElementById('box');
+    const choicesEl = doc.getElementById('choices');
+    if(boxEl) inlineAttachLayoutHandle(doc, boxEl, 'box');
+    if(choicesEl) inlineAttachLayoutHandle(doc, choicesEl, 'choices');
+
+    let hud = stage.querySelector('.vn-ie-hud');
+    if(!hud){
+      hud = doc.createElement('div'); hud.className='vn-ie-hud';
+      hud.innerHTML='<b>КАДР</b><span>выберите элемент</span>';
+      stage.appendChild(hud);
+    }
+    let tip = stage.querySelector('.vn-ie-tip');
+    if(!tip){
+      tip = doc.createElement('div'); tip.className='vn-ie-tip';
+      tip.textContent='Перетаскивайте изображения · углы и стороны меняют размер';
+      stage.appendChild(tip);
+    }
+
+    const onDown = e => {
+      if(!inlineStage.active) return;
+      const target = inlineElementFromEventTarget(e.target);
+      if(!target || target === hud || target === tip) return;
+      if(e.target.closest('.vn-ie-handle')) return;
+      e.preventDefault(); e.stopPropagation();
+      if(target.classList.contains('sprite')) inlineStartDrag(e,target,'sprite',target.dataset.vnEditorSid);
+      else if(target.id === 'box') inlineStartDrag(e,target,'box');
+      else if(target.id === 'choices') inlineStartDrag(e,target,'choices');
+    };
+    stage.addEventListener('pointerdown', onDown, true);
+    const blockClick = e => { if(inlineStage.active){ e.preventDefault(); e.stopPropagation(); } };
+    stage.addEventListener('click', blockClick, true);
+    inlineStage.cleanup = () => {
+      stage.removeEventListener('pointerdown', onDown, true);
+      stage.removeEventListener('click', blockClick, true);
+      stage.classList.remove('vn-inline-stage-edit');
+      stage.querySelectorAll('.vn-ie-selected').forEach(x=>x.classList.remove('vn-ie-selected'));
+      stage.querySelectorAll('.vn-ie-handle,.vn-ie-hud,.vn-ie-tip').forEach(x=>x.remove());
+    };
+    return true;
+  }
+
+  function setInlineStageMode(on){
+    const frame = $('playPreviewFrame');
+    const btn = $('playPreviewStageBtn');
+    if(!frame) return;
+    if(!on){
+      try { inlineStage.cleanup?.(); } catch(_){}
+      inlineStage.active = false;
+      inlineStage.cleanup = null;
+      if(btn){ btn.classList.remove('active'); btn.textContent='🖼 Кадр'; }
+      return;
+    }
+    const doc = previewDoc();
+    if(!doc || !doc.getElementById('stage')){
+      if(typeof window.notify === 'function') window.notify('Превью ещё загружается — попробуйте ещё раз', 'err');
+      return;
+    }
+    try { inlineStage.cleanup?.(); } catch(_){}
+    inlineStage.active = true;
+    inlineStage.iframe = frame;
+    inlineBind(doc);
+    if(btn){ btn.classList.add('active'); btn.textContent='✓ Кадр'; }
+  }
+
+  function bindPreviewStageButton(){
+    const btn = $('playPreviewStageBtn');
+    if(!btn || btn.dataset.myuiInlineStageBound) return;
+    btn.dataset.myuiInlineStageBound='1';
+    btn.onclick = e => { e.preventDefault(); e.stopImmediatePropagation(); setInlineStageMode(!inlineStage.active); };
+    const frame = $('playPreviewFrame');
+    frame?.addEventListener('load', () => {
+      if(inlineStage.active) setTimeout(() => setInlineStageMode(true), 80);
+    });
+  }
+
+  function bindSettingsPanel(){
+    const wrap = document.querySelector('.myui-settings');
+    const trigger = wrap?.querySelector('.myui-settings-trigger');
+    const slider = $('myuiPerfSlider');
+    if(!wrap || !trigger || !slider || trigger.dataset.myuiSettingsBound) return;
+    trigger.dataset.myuiSettingsBound = '1';
+    const close = () => {
+      wrap.classList.remove('open');
+      trigger.setAttribute('aria-expanded','false');
+    };
+    trigger.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const open = !wrap.classList.contains('open');
+      wrap.classList.toggle('open', open);
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if(open) perfState.updateSettingsUI();
+    });
+    slider.addEventListener('input', () => perfState.applyLevel(slider.value));
+    document.addEventListener('click', e => {
+      if(!e.target.closest('.myui-settings')) close();
+    });
+    perfState.updateSettingsUI();
+  }
+
+  function bindMoreMenu(){
+    const wrap = document.querySelector('.myui-more');
+    const trigger = wrap?.querySelector('.myui-more-trigger');
+    if(!wrap || !trigger || trigger.dataset.myuiMoreBound) return;
+    trigger.dataset.myuiMoreBound = '1';
+    trigger.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      wrap.classList.toggle('open');
+    });
+    document.addEventListener('click', e => {
+      if(!e.target.closest('.myui-more')) wrap.classList.remove('open');
+    });
+  }
+
+  function bindProxyButtons(){
+    document.querySelectorAll('[data-proxy]').forEach(btn => {
+      if(btn.dataset.myuiProxyBound) return;
+      btn.dataset.myuiProxyBound = '1';
+      btn.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        const target = $(btn.dataset.proxy);
+        if(target) target.click();
+      });
+    });
+  }
+
+
+  // ---- Inspector UX layer -----------------------------------------------
+  // The core still owns the real inspector/data handlers. This layer only
+  // adds hierarchy and presentation after the core renders the inspector.
+  function enhanceInspector(){
+    const body = document.getElementById('inspBody');
+    const title = document.getElementById('inspTitle');
+    if(!body) return;
+    const sections = Array.from(body.querySelectorAll(':scope > .insp-section'));
+    if(!sections.length) return;
+
+    sections.forEach(section => {
+      if(section.dataset.myuiEnhanced === '1') return;
+      section.dataset.myuiEnhanced = '1';
+      const has = sel => !!section.querySelector(sel);
+      const hasTitle = has('#iTitle');
+      const hasText = has('#iText');
+      const hasAudio = has('#iBgm, #iSfx, #iBgmUrl, #iSfxUrl');
+      const hasVariants = has('#iTexts, #iAddText');
+      const hasChoices = has('#iChoices, #iAddChoice, #iPlainNext');
+      const hasSprites = has('#spritesBox, #toggleSprites');
+      let kind = 'secondary';
+      if(hasTitle || hasText || section.id === 'iSpeakerWrap') kind = 'primary';
+      if(hasVariants || hasChoices) kind = 'logic';
+      if(hasAudio) kind = 'audio';
+      if(hasSprites) kind = 'scene';
+      section.dataset.myuiKind = kind;
+      section.classList.add('myui-insp-section');
+      if(kind === 'audio' || kind === 'scene') section.classList.add('myui-insp-secondary');
+      if(hasVariants) section.classList.add('myui-insp-variants');
+      if(hasChoices) section.classList.add('myui-insp-choices');
+      if(!section.querySelector('.myui-insp-kicker')){
+        const kicker=document.createElement('div');
+        kicker.className='myui-insp-kicker';
+        kicker.textContent = kind==='primary' ? (hasText?'Содержание':'Основное')
+          : kind==='logic' ? (hasVariants?'Условная логика':'Переход')
+          : kind==='audio' ? 'Звук' : 'Сцена';
+        section.insertBefore(kicker, section.firstChild);
+      }
+    });
+
+    if(title && !title.parentElement.querySelector('.myui-insp-subtitle')){
+      const sub=document.createElement('div');
+      sub.className='myui-insp-subtitle';
+      sub.id='myuiInspSubtitle';
+      title.parentElement.insertBefore(sub,title.nextSibling);
+    }
+    const sub=document.getElementById('myuiInspSubtitle');
+    const selected=document.querySelector('.node.selected');
+    if(sub) sub.textContent=selected ? ('Блок · '+(selected.dataset.id||'')) : 'Сценарный блок';
+  }
+
+  function installInspectorHook(){
+    if(typeof window.renderNodeInspector !== 'function' || window.__MYUI_INSPECTOR_HOOK__) return;
+    const original=window.renderNodeInspector;
+    window.renderNodeInspector=function(){
+      const result=original.apply(this,arguments);
+      requestAnimationFrame(enhanceInspector);
+      return result;
+    };
+    window.__MYUI_INSPECTOR_HOOK__=true;
+  }
+
+  function storyTree(){
+    const body = $('storyTreeBody');
+    const canvas = $('canvas');
+    if(!body || !canvas) return;

@@ -1,0 +1,95 @@
+# Моя новелла
+# (это название проекта; можно явно: @title Моя новелла)
+
+# ─── Ассеты ───
+# @asset id char|bg|music|sfx URL
+# Короткие формы: @char @bg @music @sfx
+@asset yuki char /assets/demo/yuki.png
+@asset station bg /assets/demo/station.jpg
+# @asset explore music https://example.com/theme.mp3
+# @asset click sfx https://example.com/click.wav
+# Можно внешние ссылки:
+# @char yuki https://example.com/yuki.webp
+
+# ─── Переменные ───
+@var trust_yuki number 0
+@var met_yuki bool false
+
+# ─── Сцены ───
+## Вокзал
+[bg station cover center]
+# варианты: cover | contain | fill | actual
+# [bg-fit contain]
+# или сразу путь/цвет: [bg #1c2b3a]  [bg /assets/demo/station.jpg]
+
+=== start
+narration
+Дождь стучит по крыше вокзала. Через минуту прибудет последний поезд.
+-> arrive
+
+=== arrive
+narration
+На платформе появляется фигура — это Юки.
+@sprite yuki right
+-> meet
+
+=== meet
+Юки: Ты тоже опоздала на автобус?
+@sprite yuki right
+- «Да, ужасно не повезло» -> friendly [trust_yuki +1]
+- Промолчать и отвернуться -> cold [trust_yuki -1]
+
+=== friendly
+Юки: Ха, значит не только мне сегодня не везёт.
+@sprite yuki center
+-> end
+
+=== cold
+Юки: ...Ладно, извини за вопрос.
+-> end
+
+=== end
+narration
+— Конец демо-сцены —
+
+# ─── Шпаргалка ───
+# @title Название проекта   (или первая строка # Заголовок)
+# @asset id char URL     персонаж
+# @asset id bg URL       фон
+# @asset id music URL    фоновая музыка (BGM)
+# @asset id sfx URL      звуковой эффект
+# @char / @bg / @music / @sfx id URL
+# Перетащить music на сцену или блок → BGM
+# [bg id]                фон сцены по id ассета
+# [bg #hex] / [bg /path] фон напрямую
+# @sprite id left|center|right|top|bottom|top-left|...
+#   позиции 3×3: top-left top top-right / left center right / bottom-left bottom bottom-right
+# @var id number|bool|string value
+# ## Сцена
+# === nodeId
+# narration | Имя: текст | -> next | - выбор -> id [var +1]
+
+
+# ─── Условия ───
+# ? expr                 условие для следующей реплики / выбора / спрайта / фона
+# &&  и   ||  или
+# === id ? expr          блок только если условие
+# - текст -> id ? expr   вариант ответа по условию
+# @sprite yuki right ? trust_yuki >= 2
+# [bg night] ? route == night
+#
+# Пример:
+# === meet
+# ? trust_yuki >= 2 && met_yuki == true
+# Юки: Рада снова тебя видеть.
+# ? trust_yuki < 2
+# Юки: ...Ну привет.
+# - Поговорить -> talk ? trust_yuki >= 1
+# - Уйти -> leave
+
+
+# ─── Аудио ───
+# @asset rain music /assets/demo/rain.mp3
+# @asset click sfx /assets/demo/click.wav
+# @music rain          BGM сцены или текущего блока
+# @sfx click           звук при входе в блок

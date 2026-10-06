@@ -1,0 +1,336 @@
+{
+  "id": "rainstation-pq5e",
+  "title": "Пролог",
+  "version": 2,
+  "bgm": "",
+  "bgmVol": 0.55,
+  "sfxVol": 1,
+  "masterVol": 1,
+  "published": true,
+  "variables": [
+    {
+      "id": "var_dmpb2v",
+      "name": "sanity",
+      "type": "number",
+      "default": 100
+    },
+    {
+      "id": "var_pqb8yj",
+      "name": "resonance",
+      "type": "number",
+      "default": 0
+    },
+    {
+      "id": "var_e0fap4",
+      "name": "clara_trust",
+      "type": "number",
+      "default": 0
+    },
+    {
+      "id": "var_xnoj0p",
+      "name": "evidence",
+      "type": "number",
+      "default": 0
+    },
+    {
+      "id": "var_gzoy6o",
+      "name": "saw_lake_vision",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "id": "var_xm9yg1",
+      "name": "found_diary",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "id": "var_8smx22",
+      "name": "clara_knows_ability",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "id": "var_2dcf3b",
+      "name": "victor_contact",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "id": "var_gv3rd8",
+      "name": "saved_clock",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "id": "var_rdmjsp",
+      "name": "night_visit",
+      "type": "bool",
+      "default": false
+    }
+  ],
+  "assets": [],
+  "assetFolders": [],
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "Пролог",
+      "color": "#5b7fa6",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "bgVariants": [],
+      "layout": null,
+      "bgm": "",
+      "x": 241,
+      "y": 138,
+      "w": 2093.269974039611,
+      "h": 955.5764652889445
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start",
+      "speaker": "",
+      "text": "Холод.",
+      "x": 261,
+      "y": 168,
+      "title": "Начало",
+      "sceneId": "s1",
+      "layout": {
+        "box": {
+          "left": 49.050632911392405,
+          "bottom": 52.10267857142857,
+          "width": 92,
+          "height": 24
+        }
+      },
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n2"
+    },
+    {
+      "id": "n2",
+      "speaker": "",
+      "text": "Не тот, что бывает зимой, когда мороз щиплет щеки. Это холод абсолютный, лишенный физики. Он не охлаждает кожу — он останавливает время.",
+      "x": 540.8101893592113,
+      "y": 172.7721563828008,
+      "title": "Начало1",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n3"
+    },
+    {
+      "id": "n3",
+      "speaker": "",
+      "text": "Темнота вокруг густая, как чернила. Я не вижу, но я чувствую.",
+      "x": 843.6585571000089,
+      "y": 173,
+      "title": "Начало2",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n4"
+    },
+    {
+      "id": "n4",
+      "speaker": "",
+      "text": "Шелк платья липнет к мокрой коже. Вода тяжелая, она давит на грудную клетку, вытесняя воздух из легких. Пахнет тиной, ржавчиной и дорогими духами с нотами жасмина, которые теперь пахнут гнилью.",
+      "x": 1150.770502073989,
+      "y": 163.96892524931408,
+      "title": "Начало3",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n5"
+    },
+    {
+      "id": "n5",
+      "speaker": "",
+      "text": "Кто-то стоит на берегу.",
+      "x": 1719.112703689088,
+      "y": 267.0063666931588,
+      "title": "Начало4",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n6"
+    },
+    {
+      "id": "n6",
+      "speaker": "",
+      "text": "Я не вижу его лица, но я знаю его силуэт. Я знаю, как он держит трость. Я знаю, что он сейчас улыбается. Эта уверенность не моя. Она вшита в эту память, как свинцовая дробь в подол платья.",
+      "x": 411.82628488220206,
+      "y": 472.1740944753519,
+      "title": "Начало5",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n7"
+    },
+    {
+      "id": "n7",
+      "speaker": "",
+      "text": "Темнота вокруг густая, как чернила. Я не вижу, но я чувствую.",
+      "x": 827.1370323890612,
+      "y": 474.6585571000089,
+      "title": "Начало6",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n8"
+    },
+    {
+      "id": "n8",
+      "speaker": "Тишина",
+      "text": "Прощай, Элеонора",
+      "x": 1540.7776274822556,
+      "y": 479.4163257876804,
+      "title": "Начало7",
+      "sceneId": "s1",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "choices": [
+        {
+          "label": "оооо",
+          "next": "n16",
+          "condition": null,
+          "effects": []
+        },
+        {
+          "label": "",
+          "next": "",
+          "condition": null,
+          "effects": []
+        }
+      ]
+    },
+    {
+      "id": "n9",
+      "speaker": "",
+      "text": "Вода смыкается над головой. Тьма становится абсолютной. Я открываю рот, чтобы закричать, но вместо крика из горла вырывается лишь бульканье и...",
+      "x": 1115.1328708743413,
+      "y": 587.3441817707844,
+      "title": "Начало8",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n10"
+    },
+    {
+      "id": "n10",
+      "speaker": "",
+      "text": "Тик.",
+      "x": 428.9711388346117,
+      "y": 738.4548412573986,
+      "title": "Начало9",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n11"
+    },
+    {
+      "id": "n11",
+      "speaker": "",
+      "text": "Я резко вдыхаю, хватая ртом воздух.\nЛегкие горят. Сердце колотится о ребра, сбиваясь с ритма.",
+      "x": 435.9161399252316,
+      "y": 929.8177819134846,
+      "title": "Начало 10",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n13"
+    },
+    {
+      "id": "n12",
+      "speaker": "",
+      "text": "Звук нормализуется. Это не биение сердца. Это часы. Десятки часов на стенах.",
+      "x": 1124.8581678063554,
+      "y": 819.8760044217366,
+      "title": "Начало12",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n14"
+    },
+    {
+      "id": "n13",
+      "speaker": "",
+      "text": "Тик. Тик. Тик.",
+      "x": 838.8122120987158,
+      "y": 839.2593735427837,
+      "title": "Начало11",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n12"
+    },
+    {
+      "id": "n14",
+      "speaker": "",
+      "text": "Я сижу за своим рабочим столом. В мастерской тепло, пахнет древесным лаком и остывшим кофе. На ладони, сжимая пальцы до побеления костяшек, я держу карманные часы. Их крышка открыта. Механизм внутри мертв, но металл все еще вибрирует от чужого ужаса.",
+      "x": 1477.2534678100365,
+      "y": 778.8016093293309,
+      "title": "Начало13",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center",
+      "next": "n15"
+    },
+    {
+      "id": "n15",
+      "speaker": "",
+      "text": "Я медленно разжимаю пальцы. На серебряном корпусе нет ни царапины. Но на моих пальцах проступает ледяной пот.1111111111111111",
+      "x": 1826.0948443524549,
+      "y": 866.191082960032,
+      "title": "Начало14",
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center"
+    },
+    {
+      "id": "n16",
+      "speaker": "",
+      "text": "На ули=це было холодно",
+      "x": 1916.8547108320288,
+      "y": 493.65088835342954,
+      "sceneId": "s1",
+      "type": "narration",
+      "bg": "#1c2b3a",
+      "bgFit": "cover",
+      "bgPos": "center"
+    }
+  ],
+  "description": "",
+  "coverUrl": ""
+}
