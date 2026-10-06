@@ -4,10 +4,28 @@ export const StatePlugin = {
     install(api) {
         const state = {};
 
-        // API плагина
+        return {
+            api: {
+                get() {
+                    return { ...state };
+                },
 
-        return () => {
-            // cleanup
+                getValue(name) {
+                    return state[name];
+                },
+
+                set(name, value) {
+                    state[name] = value;
+                },
+
+                update(values) {
+                    Object.assign(state, values);
+                }
+            },
+
+            cleanup() {
+                // Пока ничего не нужно
+            }
         };
     }
 };
