@@ -1,16 +1,21 @@
 # VN Engine
 
-Текущая версия учебного движка визуальной новеллы.
+JavaScript-движок визуальной новеллы на ES Modules.
+
+**Текущая версия: `0.1.0`**
+
+Проект использует Semantic Versioning. История изменений находится в `docs/changelog.md`, а исторические snapshots API — в `docs/versions/`.
 
 ## Структура
 
 - `core.js` — логика сценария и переходы между узлами.
 - `events.js` — EventBus.
-- `player.js` — визуальный корень и старые named layers.
+- `player.js` — визуальный корень и named layers.
 - `block-manager.js` — управление визуальными Block.
 - `plugin-manager.js` — установка плагинов и API.
-- `plugins/` — Dialogue, Narration, Background и Wait.
+- `plugins/` — игровые плагины.
 - `main.js` — сборка движка и тестовый сценарий.
+- `docs/` — документация и история версий.
 - `index.html` — страница.
 - `server.js` — Express-сервер.
 

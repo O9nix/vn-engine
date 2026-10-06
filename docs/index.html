@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VN Engine — Documentation</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --sidebar: #151821;
+  --panel: #191d27;
+  --text: #e8eaf0;
+  --muted: #9aa1b2;
+  --border: #2a3040;
+  --accent: #7aa2f7;
+  --code: #0b0d12;
+  --green: #9ece6a;
+  --yellow: #e0af68;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.65;
+}
+.layout { display: flex; min-height: 100vh; }
+aside {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 290px;
+  overflow-y: auto;
+  padding: 28px 20px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+}
+.brand { font-size: 21px; font-weight: 750; margin-bottom: 4px; }
+.version { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+nav h3 { color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; margin: 22px 0 8px; }
+nav a {
+  display: block;
+  color: #cbd0dc;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 9px;
+  border-radius: 7px;
+}
+nav a:hover { background: #202532; color: white; }
+main {
+  width: min(100%, 1050px);
+  margin-left: 290px;
+  padding: 46px 58px 100px;
+}
+h1 { font-size: 38px; line-height: 1.2; margin-top: 0; }
+h2 { margin-top: 56px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h3 { margin-top: 32px; }
+p, li { color: #cbd0dc; }
+strong { color: var(--text); }
+code {
+  background: #222734;
+  padding: 2px 5px;
+  border-radius: 5px;
+  color: #d7def0;
+}
+pre {
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  color: #d8dee9;
+}
+pre code { background: none; padding: 0; }
+.callout {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 15px 18px;
+  margin: 18px 0;
+}
+.callout.warning { border-color: #594d31; }
+.api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.api-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.api-card h3 { margin: 0 0 7px; font-size: 16px; }
+.api-card p { margin: 0; font-size: 14px; }
+.tag { color: var(--green); font-size: 12px; }
+@media (max-width: 800px) {
+  aside { position: static; width: 100%; max-height: none; }
+  .layout { display: block; }
+  main { margin-left: 0; padding: 30px 22px 70px; }
+  .api-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand">VN Engine</div>
+  <div class="version">Версия 0.1.0</div>
+  <nav>
+    <h3>Версия</h3>
+    <a href="#version">0.1.0</a>
+    <a href="#versioning">Правила версий</a>
+    <a href="#changelog">Changelog</a>
+
+    <h3>О проекте</h3>
+    <a href="#overview">Кратко о проекте</a>
+    <a href="#architecture">Архитектура</a>
+    <a href="#flow">Исполнение сценария</a>
+
+    <h3>API</h3>
+    <a href="#api-vn">VN</a>
+    <a href="#api-project">Project</a>
+    <a href="#api-events">EventBus</a>
+    <a href="#api-plugin-manager">PluginManager</a>
+    <a href="#api-plugin">API плагина</a>
+    <a href="#api-blocks">BlockManager</a>
+    <a href="#api-player">Player</a>
+    <a href="#api-conditions">ConditionEvaluator</a>
+
+    <h3>Плагины</h3>
+    <a href="#plugins">Обзор</a>
+    <a href="#dialogue">DialoguePlugin</a>
+    <a href="#narration">NarrationPlugin</a>
+    <a href="#background">BackgroundPlugin</a>
+    <a href="#wait">WaitPlugin</a>
+    <a href="#choice">ChoicePlugin</a>
+    <a href="#state">StatePlugin</a>
+
+    <h3>Сценарии</h3>
+    <a href="#project-example">Project example</a>
+    <a href="#choice-model">Модель Choice</a>
+    <a href="#roadmap">Следующие шаги</a>
+  </nav>
+</aside>
+
+<main>
+<section id="version">
+<h2>Версия 0.1.0</h2>
+<p>Это первая зафиксированная версия VN Engine. Исторический API snapshot находится в <code>docs/versions/0.1.0/api.md</code>, обзор состояния — в <code>docs/versions/0.1.0/overview.md</code>.</p>
+</section>
+
+<section id="versioning">
+<h2>Версионирование</h2>
+<p>Проект использует Semantic Versioning: <code>MAJOR.MINOR.PATCH</code>. PATCH используется для совместимых исправлений, MINOR — для совместимых новых возможностей, MAJOR — для несовместимых изменений API.</p>
+<p>Каждая релизная версия получает неизменяемый snapshot API и Git tag вида <code>v0.1.0</code>.</p>
+</section>
+
+<section id="changelog">
+<h2>Changelog</h2>
+<p>История изменений ведётся в <code>docs/changelog.md</code>.</p>
+</section>
+
+<section id="overview">
+<h1>VN Engine</h1>
+<p>JavaScript-движок визуальной новеллы на ES Modules. Движок построен вокруг небольшого Core и расширяется плагинами.</p>
+<div class="callout">
+<strong>Главный принцип:</strong> Core исполняет сценарий, а конкретная игровая механика находится в плагинах.
+</div>
+</section>
+
+<section id="architecture">
+<h2>Архитектура</h2>
+<pre><code>Project
+   ↓
+VN (Core)
+   ↓
+Node Handler
+   ↓
+Plugin
+   ↓
+BlockManager / Player / EventBus</code></pre>
+<p><strong>Project</strong> хранит структуру сценария. <strong>VN</strong> владеет текущим узлом и навигацией. <strong>PluginManager</strong> устанавливает плагины и предоставляет им общий API. <strong>BlockManager</strong> управляет визуальными блоками.</p>
+<p>Плагины могут регистрировать новые типы узлов и публиковать собственный API.</p>
+</section>
+
+<section id="flow">
+<h2>Исполнение сценария</h2>
+<ol>
+<li>Создаётся <code>Project</code>.</li>
+<li>Создаётся <code>VN</code>.</li>
+<li>Плагины регистрируются через <code>PluginManager.use()</code>.</li>
+<li><code>game.loadProject(project)</code> начинает выполнение с первого узла первой сцены.</li>
+<li><code>VN</code> находит handler по <code>node.type</code>.</li>
+<li>Handler создаёт UI/логику и при необходимости вызывает <code>context.wait()</code>.</li>
+<li>Продолжение выполняется через <code>context.resume()</code>, <code>context.goto(id)</code> или обычный переход к следующему узлу.</li>
+</ol>
+</section>
+
+<section id="api-vn">
+<h2>API: VN</h2>
+<p>Файл <code>core.js</code>. Core отвечает за выполнение сценария.</p>
+<div class="api-grid">
+<div class="api-card"><h3>getBus()</h3><p>Возвращает EventBus экземпляра VN.</p></div>
+<div class="api-card"><h3>getState()</h3><p>Текущий runtime-state Core. В целевой архитектуре состояние планируется вынести в StatePlugin.</p></div>
+<div class="api-card"><h3>registerNodeType(type, handler)</h3><p>Регистрирует обработчик типа узла.</p></div>
+<div class="api-card"><h3>loadProject(project)</h3><p>Загружает Project и запускает историю с первого узла.</p></div>
+<div class="api-card"><h3>next()</h3><p>Запускает текущий узел, если VN не находится в ожидании.</p></div>
+</div>
+<h3>Контекст handler</h3>
+<pre><code>handler(node, {
+    wait(),
+    resume(),
+    getState(),
+    goto(nodeId)
+});</code></pre>
+</section>
+
+<section id="api-project">
+<h2>API: Project</h2>
+<p>Файл <code>project.js</code>. Project является моделью сценария.</p>
+<pre><code>const project = new Project({
+    metadata: {},
+    scenes: [],
+    config: {},
+    assets: {}
+});</code></pre>
+<div class="api-grid">
+<div class="api-card"><h3>getMetadata()</h3><p>Возвращает metadata проекта.</p></div>
+<div class="api-card"><h3>getScenes()</h3><p>Возвращает все сцены.</p></div>
+<div class="api-card"><h3>getScene(id)</h3><p>Находит сцену по id.</p></div>
+<div class="api-card"><h3>getNode(id)</h3><p>Находит узел во всех сценах.</p></div>
+<div class="api-card"><h3>getSceneForNode(nodeId)</h3><p>Возвращает сцену-владельца узла.</p></div>
+<div class="api-card"><h3>getNextNode(nodeId)</h3><p>Возвращает следующий узел внутри сцены.</p></div>
+<div class="api-card"><h3>getConfig()</h3><p>Возвращает config.</p></div>
+<div class="api-card"><h3>getAssets()</h3><p>Возвращает assets.</p></div>
+</div>
+</section>
+
+<section id="api-events">
+<h2>API: EventBus</h2>
+<p>Файл <code>events.js</code>.</p>
+<pre><code>const off = bus.on('event', payload => {
+    console.log(payload);
+});
+
+bus.emit('event', data);
+off();</code></pre>
+<div class="api-grid">
+<div class="api-card"><h3>on(type, handler)</h3><p>Подписка на событие. Возвращает функцию отписки.</p></div>
+<div class="api-card"><h3>off(type, handler)</h3><p>Удаляет обработчик.</p></div>
+<div class="api-card"><h3>emit(type, payload)</h3><p>Отправляет событие подписчикам.</p></div>
+</div>
+<div class="callout"><strong>Правило:</strong> EventBus сообщает о фактах. Навигация выполняется через API контекста VN, например <code>context.goto()</code>.</div>
+</section>
+
+<section id="api-plugin-manager">
+<h2>API: PluginManager</h2>
+<p>PluginManager — обязательная точка установки плагинов.</p>
+<pre><code>const plugins = new PluginManager(
+    bus,
+    game,
+    player,
+    blocks,
+    conditions
+);</code></pre>
+<div class="api-grid">
+<div class="api-card"><h3>use(plugin)</h3><p>Устанавливает плагин и вызывает его <code>install(api)</code>.</p></div>
+<div class="api-card"><h3>remove(name)</h3><p>Удаляет плагин и вызывает его cleanup.</p></div>
+<div class="api-card"><h3>has(name)</h3><p>Проверяет установлен ли плагин.</p></div>
+<div class="api-card"><h3>get(name)</h3><p>Возвращает исходный объект плагина.</p></div>
+<div class="api-card"><h3>list()</h3><p>Возвращает имена установленных плагинов.</p></div>
+</div>
+</section>
+
+<section id="api-plugin">
+<h2>API плагина</h2>
+<p>Плагин имеет имя и метод <code>install(api)</code>. Install может вернуть публичный API и cleanup.</p>
+<pre><code>export const MyPlugin = {
+    name: 'my-plugin',
+
+    install(api) {
+        return {
+            api: {
+                hello() {
+                    return 'hello';
+                }
+            },
+
+            cleanup() {
+                // очистка
+            }
+        };
+    }
+};</code></pre>
+<h3>Доступ к API другого плагина</h3>
+<pre><code>const state = api.plugins.state;
+
+state.api.getValue('health');</code></pre>
+<p>Имена API не являются глобальными: обращение идёт через конкретное имя установленного плагина.</p>
+</section>
+
+<section id="api-blocks">
+<h2>API: BlockManager</h2>
+<p>Управляет визуальными блоками, создаваемыми плагинами.</p>
+<pre><code>const block = api.blocks.create('dialogue', {
+    channel: 'content',
+    element,
+    data: {},
+    meta: {}
+});</code></pre>
+<div class="api-grid">
+<div class="api-card"><h3>create(type, options)</h3><p>Создаёт видимый блок и делает его текущим для channel.</p></div>
+<div class="api-card"><h3>get(id)</h3><p>Получает блок по техническому id.</p></div>
+<div class="api-card"><h3>getAll()</h3><p>Все блоки.</p></div>
+<div class="api-card"><h3>getByType(type)</h3><p>Блоки конкретного типа.</p></div>
+<div class="api-card"><h3>getActiveByChannel(channel)</h3><p>Видимые блоки канала.</p></div>
+<div class="api-card"><h3>getCurrent(channel)</h3><p>Текущий блок канала, даже если он скрыт.</p></div>
+<div class="api-card"><h3>show(id)</h3><p>Показывает блок.</p></div>
+<div class="api-card"><h3>hide(id)</h3><p>Скрывает блок.</p></div>
+<div class="api-card"><h3>remove(id)</h3><p>Удаляет DOM и сам блок из менеджера.</p></div>
+</div>
+<h3>Block</h3>
+<pre><code>{
+    id,
+    type,
+    channel,
+    state,
+    element,
+    data,
+    meta
+}</code></pre>
+</section>
+
+<section id="api-player">
+<h2>API: Player</h2>
+<div class="api-grid">
+<div class="api-card"><h3>getPluginLayer()</h3><p>Возвращает общий DOM-контейнер для плагинов.</p></div>
+<div class="api-card"><h3>registerLayer(name, element)</h3><p>Регистрирует именованный визуальный слой.</p></div>
+<div class="api-card"><h3>show(name)</h3><p>Показывает именованный слой.</p></div>
+<div class="api-card"><h3>hide(name)</h3><p>Скрывает именованный слой.</p></div>
+<div class="api-card"><h3>isVisible(name)</h3><p>Проверяет видимость слоя.</p></div>
+</div>
+</section>
+
+<section id="api-conditions">
+<h2>API: ConditionEvaluator</h2>
+<p>Файл <code>core/condition-evaluator.js</code>.</p>
+<pre><code>conditions.evaluate(condition, state);</code></pre>
+<p>Поддерживаются операторы:</p>
+<pre><code>==  !=  &gt;  &gt;=  &lt;  &lt;=</code></pre>
+<p>Если condition отсутствует, результат — <code>true</code>. В текущей реализации используются <code>==</code> и <code>!=</code>.</p>
+</section>
+
+<section id="plugins">
+<h2>Плагины</h2>
+<p>Текущие плагины проекта:</p>
+<ul>
+<li><code>dialogue</code></li>
+<li><code>narration</code></li>
+<li><code>background</code></li>
+<li><code>wait</code></li>
+<li><code>choice</code></li>
+<li><code>state</code> — реализован, но пока не подключён в текущем <code>main.js</code>.</li>
+</ul>
+</section>
+
+<section id="dialogue"><h2>DialoguePlugin</h2><p>Регистрирует node type <code>dialogue</code>, создаёт Block канала <code>content</code> и вызывает <code>context.wait()</code>.</p></section>
+<section id="narration"><h2>NarrationPlugin</h2><p>Регистрирует <code>narration</code>, создаёт content-блок и ожидает продолжения.</p></section>
+<section id="background"><h2>BackgroundPlugin</h2><p>Регистрирует <code>background</code> и устанавливает CSS background у <code>document.body</code>.</p></section>
+<section id="wait"><h2>WaitPlugin</h2><p>Регистрирует <code>wait</code>. Берёт текущий content-блок, добавляет progress bar и после duration вызывает <code>context.resume()</code>.</p></section>
+
+<section id="choice">
+<h2>ChoicePlugin</h2>
+<p>Регистрирует <code>choice</code>, создаёт overlay-блок с кнопками и выбирает подходящий variant по условию.</p>
+<pre><code>{
+    id: 'go',
+    variants: [
+        {
+            condition: {
+                variable: 'health',
+                operator: '&lt;=',
+                value: 5
+            },
+            text: 'Сначала в больницу',
+            goto: 'hospital'
+        },
+        {
+            text: 'Пойдём домой',
+            goto: 'home'
+        }
+    ]
+}</code></pre>
+<p>Variant выбирается при отображении Choice. При выборе кнопки выполняется <code>goto</code>, если он задан; иначе вызывается <code>context.resume()</code>.</p>
+</section>
+
+<section id="state">
+<h2>StatePlugin</h2>
+<p>Плагин уже существует в проекте и предоставляет:</p>
+<pre><code>api.get()
+api.getValue(name)
+api.set(name, value)
+api.update(values)</code></pre>
+<p>Пример:</p>
+<pre><code>api.plugins.state.api.set('health', 10);
+
+const health =
+    api.plugins.state.api.getValue('health');</code></pre>
+<div class="callout warning"><strong>Текущий статус:</strong> StatePlugin пока не подключён в <code>main.js</code>. Кроме того, VN всё ещё содержит собственный <code>#state</code>. Следующий этап — сделать StatePlugin единственным владельцем runtime state.</div>
+</section>
+
+<section id="project-example">
+<h2>Пример Project</h2>
+<pre><code>const project = new Project({
+    scenes: [
+        {
+            id: 'scene-1',
+            nodes: [
+                {
+                    id: 'start',
+                    type: 'dialogue',
+                    character: 'Аня',
+                    text: 'Как себя чувствуешь?'
+                },
+                {
+                    id: 'choice-1',
+                    type: 'choice',
+                    text: 'Куда пойдём?',
+                    options: [
+                        {
+                            id: 'go',
+                            variants: [
+                                {
+                                    condition: {
+                                        variable: 'health',
+                                        operator: '&lt;=',
+                                        value: 5
+                                    },
+                                    text: 'Сначала в больницу',
+                                    goto: 'hospital'
+                                },
+                                {
+                                    text: 'Пойдём домой',
+                                    goto: 'home'
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+});</code></pre>
+</section>
+
+<section id="choice-model">
+<h2>Модель Choice</h2>
+<p><strong>Option</strong> — логический ответ игрока. <strong>Variant</strong> — конкретное представление и действие, подходящее текущему состоянию.</p>
+<pre><code>Choice
+└── option
+    └── variants
+        ├── condition
+        ├── text
+        └── goto</code></pre>
+</section>
+
+<section id="roadmap">
+<h2>Следующие шаги</h2>
+<ol>
+<li>Сделать StatePlugin единственным владельцем runtime state.</li>
+<li>Перевести ChoicePlugin на StatePlugin API.</li>
+<li>Вынести condition-механику в плагинную модель.</li>
+<li>Добавить явные зависимости плагинов.</li>
+<li>Добавить систему эффектов изменения состояния.</li>
+<li>Развивать Inventory, Quest и другие механики как независимые плагины.</li>
+</ol>
+<div class="callout"><strong>Важно:</strong> FlowResolver не является частью целевой архитектуры. Навигацией владеет VN.</div>
+</section>
+</main>
+</div>
+</body>
+</html>
