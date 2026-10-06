@@ -70,7 +70,7 @@ export const DialoguePlugin = {
         );
 
         return () => {
-            // Пока нечего удалять.
+           
         };
     }
 };

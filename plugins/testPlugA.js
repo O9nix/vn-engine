@@ -1,5 +1,6 @@
 export class PluginManager {
     #plugins = new Map();
+    #services = new Map();
     #api;
 
     constructor(
@@ -65,27 +66,38 @@ export class PluginManager {
                     )
             },
 
-            plugins: new Proxy(
-                {},
-                {
-                    get: (_, name) => {
-                        const entry =
-                            this.#plugins.get(name);
-
-                        if (!entry) {
-                            console.warn(
-                                `[PluginManager] Плагин "${String(name)}" не установлен`
-                            );
-
-                            return null;
-                        }
-
-                        return {
-                            api: entry.api
-                        };
+            services: {
+                register: (name, service) => {
+                    if (!name) {
+                        throw new Error(
+                            'Имя сервиса обязательно'
+                        );
                     }
+
+                    if (this.#services.has(name)) {
+                        throw new Error(
+                            `Сервис "${name}" уже зарегистрирован`
+                        );
+                    }
+
+                    this.#services.set(
+                        name,
+                        service
+                    );
+
+                    return () => {
+                        this.#services.delete(name);
+                    };
+                },
+
+                get: (name) => {
+                    return this.#services.get(name) ?? null;
+                },
+
+                has: (name) => {
+                    return this.#services.has(name);
                 }
-            )
+            }
         };
     }
 
@@ -113,31 +125,16 @@ export class PluginManager {
             );
         }
 
-        const result =
-            plugin.install(this.#api);
-
-        let pluginApi = {};
-        let cleanup = null;
-
-        if (result) {
-            if (
-                result.api &&
-                typeof result.api === 'object'
-            ) {
-                pluginApi = result.api;
-            }
-
-            if (
-                typeof result.cleanup === 'function'
-            ) {
-                cleanup = result.cleanup;
-            }
-        }
+        const cleanup = plugin.install(
+            this.#api
+        );
 
         this.#plugins.set(name, {
             plugin,
-            api: pluginApi,
-            cleanup
+            cleanup:
+                typeof cleanup === 'function'
+                    ? cleanup
+                    : null
         });
 
         console.log(

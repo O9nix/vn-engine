@@ -42,9 +42,7 @@ export class VN {
 
     loadProject(project) {
         this.#project = project;
-        this.#state = {
-            health: 7
-        };
+        this.#state = {};
         this.#currentNodeId = null;
         this.#isWaiting = false;
 
