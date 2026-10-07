@@ -4,7 +4,6 @@ export class VN {
     #bus = new EventBus();
 
     #project = null;
-    #state = {};
     #currentNodeId = null;
     #isWaiting = false;
 
@@ -18,10 +17,6 @@ export class VN {
 
     getBus() {
         return this.#bus;
-    }
-
-    getState() {
-        return { ...this.#state };
     }
 
     registerNodeType(type, handler) {
@@ -42,7 +37,6 @@ export class VN {
 
     loadProject(project) {
         this.#project = project;
-        this.#state = {};
         this.#currentNodeId = null;
         this.#isWaiting = false;
 
@@ -131,10 +125,6 @@ export class VN {
 
             resume: () => {
                 this.#continue();
-            },
-
-            getState: () => {
-                return this.getState();
             },
             goto: (nodeId) => {
     this.#goto(nodeId);

@@ -2,7 +2,9 @@ export const StatePlugin = {
     name: 'state',
 
     install(api) {
-        const state = {};
+        const state = {
+            health: 7
+        };
 
         return {
             api: {

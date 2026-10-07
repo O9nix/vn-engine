@@ -22,33 +22,9 @@ import { WaitPlugin }
     from './plugins/wait-plugin.js';
 import { ChoicePlugin }
     from './plugins/choice-plugin.js';
+import { StatePlugin }
+    from './plugins/state-plugin.js';
 
-
-export const TestPluginB = {
-    name: 'test-b',
-
-    install(api) {
-        const pluginA =
-            api.plugins['test-a'];
-
-        console.log(
-            pluginA.api.hello()
-        );
-    }
-};
-export const TestPluginA = {
-    name: 'test-a',
-
-    install(api) {
-        return {
-            api: {
-                hello() {
-                    return 'Hello from A';
-                }
-            }
-        };
-    }
-};
 const game = new VN();
 
 const bus = game.getBus();
@@ -67,15 +43,13 @@ const plugins = new PluginManager(
     conditions
 );
 
+plugins.use(StatePlugin);
 plugins.use(DialoguePlugin);
 plugins.use(NarrationPlugin);
 plugins.use(BackgroundPlugin);
 plugins.use(WaitPlugin);
 plugins.use(ChoicePlugin);
 
-
-plugins.use(TestPluginA);
-plugins.use(TestPluginB);
 
 
 document.addEventListener(

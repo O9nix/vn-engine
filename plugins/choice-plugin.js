@@ -32,7 +32,7 @@ export const ChoicePlugin = {
                     return;
                 }
 
-                const state = context.getState();
+                const state = api.plugins.state.api.get();
 
                 const element =
                     document.createElement('div');
