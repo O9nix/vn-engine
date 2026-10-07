@@ -40,7 +40,9 @@ export class VN {
         this.#currentNodeId = null;
         this.#isWaiting = false;
 
-        this.#bus.emit('story:loaded');
+        this.#bus.emit('story:loaded', {
+    project: this.#project
+});
 
         const scenes = project.getScenes();
 

@@ -24,6 +24,8 @@ import { ChoicePlugin }
     from './plugins/choice-plugin.js';
 import { StatePlugin }
     from './plugins/state-plugin.js';
+    import {TopLeftHUDPlugin}
+    from './plugins/TopLeftHUDPlugin.js'
 
 const game = new VN();
 
@@ -42,8 +44,8 @@ const plugins = new PluginManager(
     blocks,
     conditions
 );
-
 plugins.use(StatePlugin);
+plugins.use(TopLeftHUDPlugin);
 plugins.use(DialoguePlugin);
 plugins.use(NarrationPlugin);
 plugins.use(BackgroundPlugin);
@@ -67,11 +69,23 @@ document.addEventListener(
 );
 
 const project = new Project({
+     config:{state :{
+            health: 9
+        }},
     scenes: [
         {
             id: 'scene-1',
 
             nodes: [
+                // {
+                //     id: 'TopLeftHUDPlugin',
+
+                //     type: 'TopLeftHUDPlugin',
+
+                //     character: 'Аня',
+
+                //     text: 'Как себя чувствуешь?'
+                // },
                 {
                     id: 'start',
 
