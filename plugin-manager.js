@@ -90,6 +90,8 @@ export class PluginManager {
                  * @param {string} event Имя события
                  * @param {function} handler Callback
                  * @returns {function} Функция отписки
+                 * @example
+                 * obj.doThing('x');
                  */
                 on: (event, handler) =>
                     bus.on(event, handler),

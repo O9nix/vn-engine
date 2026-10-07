@@ -1,0 +1,25 @@
+{
+  "name": "apiscribe",
+  "version": "0.2.0",
+  "description": "Генератор документации API из комментариев (@api-теги в стиле JSDoc/apiDoc): HTML с меню слева, версионирование по version.md, история изменений",
+  "bin": {
+    "apiscribe": "bin/apiscribe.js"
+  },
+  "main": "src/index.js",
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "keywords": [
+    "api",
+    "documentation",
+    "docs",
+    "jsdoc",
+    "apidoc",
+    "generator"
+  ],
+  "license": "MIT"
+}

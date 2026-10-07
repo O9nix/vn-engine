@@ -1,0 +1,8 @@
+{
+  "src": ".",
+  "out": "docsx/api",
+  "versionFile": "package.json",
+  "title": "VN Engine API",
+  "lang": "ru",
+  "exclude": ["apiscribe", "create-apidocx.mjs"]
+}
