@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+  "docs": "node apiscribe/bin/apiscribe.js",
+  "prestart": "npm run docs"
   },
   "dependencies": {
     "express": "^5.1.0"

@@ -1,0 +1,189 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const defaultLanguages = require('./languages');
+const { scanFiles } = require('./scanner');
+const { parseSources } = require('./parser');
+const { loadHistory, saveHistory, upsertVersion, diff } = require('./history');
+const { renderHtml, TOOL_VERSION } = require('./render');
+
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    return null;
+  }
+}
+
+/** Настройки: значения по умолчанию < package.json["apiscribe"] < apiscribe.config.json < аргументы. */
+function resolveOptions(user = {}) {
+  const cwd = path.resolve(user.cwd || process.cwd());
+  const pkg = readJson(path.join(cwd, 'package.json')) || {};
+  const cfgFile = path.resolve(cwd, user.config || 'apiscribe.config.json');
+  const cfg = readJson(cfgFile) || {};
+  const o = Object.assign(
+    {
+      src: '.',
+      out: 'docs/api',
+      versionFile: 'version.md',
+      historyFile: null,
+      title: pkg.name ? `${pkg.name} API` : 'API Documentation',
+      lang: 'ru',
+      exclude: [],
+      languages: {},
+      force: false,
+      quiet: false,
+    },
+    pkg.apiscribe || {},
+    cfg,
+    Object.fromEntries(Object.entries(user).filter(([, v]) => v !== undefined))
+  );
+
+  const outDir = path.resolve(cwd, o.out);
+  const exclude = [...(o.exclude || [])];
+  const outRel = path.relative(path.resolve(cwd, o.src), outDir).split(path.sep).join('/');
+  if (outRel && !outRel.startsWith('..')) exclude.push(outRel);
+
+  return {
+    cwd,
+    srcDir: path.resolve(cwd, o.src),
+    outDir,
+    outFile: path.join(outDir, 'index.html'),
+    versionFile: path.resolve(cwd, o.versionFile),
+    historyFile: path.resolve(cwd, o.historyFile || path.join(o.out, 'history.json')),
+    title: o.title,
+    lang: o.lang,
+    exclude,
+    languages: Object.assign({}, defaultLanguages, o.languages),
+    force: !!o.force,
+    quiet: !!o.quiet,
+  };
+}
+
+/** Версия из version.md: первая строка вида 1.2.3 (или просто первая непустая строка). */
+function readVersion(file) {
+  if (!fs.existsSync(file)) {
+    throw new Error(`Не найден файл версии: ${file}\nСоздайте его командой "apiscribe init" или вручную (например, 1.0.0).`);
+  }
+  const text = fs.readFileSync(file, 'utf8');
+  if (/\.json$/i.test(file)) {
+    let v;
+    try {
+      v = JSON.parse(text).version;
+    } catch (e) {
+      throw new Error(`Не удалось разобрать JSON: ${file}`);
+    }
+    if (!v) throw new Error(`В ${file} нет поля "version"`);
+    return String(v);
+  }
+  const m = text.match(/\bv?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)/);
+  if (m) return m[1];
+  const first = text.split(/\r?\n/).map((l) => l.replace(/^[#\s]+/, '').trim()).find(Boolean);
+  if (!first) throw new Error(`Файл версии пуст: ${file}`);
+  return first;
+}
+
+/**
+ * Основная функция: сканирует исходники, сверяет версию с историей,
+ * обновляет history.json и пересобирает index.html.
+ */
+function generate(userOpts = {}) {
+  const opts = resolveOptions(userOpts);
+  const version = readVersion(opts.versionFile);
+
+  const files = scanFiles(opts.srcDir, opts.languages, opts.exclude);
+  const { endpoints, warnings } = parseSources(files);
+
+  const history = loadHistory(opts.historyFile, opts.title);
+  const previous = history.versions.length ? history.versions[history.versions.length - 1].version : null;
+  const status = upsertVersion(history, version, endpoints);
+
+  if (status === 'new-version' || status === 'updated') saveHistory(opts.historyFile, history);
+
+  // страница пересобирается, если API изменилось, файла нет или он собран другой версией инструмента
+  let htmlStale = true;
+  if (fs.existsSync(opts.outFile)) {
+    htmlStale = !fs.readFileSync(opts.outFile, 'utf8').includes(`content="apiscribe ${TOOL_VERSION}"`);
+  }
+  if (status !== 'unchanged' || opts.force || htmlStale) {
+    fs.mkdirSync(opts.outDir, { recursive: true });
+    fs.writeFileSync(opts.outFile, renderHtml(history, opts));
+  }
+
+  const entry = history.versions.find((v) => v.version === version);
+  const idx = history.versions.indexOf(entry);
+  const changes = idx > 0 ? diff(history.versions[idx - 1].endpoints, entry.endpoints) : null;
+
+  return {
+    status,
+    version,
+    previousVersion: previous,
+    endpointCount: endpoints.length,
+    filesScanned: files.length,
+    changes,
+    warnings,
+    outFile: opts.outFile,
+    historyFile: opts.historyFile,
+    options: opts,
+  };
+}
+
+/**
+ * Express/Connect-совместимый middleware.
+ * Документация пересобирается при создании (старт сервера), затем отдаётся как HTML.
+ *   app.use('/docs', require('apiscribe').middleware());
+ */
+function middleware(userOpts = {}) {
+  let file;
+  try {
+    const r = generate(Object.assign({ quiet: true }, userOpts));
+    file = r.outFile;
+    for (const w of r.warnings) console.warn('[apiscribe] ' + w);
+  } catch (e) {
+    console.warn('[apiscribe] не удалось собрать документацию: ' + e.message);
+    file = resolveOptions(userOpts).outFile;
+  }
+  return function apiscribe(req, res, next) {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      if (next) return next();
+      res.statusCode = 405;
+      return res.end();
+    }
+    fs.readFile(file, (err, buf) => {
+      if (err) {
+        if (next) return next();
+        res.statusCode = 404;
+        return res.end();
+      }
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end(req.method === 'HEAD' ? undefined : buf);
+    });
+  };
+}
+
+/** Создаёт version.md и apiscribe.config.json, если их ещё нет. */
+function init(userOpts = {}) {
+  const cwd = path.resolve(userOpts.cwd || process.cwd());
+  const created = [];
+  const versionFile = path.join(cwd, userOpts.versionFile || 'version.md');
+  if (!fs.existsSync(versionFile)) {
+    fs.writeFileSync(versionFile, '0.1.0\n');
+    created.push(path.relative(cwd, versionFile));
+  }
+  const cfgFile = path.join(cwd, 'apiscribe.config.json');
+  if (!fs.existsSync(cfgFile)) {
+    const cfg = {
+      src: userOpts.src || 'src',
+      out: userOpts.out || 'docs/api',
+      versionFile: userOpts.versionFile || 'version.md',
+      title: userOpts.title || 'API Documentation',
+      lang: userOpts.lang || 'ru',
+    };
+    fs.writeFileSync(cfgFile, JSON.stringify(cfg, null, 2) + '\n');
+    created.push(path.relative(cwd, cfgFile));
+  }
+  return created;
+}
+
+module.exports = { generate, middleware, init, readVersion, resolveOptions, parseSources, scanFiles };
