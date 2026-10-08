@@ -3,7 +3,7 @@ import { Player } from './player.js';
 import { BlockManager } from './block-manager.js';
 import { Project } from './project.js';
 import { FlowResolver } from './flow.js';
-import { ConditionEvaluator } from './core/condition-evaluator.js';
+import { ConditionsPlugin } from './plugins/conditions-plugin.js';
 
 
 import { PluginManager }
@@ -36,13 +36,12 @@ const player = new Player();
 const blocks = new BlockManager(
     player.getPluginLayer()
 );
-const conditions = new ConditionEvaluator();
+
 const plugins = new PluginManager(
     bus,
     game,
     player,
     blocks,
-    conditions
 );
 plugins.use(StatePlugin);
 plugins.use(TopLeftHUDPlugin);
@@ -51,7 +50,7 @@ plugins.use(NarrationPlugin);
 plugins.use(BackgroundPlugin);
 plugins.use(WaitPlugin);
 plugins.use(ChoicePlugin);
-
+plugins.use(ConditionsPlugin);
 
 
 document.addEventListener(
@@ -70,22 +69,14 @@ document.addEventListener(
 
 const project = new Project({
      config:{state :{
-            health: 9
+            health: 7
         }},
     scenes: [
         {
             id: 'scene-1',
 
             nodes: [
-                // {
-                //     id: 'TopLeftHUDPlugin',
 
-                //     type: 'TopLeftHUDPlugin',
-
-                //     character: 'Аня',
-
-                //     text: 'Как себя чувствуешь?'
-                // },
                 {
                     id: 'start',
 

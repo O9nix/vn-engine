@@ -1086,6 +1086,2422 @@
           "doc": true
         }
       ]
+    },
+    {
+      "version": "0.1.1",
+      "date": "2026-10-07",
+      "updatedAt": "2026-10-07T16:28:00.558Z",
+      "endpoints": [
+        {
+          "key": "PluginManager",
+          "method": "CLASS",
+          "path": "PluginManager",
+          "title": "PluginManager",
+          "group": "PluginManager",
+          "description": "Устанавливает плагины и предоставляет единый Plugin API\n(`events`, `game`, `player`, `blocks`, `conditions`, `plugins`).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "PluginManager.constructor",
+          "method": "METHOD",
+          "path": "PluginManager.constructor",
+          "title": "PluginManager.constructor(bus, game, player, blocks, conditions)",
+          "group": "PluginManager",
+          "description": "Собирает объект `api`, который каждый плагин получает в `install(api)`.\n\nСтруктура api:\n```\napi\n├── events\n│   ├── on(event, handler) → unsubscribe\n│   └── emit(event, payload)\n├── game\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── registerNodeType(type, handler)\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── player\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── blocks          → BlockManager\n├── conditions\n│   └── evaluate(condition, state) → boolean\n└── plugins         → Proxy\n    └── <name>.api  → публичный API плагина\n```",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "EventBus",
+                "name": "bus",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "VN",
+                "name": "game",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "Player",
+                "name": "player",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "BlockManager",
+                "name": "blocks",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "ConditionEvaluator",
+                "name": "conditions",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 11
+          },
+          "sig": "(bus, game, player, blocks, conditions)",
+          "doc": true
+        },
+        {
+          "key": "api.events",
+          "method": "PROP",
+          "path": "api.events",
+          "title": "api.events",
+          "group": "PluginAPI",
+          "description": "Обёртка над EventBus.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 80
+          },
+          "doc": true
+        },
+        {
+          "key": "api.events.on",
+          "method": "METHOD",
+          "path": "api.events.on",
+          "title": "api.events.on(event, handler)",
+          "group": "PluginAPI",
+          "description": "Подписка на событие.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "event",
+                "optional": false,
+                "description": "Имя события"
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "handler",
+                "optional": false,
+                "description": "Callback"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "obj.doThing('x');"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 86
+          },
+          "returns": {
+            "type": "function",
+            "description": "Функция отписки"
+          },
+          "sig": "(event, handler)",
+          "doc": true
+        },
+        {
+          "key": "api.events.emit",
+          "method": "METHOD",
+          "path": "api.events.emit",
+          "title": "api.events.emit(event, payload)",
+          "group": "PluginAPI",
+          "description": "Эмит события.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "event",
+                "optional": false,
+                "description": "Имя события"
+              },
+              {
+                "group": null,
+                "type": "*",
+                "name": "payload",
+                "optional": true,
+                "description": "Данные"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 99
+          },
+          "sig": "(event, payload)",
+          "doc": true
+        },
+        {
+          "key": "api.game",
+          "method": "PROP",
+          "path": "api.game",
+          "title": "api.game",
+          "group": "PluginAPI",
+          "description": "Фасад к VN + Player: регистрация типов узлов и работа со слоями.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 110
+          },
+          "doc": true
+        },
+        {
+          "key": "api.game.getPluginLayer",
+          "method": "METHOD",
+          "path": "api.game.getPluginLayer",
+          "title": "api.game.getPluginLayer()",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 116
+          },
+          "returns": {
+            "type": "HTMLElement",
+            "description": "DOM-слой плагинов"
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "api.game.registerLayer",
+          "method": "METHOD",
+          "path": "api.game.registerLayer",
+          "title": "api.game.registerLayer(name, element)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              },
+              {
+                "group": null,
+                "type": "HTMLElement",
+                "name": "element",
+                "optional": false,
+                "description": "DOM-элемент"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 124
+          },
+          "returns": {
+            "type": "function",
+            "description": "cleanup"
+          },
+          "sig": "(name, element)",
+          "doc": true
+        },
+        {
+          "key": "api.game.registerNodeType",
+          "method": "METHOD",
+          "path": "api.game.registerNodeType",
+          "title": "api.game.registerNodeType(type, handler)",
+          "group": "PluginAPI",
+          "description": "Регистрирует обработчик типа узла сценария.\ncontext: { wait(), resume(), goto(nodeId) }",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "type",
+                "optional": false,
+                "description": "Имя типа узла"
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "handler",
+                "optional": false,
+                "description": "(node, context) => void"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 134
+          },
+          "sig": "(type, handler)",
+          "doc": true
+        },
+        {
+          "key": "api.game.show",
+          "method": "METHOD",
+          "path": "api.game.show",
+          "title": "api.game.show(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 145
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.game.hide",
+          "method": "METHOD",
+          "path": "api.game.hide",
+          "title": "api.game.hide(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 153
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.game.isVisible",
+          "method": "METHOD",
+          "path": "api.game.isVisible",
+          "title": "api.game.isVisible(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 161
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.player",
+          "method": "PROP",
+          "path": "api.player",
+          "title": "api.player",
+          "group": "PluginAPI",
+          "description": "Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 171
+          },
+          "doc": true
+        },
+        {
+          "key": "api.player.getPluginLayer",
+          "method": "METHOD",
+          "path": "api.player.getPluginLayer",
+          "title": "api.player.getPluginLayer()",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 177
+          },
+          "returns": {
+            "type": "HTMLElement",
+            "description": ""
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "api.player.registerLayer",
+          "method": "METHOD",
+          "path": "api.player.registerLayer",
+          "title": "api.player.registerLayer(name, element)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "HTMLElement",
+                "name": "element",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 185
+          },
+          "returns": {
+            "type": "function",
+            "description": "cleanup"
+          },
+          "sig": "(name, element)",
+          "doc": true
+        },
+        {
+          "key": "api.player.show",
+          "method": "METHOD",
+          "path": "api.player.show",
+          "title": "api.player.show(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 195
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.player.hide",
+          "method": "METHOD",
+          "path": "api.player.hide",
+          "title": "api.player.hide(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 203
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.player.isVisible",
+          "method": "METHOD",
+          "path": "api.player.isVisible",
+          "title": "api.player.isVisible(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 211
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.blocks",
+          "method": "PROP",
+          "path": "api.blocks",
+          "title": "api.blocks",
+          "group": "PluginAPI",
+          "description": "Экземпляр BlockManager.\nМетоды: create, get, getAll, getByType, getActiveByChannel,\ngetCurrent, show, hide, remove.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 221
+          },
+          "type": "BlockManager",
+          "doc": true
+        },
+        {
+          "key": "api.conditions",
+          "method": "PROP",
+          "path": "api.conditions",
+          "title": "api.conditions",
+          "group": "PluginAPI",
+          "description": "Обёртка над ConditionEvaluator.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 231
+          },
+          "doc": true
+        },
+        {
+          "key": "api.conditions.evaluate",
+          "method": "METHOD",
+          "path": "api.conditions.evaluate",
+          "title": "api.conditions.evaluate(condition, state)",
+          "group": "PluginAPI",
+          "description": "Проверяет условие относительно state.\ncondition: { variable, operator, value }\noperator: == | != | > | >= | < | <=\nПустое condition → true.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "condition",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "Object",
+                "name": "state",
+                "optional": true,
+                "description": "",
+                "default": "{}"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 237
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(condition, state)",
+          "doc": true
+        },
+        {
+          "key": "api.plugins",
+          "method": "PROP",
+          "path": "api.plugins",
+          "title": "api.plugins",
+          "group": "PluginAPI",
+          "description": "Proxy к API установленных плагинов.\nДоступ: `api.plugins.<name>.api`\nЕсли плагин не установлен — null + warning в консоль.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const state = api.plugins.state.api.get();\napi.plugins.state.api.set('health', 10);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 255
+          },
+          "doc": true
+        },
+        {
+          "key": "PluginManager.use",
+          "method": "METHOD",
+          "path": "PluginManager.use",
+          "title": "PluginManager.use(plugin)",
+          "group": "PluginManager",
+          "description": "Устанавливает плагин. Плагин обязан иметь `name` и `install(api)`.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "plugin",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "string",
+                "name": "plugin.name",
+                "optional": false,
+                "description": "Уникальное имя"
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "plugin.install",
+                "optional": false,
+                "description": "Функция установки, получает api"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "plugins.use(DialoguePlugin).use(ChoicePlugin);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 289
+          },
+          "returns": {
+            "type": "PluginManager",
+            "description": "this (chainable)"
+          },
+          "throws": [
+            {
+              "type": "TypeError",
+              "description": "Если нет install"
+            },
+            {
+              "type": "Error",
+              "description": "Если нет name или плагин уже установлен"
+            }
+          ],
+          "sig": "(plugin)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.remove",
+          "method": "METHOD",
+          "path": "PluginManager.remove",
+          "title": "PluginManager.remove(name)",
+          "group": "PluginManager",
+          "description": "Удаляет плагин и вызывает его cleanup, если он есть.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 360
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "true, если плагин был удалён"
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.has",
+          "method": "METHOD",
+          "path": "PluginManager.has",
+          "title": "PluginManager.has(name)",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 388
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.get",
+          "method": "METHOD",
+          "path": "PluginManager.get",
+          "title": "PluginManager.get(name)",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 398
+          },
+          "returns": {
+            "type": "Object|undefined",
+            "description": "Исходный объект плагина"
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.list",
+          "method": "METHOD",
+          "path": "PluginManager.list",
+          "title": "PluginManager.list()",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 408
+          },
+          "returns": {
+            "type": "string[]",
+            "description": "Имена установленных плагинов"
+          },
+          "sig": "()",
+          "doc": true
+        }
+      ]
+    },
+    {
+      "version": "0.1.2",
+      "date": "2026-10-08",
+      "updatedAt": "2026-10-08T02:11:02.038Z",
+      "endpoints": [
+        {
+          "key": "PluginManager",
+          "method": "CLASS",
+          "path": "PluginManager",
+          "title": "PluginManager",
+          "group": "PluginManager",
+          "description": "Устанавливает плагины и предоставляет единый Plugin API\n(`events`, `game`, `player`, `blocks`, `conditions`, `plugins`).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "PluginManager.constructor",
+          "method": "METHOD",
+          "path": "PluginManager.constructor",
+          "title": "PluginManager.constructor(bus, game, player, blocks, conditions)",
+          "group": "PluginManager",
+          "description": "Собирает объект `api`, который каждый плагин получает в `install(api)`.\n\nСтруктура api:\n```\napi\n├── events\n│   ├── on(event, handler) → unsubscribe\n│   └── emit(event, payload)\n├── game\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── registerNodeType(type, handler)\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── player\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── blocks          → BlockManager\n├── conditions\n│   └── evaluate(condition, state) → boolean\n└── plugins         → Proxy\n    └── <name>.api  → публичный API плагина\n```",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "EventBus",
+                "name": "bus",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "VN",
+                "name": "game",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "Player",
+                "name": "player",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "BlockManager",
+                "name": "blocks",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "ConditionEvaluator",
+                "name": "conditions",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 11
+          },
+          "sig": "(bus, game, player, blocks, conditions)",
+          "doc": true
+        },
+        {
+          "key": "api.events",
+          "method": "PROP",
+          "path": "api.events",
+          "title": "api.events",
+          "group": "PluginAPI",
+          "description": "Обёртка над EventBus.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 80
+          },
+          "doc": true
+        },
+        {
+          "key": "api.events.on",
+          "method": "METHOD",
+          "path": "api.events.on",
+          "title": "api.events.on(event, handler)",
+          "group": "PluginAPI",
+          "description": "Подписка на событие.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "event",
+                "optional": false,
+                "description": "Имя события"
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "handler",
+                "optional": false,
+                "description": "Callback"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "obj.doThing('x');"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 86
+          },
+          "returns": {
+            "type": "function",
+            "description": "Функция отписки"
+          },
+          "sig": "(event, handler)",
+          "doc": true
+        },
+        {
+          "key": "api.events.emit",
+          "method": "METHOD",
+          "path": "api.events.emit",
+          "title": "api.events.emit(event, payload)",
+          "group": "PluginAPI",
+          "description": "Эмит события.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "event",
+                "optional": false,
+                "description": "Имя события"
+              },
+              {
+                "group": null,
+                "type": "*",
+                "name": "payload",
+                "optional": true,
+                "description": "Данные"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 99
+          },
+          "sig": "(event, payload)",
+          "doc": true
+        },
+        {
+          "key": "api.game",
+          "method": "PROP",
+          "path": "api.game",
+          "title": "api.game",
+          "group": "PluginAPI",
+          "description": "Фасад к VN + Player: регистрация типов узлов и работа со слоями.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 110
+          },
+          "doc": true
+        },
+        {
+          "key": "api.game.getPluginLayer",
+          "method": "METHOD",
+          "path": "api.game.getPluginLayer",
+          "title": "api.game.getPluginLayer()",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 116
+          },
+          "returns": {
+            "type": "HTMLElement",
+            "description": "DOM-слой плагинов"
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "api.game.registerLayer",
+          "method": "METHOD",
+          "path": "api.game.registerLayer",
+          "title": "api.game.registerLayer(name, element)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              },
+              {
+                "group": null,
+                "type": "HTMLElement",
+                "name": "element",
+                "optional": false,
+                "description": "DOM-элемент"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 124
+          },
+          "returns": {
+            "type": "function",
+            "description": "cleanup"
+          },
+          "sig": "(name, element)",
+          "doc": true
+        },
+        {
+          "key": "api.game.registerNodeType",
+          "method": "METHOD",
+          "path": "api.game.registerNodeType",
+          "title": "api.game.registerNodeType(type, handler)",
+          "group": "PluginAPI",
+          "description": "Регистрирует обработчик типа узла сценария.\ncontext: { wait(), resume(), goto(nodeId) }",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "type",
+                "optional": false,
+                "description": "Имя типа узла"
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "handler",
+                "optional": false,
+                "description": "(node, context) => void"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 134
+          },
+          "sig": "(type, handler)",
+          "doc": true
+        },
+        {
+          "key": "api.game.show",
+          "method": "METHOD",
+          "path": "api.game.show",
+          "title": "api.game.show(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 145
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.game.hide",
+          "method": "METHOD",
+          "path": "api.game.hide",
+          "title": "api.game.hide(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 153
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.game.isVisible",
+          "method": "METHOD",
+          "path": "api.game.isVisible",
+          "title": "api.game.isVisible(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя слоя"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 161
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.player",
+          "method": "PROP",
+          "path": "api.player",
+          "title": "api.player",
+          "group": "PluginAPI",
+          "description": "Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 171
+          },
+          "doc": true
+        },
+        {
+          "key": "api.player.getPluginLayer",
+          "method": "METHOD",
+          "path": "api.player.getPluginLayer",
+          "title": "api.player.getPluginLayer()",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 177
+          },
+          "returns": {
+            "type": "HTMLElement",
+            "description": ""
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "api.player.registerLayer",
+          "method": "METHOD",
+          "path": "api.player.registerLayer",
+          "title": "api.player.registerLayer(name, element)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "HTMLElement",
+                "name": "element",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 185
+          },
+          "returns": {
+            "type": "function",
+            "description": "cleanup"
+          },
+          "sig": "(name, element)",
+          "doc": true
+        },
+        {
+          "key": "api.player.show",
+          "method": "METHOD",
+          "path": "api.player.show",
+          "title": "api.player.show(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 195
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.player.hide",
+          "method": "METHOD",
+          "path": "api.player.hide",
+          "title": "api.player.hide(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 203
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.player.isVisible",
+          "method": "METHOD",
+          "path": "api.player.isVisible",
+          "title": "api.player.isVisible(name)",
+          "group": "PluginAPI",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 211
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "api.blocks",
+          "method": "PROP",
+          "path": "api.blocks",
+          "title": "api.blocks",
+          "group": "PluginAPI",
+          "description": "Экземпляр BlockManager.\nМетоды: create, get, getAll, getByType, getActiveByChannel,\ngetCurrent, show, hide, remove.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 221
+          },
+          "type": "BlockManager",
+          "doc": true
+        },
+        {
+          "key": "api.plugins",
+          "method": "PROP",
+          "path": "api.plugins",
+          "title": "api.plugins",
+          "group": "PluginAPI",
+          "description": "Proxy к API установленных плагинов.\nДоступ: `api.plugins.<name>.api`\nЕсли плагин не установлен — null + warning в консоль.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const state = api.plugins.state.api.get();\napi.plugins.state.api.set('health', 10);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 233
+          },
+          "doc": true
+        },
+        {
+          "key": "PluginManager.use",
+          "method": "METHOD",
+          "path": "PluginManager.use",
+          "title": "PluginManager.use(plugin)",
+          "group": "PluginManager",
+          "description": "Устанавливает плагин. Плагин обязан иметь `name` и `install(api)`.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "plugin",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "string",
+                "name": "plugin.name",
+                "optional": false,
+                "description": "Уникальное имя"
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "plugin.install",
+                "optional": false,
+                "description": "Функция установки, получает api"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "plugins.use(DialoguePlugin).use(ChoicePlugin);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 267
+          },
+          "returns": {
+            "type": "PluginManager",
+            "description": "this (chainable)"
+          },
+          "throws": [
+            {
+              "type": "TypeError",
+              "description": "Если нет install"
+            },
+            {
+              "type": "Error",
+              "description": "Если нет name или плагин уже установлен"
+            }
+          ],
+          "sig": "(plugin)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.remove",
+          "method": "METHOD",
+          "path": "PluginManager.remove",
+          "title": "PluginManager.remove(name)",
+          "group": "PluginManager",
+          "description": "Удаляет плагин и вызывает его cleanup, если он есть.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 338
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "true, если плагин был удалён"
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.has",
+          "method": "METHOD",
+          "path": "PluginManager.has",
+          "title": "PluginManager.has(name)",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 366
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.get",
+          "method": "METHOD",
+          "path": "PluginManager.get",
+          "title": "PluginManager.get(name)",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 376
+          },
+          "returns": {
+            "type": "Object|undefined",
+            "description": "Исходный объект плагина"
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.list",
+          "method": "METHOD",
+          "path": "PluginManager.list",
+          "title": "PluginManager.list()",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 386
+          },
+          "returns": {
+            "type": "string[]",
+            "description": "Имена установленных плагинов"
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "ConditionsPlugin",
+          "method": "CLASS",
+          "path": "ConditionsPlugin",
+          "title": "ConditionsPlugin",
+          "group": "Plugins",
+          "description": "Проверяет игровые условия.\n\nПредоставляет другим плагинам метод evaluate()\nчерез api.plugins.conditions.api.\n\nПоддерживаемые операторы:\n==, !=, >, >=, <, <=",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/conditions-plugin.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "ConditionsPlugin.evaluate",
+          "method": "METHOD",
+          "path": "ConditionsPlugin.evaluate",
+          "title": "ConditionsPlugin.evaluate(condition, state)",
+          "group": "ConditionsPlugin",
+          "description": "Проверяет условие относительно переданного состояния.\n\nЕсли условие не задано, возвращает true.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "condition",
+                "optional": false,
+                "description": "Условие проверки."
+              },
+              {
+                "group": null,
+                "type": "Object",
+                "name": "state",
+                "optional": false,
+                "description": "Состояние, относительно которого\nпроверяется условие."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const result =\n    api.plugins.conditions.api.evaluate(\n        {\n            variable: 'health',\n            operator: '>',\n            value: 5\n        },\n        { health: 10 }\n    );"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/conditions-plugin.js",
+            "line": 17
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "Результат проверки."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если оператор условия неизвестен."
+            }
+          ],
+          "sig": "(condition, state)",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin",
+          "method": "CLASS",
+          "path": "StatePlugin",
+          "title": "StatePlugin",
+          "group": "Plugins",
+          "description": "Управляет runtime-состоянием игры.\n\nПлагин хранит состояние независимо от Project.\nНачальное состояние загружается из `project.config.state`\nпри событии `story:loaded`.\n\nRuntime-состояние изменяется через публичный API плагина\nи доступно другим плагинам через:\n\n`api.plugins.state.api`",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.get",
+          "method": "METHOD",
+          "path": "StatePlugin.get",
+          "title": "StatePlugin.get()",
+          "group": "StatePlugin",
+          "description": "Возвращает копию текущего runtime-состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const state = api.plugins.state.api.get();\nconsole.log(state.health);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 22
+          },
+          "returns": {
+            "type": "Object",
+            "description": "Копия текущего состояния."
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.getValue",
+          "method": "METHOD",
+          "path": "StatePlugin.getValue",
+          "title": "StatePlugin.getValue(name)",
+          "group": "StatePlugin",
+          "description": "Возвращает значение переменной состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя переменной."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const health =\n    api.plugins.state.api.getValue('health');"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 38
+          },
+          "returns": {
+            "type": "*",
+            "description": "Значение переменной."
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.set",
+          "method": "METHOD",
+          "path": "StatePlugin.set",
+          "title": "StatePlugin.set(name, value)",
+          "group": "StatePlugin",
+          "description": "Устанавливает значение переменной состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя переменной."
+              },
+              {
+                "group": null,
+                "type": "*",
+                "name": "value",
+                "optional": false,
+                "description": "Новое значение."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "api.plugins.state.api.set('health', 10);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 55
+          },
+          "sig": "(name, value)",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.update",
+          "method": "METHOD",
+          "path": "StatePlugin.update",
+          "title": "StatePlugin.update(values)",
+          "group": "StatePlugin",
+          "description": "Обновляет несколько переменных состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "values",
+                "optional": false,
+                "description": "Объект с новыми значениями."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "api.plugins.state.api.update({\n    health: 10,\n    money: 100\n});"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 71
+          },
+          "sig": "(values)",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.storyLoaded",
+          "method": "PROP",
+          "path": "StatePlugin.storyLoaded",
+          "title": "StatePlugin.storyLoaded",
+          "group": "StatePlugin",
+          "description": "Инициализирует runtime-состояние из конфигурации проекта\nпосле загрузки истории.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 89
+          },
+          "doc": true
+        }
+      ]
     }
   ]
 }

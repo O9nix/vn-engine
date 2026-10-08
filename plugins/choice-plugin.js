@@ -4,20 +4,20 @@ export const ChoicePlugin = {
     install(api) {
         let activeBlock = null;
 
-        function resolveVariant(option, state) {
-            for (const variant of option.variants ?? []) {
-                if (
-                    api.conditions.evaluate(
-                        variant.condition,
-                        state
-                    )
-                ) {
-                    return variant;
-                }
-            }
-
-            return null;
+function resolveVariant(option, state) {
+    for (const variant of option.variants ?? []) {
+        if (
+            api.plugins.conditions.api.evaluate(
+                variant.condition,
+                state
+            )
+        ) {
+            return variant;
         }
+    }
+
+    return null;
+}
 
         api.game.registerNodeType(
             'choice',
@@ -32,7 +32,8 @@ export const ChoicePlugin = {
                     return;
                 }
 
-                const state = api.plugins.state.api.get();
+                const state =
+                    api.plugins.state.api.get();
 
                 const element =
                     document.createElement('div');
@@ -56,10 +57,6 @@ export const ChoicePlugin = {
                     zIndex: '100'
                 });
 
-                /*
-                 * Не даём кликам внутри Choice
-                 * дойти до глобального click-game.
-                 */
                 element.addEventListener(
                     'click',
                     event => {
@@ -67,9 +64,6 @@ export const ChoicePlugin = {
                     }
                 );
 
-                /*
-                 * Заголовок Choice.
-                 */
                 if (node.text) {
                     const title =
                         document.createElement('div');
@@ -86,9 +80,6 @@ export const ChoicePlugin = {
                     element.appendChild(title);
                 }
 
-                /*
-                 * Создаём кнопки.
-                 */
                 for (const option of node.options) {
                     const variant =
                         resolveVariant(
@@ -96,9 +87,6 @@ export const ChoicePlugin = {
                             state
                         );
 
-                    /*
-                     * Ни один variant не подошёл.
-                     */
                     if (!variant) {
                         console.warn(
                             `[ChoicePlugin] Для option "${option.id}" нет подходящего variant`
@@ -128,28 +116,17 @@ export const ChoicePlugin = {
                                 return;
                             }
 
-                            /*
-                             * Удаляем Choice.
-                             */
                             api.blocks.remove(
                                 activeBlock.id
                             );
 
                             activeBlock = null;
 
-                            /*
-                             * Переходим по выбранному variant.
-                             */
                             if (variant.goto) {
                                 context.goto(
                                     variant.goto
                                 );
                             } else {
-                                /*
-                                 * Если goto нет,
-                                 * продолжаем обычную
-                                 * последовательность.
-                                 */
                                 context.resume();
                             }
                         }
@@ -158,46 +135,37 @@ export const ChoicePlugin = {
                     element.appendChild(button);
                 }
 
-                /*
-                 * Создаём визуальный Block.
-                 */
                 activeBlock =
                     api.blocks.create(
                         'choice',
                         {
                             channel: 'overlay',
-
                             element,
-
                             data: {
                                 text: node.text,
                                 options: node.options
                             },
-
                             meta: {
                                 node
                             }
                         }
                     );
 
-                /*
-                 * Choice останавливает VN,
-                 * пока пользователь не выберет вариант.
-                 */
                 context.wait();
             }
         );
 
-        /*
-         * Cleanup при удалении плагина.
-         */
-        return () => {
-            if (activeBlock) {
-                api.blocks.remove(
-                    activeBlock.id
-                );
+        return {
+            api: {},
 
-                activeBlock = null;
+            cleanup() {
+                if (activeBlock) {
+                    api.blocks.remove(
+                        activeBlock.id
+                    );
+
+                    activeBlock = null;
+                }
             }
         };
     }

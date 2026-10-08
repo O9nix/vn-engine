@@ -228,29 +228,7 @@ export class PluginManager {
              */
             blocks,
 
-            /**
-             * @apiName api.conditions
-             * @apiGroup PluginAPI
-             * Обёртка над ConditionEvaluator.
-             */
-            conditions: {
-                /**
-                 * @apiName api.conditions.evaluate
-                 * @apiGroup PluginAPI
-                 * Проверяет условие относительно state.
-                 * condition: { variable, operator, value }
-                 * operator: == | != | > | >= | < | <=
-                 * Пустое condition → true.
-                 * @param {Object} [condition]
-                 * @param {Object} [state={}]
-                 * @returns {boolean}
-                 */
-                evaluate: (condition, state) =>
-                    conditions.evaluate(
-                        condition,
-                        state
-                    )
-            },
+            
 
             /**
              * @apiName api.plugins
