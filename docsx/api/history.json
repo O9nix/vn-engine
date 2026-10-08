@@ -2175,7 +2175,7 @@
     {
       "version": "0.1.2",
       "date": "2026-10-08",
-      "updatedAt": "2026-10-08T02:11:02.038Z",
+      "updatedAt": "2026-10-08T09:02:19.334Z",
       "endpoints": [
         {
           "key": "PluginManager",
@@ -2211,7 +2211,7 @@
           "path": "PluginManager.constructor",
           "title": "PluginManager.constructor(bus, game, player, blocks, conditions)",
           "group": "PluginManager",
-          "description": "Собирает объект `api`, который каждый плагин получает в `install(api)`.\n\nСтруктура api:\n```\napi\n├── events\n│   ├── on(event, handler) → unsubscribe\n│   └── emit(event, payload)\n├── game\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── registerNodeType(type, handler)\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── player\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── blocks          → BlockManager\n├── conditions\n│   └── evaluate(condition, state) → boolean\n└── plugins         → Proxy\n    └── <name>.api  → публичный API плагина\n```",
+          "description": "Собирает объект `api`, который каждый плагин получает в `install(api)`.\n\nСтруктура api:\n```\napi\n├── events\n│   ├── on(event, handler) → unsubscribe\n│   └── emit(event, payload)\n├── game\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── registerNodeType(type, handler)\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── player\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── blocks          → BlockManager\n└── plugins         → Proxy\n    └── <name>.api  → публичный API плагина\n```",
           "since": null,
           "deprecated": null,
           "permissions": [],
@@ -2294,7 +2294,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 80
+            "line": 78
           },
           "doc": true
         },
@@ -2343,7 +2343,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 86
+            "line": 84
           },
           "returns": {
             "type": "function",
@@ -2391,7 +2391,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 99
+            "line": 97
           },
           "sig": "(event, payload)",
           "doc": true
@@ -2420,7 +2420,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 110
+            "line": 108
           },
           "doc": true
         },
@@ -2448,7 +2448,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 116
+            "line": 114
           },
           "returns": {
             "type": "HTMLElement",
@@ -2496,7 +2496,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 124
+            "line": 122
           },
           "returns": {
             "type": "function",
@@ -2544,7 +2544,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 134
+            "line": 132
           },
           "sig": "(type, handler)",
           "doc": true
@@ -2581,7 +2581,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 145
+            "line": 143
           },
           "sig": "(name)",
           "doc": true
@@ -2618,7 +2618,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 153
+            "line": 151
           },
           "sig": "(name)",
           "doc": true
@@ -2655,7 +2655,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 161
+            "line": 159
           },
           "returns": {
             "type": "boolean",
@@ -2688,7 +2688,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 171
+            "line": 169
           },
           "doc": true
         },
@@ -2716,7 +2716,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 177
+            "line": 175
           },
           "returns": {
             "type": "HTMLElement",
@@ -2764,7 +2764,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 185
+            "line": 183
           },
           "returns": {
             "type": "function",
@@ -2805,7 +2805,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 195
+            "line": 193
           },
           "sig": "(name)",
           "doc": true
@@ -2842,7 +2842,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 203
+            "line": 201
           },
           "sig": "(name)",
           "doc": true
@@ -2879,7 +2879,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 211
+            "line": 209
           },
           "returns": {
             "type": "boolean",
@@ -2912,7 +2912,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 221
+            "line": 219
           },
           "type": "BlockManager",
           "doc": true
@@ -2947,7 +2947,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 233
+            "line": 231
           },
           "doc": true
         },
@@ -3003,7 +3003,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 267
+            "line": 265
           },
           "returns": {
             "type": "PluginManager",
@@ -3054,7 +3054,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 338
+            "line": 336
           },
           "returns": {
             "type": "boolean",
@@ -3095,7 +3095,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 366
+            "line": 364
           },
           "returns": {
             "type": "boolean",
@@ -3136,7 +3136,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 376
+            "line": 374
           },
           "returns": {
             "type": "Object|undefined",
@@ -3169,7 +3169,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 386
+            "line": 384
           },
           "returns": {
             "type": "string[]",

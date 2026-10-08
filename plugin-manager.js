@@ -33,8 +33,6 @@ export class PluginManager {
      * │   ├── hide(name)
      * │   └── isVisible(name) → boolean
      * ├── blocks          → BlockManager
-     * ├── conditions
-     * │   └── evaluate(condition, state) → boolean
      * └── plugins         → Proxy
      *     └── <name>.api  → публичный API плагина
      * ```

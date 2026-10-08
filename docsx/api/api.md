@@ -98,8 +98,6 @@ api
 │   ├── hide(name)
 │   └── isVisible(name) → boolean
 ├── blocks          → BlockManager
-├── conditions
-│   └── evaluate(condition, state) → boolean
 └── plugins         → Proxy
     └── <name>.api  → публичный API плагина
 ```
@@ -147,7 +145,7 @@ api
 plugins.use(DialoguePlugin).use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:267</sub>
+<sub>Исходник: plugin-manager.js:265</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -167,7 +165,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 `boolean` — true, если плагин был удалён
 
-<sub>Исходник: plugin-manager.js:338</sub>
+<sub>Исходник: plugin-manager.js:336</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -185,7 +183,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:366</sub>
+<sub>Исходник: plugin-manager.js:364</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -203,7 +201,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:376</sub>
+<sub>Исходник: plugin-manager.js:374</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -215,7 +213,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:386</sub>
+<sub>Исходник: plugin-manager.js:384</sub>
 
 ## PluginAPI
 
@@ -234,7 +232,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 | [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
 | [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
 
-<sub>Исходник: plugin-manager.js:80</sub>
+<sub>Исходник: plugin-manager.js:78</sub>
 
 <a id="api-events-on"></a>
 
@@ -261,7 +259,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 obj.doThing('x');
 ```
 
-<sub>Исходник: plugin-manager.js:86</sub>
+<sub>Исходник: plugin-manager.js:84</sub>
 
 <a id="api-events-emit"></a>
 
@@ -278,7 +276,7 @@ obj.doThing('x');
 | `event` *(обязательное)* | `string` | Имя события |
 | `payload` *(необязательное)* | `*` | Данные |
 
-<sub>Исходник: plugin-manager.js:99</sub>
+<sub>Исходник: plugin-manager.js:97</sub>
 
 <a id="api-game"></a>
 
@@ -299,7 +297,7 @@ obj.doThing('x');
 | [`api.game.hide(name)`](#api-game-hide) |  |
 | [`api.game.isVisible(name)`](#api-game-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:110</sub>
+<sub>Исходник: plugin-manager.js:108</sub>
 
 <a id="api-game-getpluginlayer"></a>
 
@@ -311,7 +309,7 @@ obj.doThing('x');
 
 `HTMLElement` — DOM-слой плагинов
 
-<sub>Исходник: plugin-manager.js:116</sub>
+<sub>Исходник: plugin-manager.js:114</sub>
 
 <a id="api-game-registerlayer"></a>
 
@@ -330,7 +328,7 @@ obj.doThing('x');
 
 `function` — cleanup
 
-<sub>Исходник: plugin-manager.js:124</sub>
+<sub>Исходник: plugin-manager.js:122</sub>
 
 <a id="api-game-registernodetype"></a>
 
@@ -348,7 +346,7 @@ context: { wait(), resume(), goto(nodeId) }
 | `type` *(обязательное)* | `string` | Имя типа узла |
 | `handler` *(обязательное)* | `function` | (node, context) => void |
 
-<sub>Исходник: plugin-manager.js:134</sub>
+<sub>Исходник: plugin-manager.js:132</sub>
 
 <a id="api-game-show"></a>
 
@@ -362,7 +360,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя |
 
-<sub>Исходник: plugin-manager.js:145</sub>
+<sub>Исходник: plugin-manager.js:143</sub>
 
 <a id="api-game-hide"></a>
 
@@ -376,7 +374,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя |
 
-<sub>Исходник: plugin-manager.js:153</sub>
+<sub>Исходник: plugin-manager.js:151</sub>
 
 <a id="api-game-isvisible"></a>
 
@@ -394,7 +392,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:161</sub>
+<sub>Исходник: plugin-manager.js:159</sub>
 
 <a id="api-player"></a>
 
@@ -414,7 +412,7 @@ context: { wait(), resume(), goto(nodeId) }
 | [`api.player.hide(name)`](#api-player-hide) |  |
 | [`api.player.isVisible(name)`](#api-player-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:171</sub>
+<sub>Исходник: plugin-manager.js:169</sub>
 
 <a id="api-player-getpluginlayer"></a>
 
@@ -426,7 +424,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `HTMLElement`
 
-<sub>Исходник: plugin-manager.js:177</sub>
+<sub>Исходник: plugin-manager.js:175</sub>
 
 <a id="api-player-registerlayer"></a>
 
@@ -445,7 +443,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `function` — cleanup
 
-<sub>Исходник: plugin-manager.js:185</sub>
+<sub>Исходник: plugin-manager.js:183</sub>
 
 <a id="api-player-show"></a>
 
@@ -459,7 +457,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` |  |
 
-<sub>Исходник: plugin-manager.js:195</sub>
+<sub>Исходник: plugin-manager.js:193</sub>
 
 <a id="api-player-hide"></a>
 
@@ -473,7 +471,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` |  |
 
-<sub>Исходник: plugin-manager.js:203</sub>
+<sub>Исходник: plugin-manager.js:201</sub>
 
 <a id="api-player-isvisible"></a>
 
@@ -491,7 +489,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:211</sub>
+<sub>Исходник: plugin-manager.js:209</sub>
 
 <a id="api-blocks"></a>
 
@@ -503,7 +501,7 @@ context: { wait(), resume(), goto(nodeId) }
 Методы: create, get, getAll, getByType, getActiveByChannel,
 getCurrent, show, hide, remove.
 
-<sub>Исходник: plugin-manager.js:221</sub>
+<sub>Исходник: plugin-manager.js:219</sub>
 
 <a id="api-plugins"></a>
 
@@ -522,7 +520,7 @@ const state = api.plugins.state.api.get();
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugin-manager.js:233</sub>
+<sub>Исходник: plugin-manager.js:231</sub>
 
 ## Plugins
 
@@ -729,6 +727,10 @@ api.plugins.state.api.update({
 - `StatePlugin.set`
 - `StatePlugin.update`
 - `StatePlugin.storyLoaded`
+
+**Изменено (1)**
+
+- `PluginManager.constructor`
 
 **Удалено (2)**
 
