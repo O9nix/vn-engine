@@ -1,6 +1,6 @@
 {
   "name": "apiscribe",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Генератор документации API из комментариев (@api-теги в стиле JSDoc/apiDoc): HTML с меню слева, версионирование по version.md, история изменений",
   "bin": {
     "apiscribe": "bin/apiscribe.js"

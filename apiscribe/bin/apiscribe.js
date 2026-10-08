@@ -18,7 +18,9 @@ const HELP = `apiscribe — генератор документации API из
   --lang ru|en             язык интерфейса                 (ru)
   --exclude a,b            дополнительные исключения
   --config <файл>          файл настроек                   (apiscribe.config.json)
-  --force                  пересобрать HTML, даже если ничего не изменилось
+  --no-markdown            не создавать Markdown-файл рядом с HTML
+  --md-file <имя>          имя Markdown-файла в папке --out  (api.md)
+  --force                  пересобрать HTML и Markdown, даже если ничего не изменилось
   -q, --quiet              не печатать отчёт
   -h, --help               помощь
 `;
@@ -32,6 +34,7 @@ const KEYS = {
   lang: 'lang',
   config: 'config',
   exclude: 'exclude',
+  'md-file': 'markdownFile',
 };
 
 function parseArgs(argv) {
@@ -42,6 +45,7 @@ function parseArgs(argv) {
     if (a === '-h' || a === '--help') o.help = true;
     else if (a === '-q' || a === '--quiet') o.quiet = true;
     else if (a === '--force') o.force = true;
+    else if (a === '--no-markdown') o.markdown = false;
     else if (a.startsWith('--')) {
       let [k, v] = a.slice(2).split(/=(.*)/s);
       if (v === undefined) v = argv[++i];
@@ -67,6 +71,7 @@ function report(r) {
   console.log(`${r.status === 'locked' ? '⚠' : '✔'} ${msg}`);
   console.log(`  эндпоинтов: ${r.endpointCount}, файлов просмотрено: ${r.filesScanned}`);
   console.log(`  документация: ${r.outFile}`);
+  if (r.mdFile) console.log(`  markdown:     ${r.mdFile}`);
   console.log(`  история:      ${r.historyFile}`);
   for (const w of r.warnings) console.warn(`  ! ${w}`);
 }

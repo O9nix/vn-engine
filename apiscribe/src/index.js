@@ -7,6 +7,7 @@ const { scanFiles } = require('./scanner');
 const { parseSources } = require('./parser');
 const { loadHistory, saveHistory, upsertVersion, diff } = require('./history');
 const { renderHtml, TOOL_VERSION } = require('./render');
+const { renderMarkdown } = require('./markdown');
 
 function readJson(file) {
   try {
@@ -32,6 +33,8 @@ function resolveOptions(user = {}) {
       lang: 'ru',
       exclude: [],
       languages: {},
+      markdown: true,
+      markdownFile: 'api.md',
       force: false,
       quiet: false,
     },
@@ -50,6 +53,7 @@ function resolveOptions(user = {}) {
     srcDir: path.resolve(cwd, o.src),
     outDir,
     outFile: path.join(outDir, 'index.html'),
+    mdFile: o.markdown === false ? null : path.resolve(outDir, o.markdownFile || 'api.md'),
     versionFile: path.resolve(cwd, o.versionFile),
     historyFile: path.resolve(cwd, o.historyFile || path.join(o.out, 'history.json')),
     title: o.title,
@@ -106,9 +110,16 @@ function generate(userOpts = {}) {
   if (fs.existsSync(opts.outFile)) {
     htmlStale = !fs.readFileSync(opts.outFile, 'utf8').includes(`content="apiscribe ${TOOL_VERSION}"`);
   }
-  if (status !== 'unchanged' || opts.force || htmlStale) {
+  const rebuild = status !== 'unchanged' || opts.force || htmlStale;
+  if (rebuild) {
     fs.mkdirSync(opts.outDir, { recursive: true });
     fs.writeFileSync(opts.outFile, renderHtml(history, opts));
+  }
+
+  // Markdown лежит рядом с HTML и пересобирается в тех же случаях (плюс, если файла нет)
+  if (opts.mdFile && (rebuild || !fs.existsSync(opts.mdFile))) {
+    fs.mkdirSync(path.dirname(opts.mdFile), { recursive: true });
+    fs.writeFileSync(opts.mdFile, renderMarkdown(history, Object.assign({ toolVersion: TOOL_VERSION }, opts)));
   }
 
   const entry = history.versions.find((v) => v.version === version);
@@ -124,6 +135,7 @@ function generate(userOpts = {}) {
     changes,
     warnings,
     outFile: opts.outFile,
+    mdFile: opts.mdFile,
     historyFile: opts.historyFile,
     options: opts,
   };
