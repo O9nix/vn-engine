@@ -1,6 +1,6 @@
 export const ChoicePlugin = {
     name: 'choice',
-
+    dependencies: [ 'state', 'conditions' ],
     install(api) {
         let activeBlock = null;
 

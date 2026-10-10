@@ -1,14 +1,14 @@
 # VN Engine API
 
-**Версия 0.1.2** · Дата 2026-10-08 · 33 записей
+**Версия 0.1.2** · Дата 2026-10-10 · 33 записей
 
-<!-- Файл создан автоматически: apiscribe 0.3.0. Вручную не редактируйте. -->
+<!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
 ## Содержание
 
 - **PluginManager**
   - [PluginManager](#pluginmanager)
-    - [PluginManager.constructor(bus, game, player, blocks, conditions)](#pluginmanager-constructor)
+    - [PluginManager.constructor(bus, game, player, blocks)](#pluginmanager-constructor)
     - [PluginManager.use(plugin)](#pluginmanager-use)
     - [PluginManager.remove(name)](#pluginmanager-remove)
     - [PluginManager.has(name)](#pluginmanager-has)
@@ -55,15 +55,15 @@
 *Класс*
 
 Устанавливает плагины и предоставляет единый Plugin API
-(`events`, `game`, `player`, `blocks`, `conditions`, `plugins`).
+(`events`, `game`, `player`, `blocks`, `plugins`).
 
 #### Содержимое
 
 | Имя | Описание |
 | --- | --- |
-| [`PluginManager.constructor(bus, game, player, blocks, conditions)`](#pluginmanager-constructor) | Собирает объект `api`, который каждый плагин получает в `install(api)`. |
-| [`PluginManager.use(plugin)`](#pluginmanager-use) | Устанавливает плагин. Плагин обязан иметь `name` и `install(api)`. |
-| [`PluginManager.remove(name)`](#pluginmanager-remove) | Удаляет плагин и вызывает его cleanup, если он есть. |
+| [`PluginManager.constructor(bus, game, player, blocks)`](#pluginmanager-constructor) | Собирает объект `api`, который каждый плагин получает в `install(api)`. |
+| [`PluginManager.use(plugin)`](#pluginmanager-use) | Устанавливает плагин после проверки его зависимостей. |
+| [`PluginManager.remove(name)`](#pluginmanager-remove) | Удаляет установленный плагин, если от него не зависят другие установленные плагины. |
 | [`PluginManager.has(name)`](#pluginmanager-has) |  |
 | [`PluginManager.get(name)`](#pluginmanager-get) |  |
 | [`PluginManager.list()`](#pluginmanager-list) |  |
@@ -72,7 +72,7 @@
 
 <a id="pluginmanager-constructor"></a>
 
-#### `PluginManager.constructor(bus, game, player, blocks, conditions)`
+#### `PluginManager.constructor(bus, game, player, blocks)`
 
 *Метод*
 
@@ -110,9 +110,8 @@ api
 | `game` *(обязательное)* | `VN` |  |
 | `player` *(обязательное)* | `Player` |  |
 | `blocks` *(обязательное)* | `BlockManager` |  |
-| `conditions` *(обязательное)* | `ConditionEvaluator` |  |
 
-<sub>Исходник: plugin-manager.js:11</sub>
+<sub>Исходник: plugin-manager.js:10</sub>
 
 <a id="pluginmanager-use"></a>
 
@@ -120,32 +119,30 @@ api
 
 *Метод*
 
-Устанавливает плагин. Плагин обязан иметь `name` и `install(api)`.
+Устанавливает плагин после проверки его зависимостей.
 
 ##### Параметры
 
 | Поле | Тип | Описание |
 | --- | --- | --- |
-| `plugin` *(обязательное)* | `Object` |  |
-| `plugin.name` *(обязательное)* | `string` | Уникальное имя |
-| `plugin.install` *(обязательное)* | `function` | Функция установки, получает api |
+| `plugin` *(обязательное)* | `Object` | Устанавливаемый плагин. |
 
 ##### Возвращает
 
-`PluginManager` — this (chainable)
+`PluginManager` — Текущий экземпляр менеджера.
 
 ##### Исключения
 
-- `TypeError` — Если нет install
-- `Error` — Если нет name или плагин уже установлен
+- `Error` — Если плагин некорректен, уже установлен или его зависимости отсутствуют.
 
 ##### Примеры
 
 ```js
-plugins.use(DialoguePlugin).use(ChoicePlugin);
+plugins.use(ConditionsPlugin);
+plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:265</sub>
+<sub>Исходник: plugin-manager.js:261</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -153,19 +150,31 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 *Метод*
 
-Удаляет плагин и вызывает его cleanup, если он есть.
+Удаляет установленный плагин, если от него
+не зависят другие установленные плагины.
 
 ##### Параметры
 
 | Поле | Тип | Описание |
 | --- | --- | --- |
-| `name` *(обязательное)* | `string` | Имя плагина |
+| `name` *(обязательное)* | `string` | Имя удаляемого плагина. |
 
 ##### Возвращает
 
-`boolean` — true, если плагин был удалён
+`boolean` — true, если плагин удалён,
+или false, если он не был установлен.
 
-<sub>Исходник: plugin-manager.js:336</sub>
+##### Исключения
+
+- `Error` — Если от плагина зависят другие установленные плагины.
+
+##### Примеры
+
+```js
+plugins.remove('choice');
+```
+
+<sub>Исходник: plugin-manager.js:356</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -183,7 +192,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:364</sub>
+<sub>Исходник: plugin-manager.js:414</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -201,7 +210,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:374</sub>
+<sub>Исходник: plugin-manager.js:424</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -213,7 +222,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:384</sub>
+<sub>Исходник: plugin-manager.js:434</sub>
 
 ## PluginAPI
 
@@ -232,7 +241,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 | [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
 | [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
 
-<sub>Исходник: plugin-manager.js:78</sub>
+<sub>Исходник: plugin-manager.js:73</sub>
 
 <a id="api-events-on"></a>
 
@@ -259,7 +268,7 @@ plugins.use(DialoguePlugin).use(ChoicePlugin);
 obj.doThing('x');
 ```
 
-<sub>Исходник: plugin-manager.js:84</sub>
+<sub>Исходник: plugin-manager.js:79</sub>
 
 <a id="api-events-emit"></a>
 
@@ -276,7 +285,7 @@ obj.doThing('x');
 | `event` *(обязательное)* | `string` | Имя события |
 | `payload` *(необязательное)* | `*` | Данные |
 
-<sub>Исходник: plugin-manager.js:97</sub>
+<sub>Исходник: plugin-manager.js:92</sub>
 
 <a id="api-game"></a>
 
@@ -297,7 +306,7 @@ obj.doThing('x');
 | [`api.game.hide(name)`](#api-game-hide) |  |
 | [`api.game.isVisible(name)`](#api-game-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:108</sub>
+<sub>Исходник: plugin-manager.js:103</sub>
 
 <a id="api-game-getpluginlayer"></a>
 
@@ -309,7 +318,7 @@ obj.doThing('x');
 
 `HTMLElement` — DOM-слой плагинов
 
-<sub>Исходник: plugin-manager.js:114</sub>
+<sub>Исходник: plugin-manager.js:109</sub>
 
 <a id="api-game-registerlayer"></a>
 
@@ -328,7 +337,7 @@ obj.doThing('x');
 
 `function` — cleanup
 
-<sub>Исходник: plugin-manager.js:122</sub>
+<sub>Исходник: plugin-manager.js:117</sub>
 
 <a id="api-game-registernodetype"></a>
 
@@ -346,7 +355,7 @@ context: { wait(), resume(), goto(nodeId) }
 | `type` *(обязательное)* | `string` | Имя типа узла |
 | `handler` *(обязательное)* | `function` | (node, context) => void |
 
-<sub>Исходник: plugin-manager.js:132</sub>
+<sub>Исходник: plugin-manager.js:127</sub>
 
 <a id="api-game-show"></a>
 
@@ -360,7 +369,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя |
 
-<sub>Исходник: plugin-manager.js:143</sub>
+<sub>Исходник: plugin-manager.js:138</sub>
 
 <a id="api-game-hide"></a>
 
@@ -374,7 +383,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя |
 
-<sub>Исходник: plugin-manager.js:151</sub>
+<sub>Исходник: plugin-manager.js:146</sub>
 
 <a id="api-game-isvisible"></a>
 
@@ -392,7 +401,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:159</sub>
+<sub>Исходник: plugin-manager.js:154</sub>
 
 <a id="api-player"></a>
 
@@ -412,7 +421,7 @@ context: { wait(), resume(), goto(nodeId) }
 | [`api.player.hide(name)`](#api-player-hide) |  |
 | [`api.player.isVisible(name)`](#api-player-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:169</sub>
+<sub>Исходник: plugin-manager.js:164</sub>
 
 <a id="api-player-getpluginlayer"></a>
 
@@ -424,7 +433,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `HTMLElement`
 
-<sub>Исходник: plugin-manager.js:175</sub>
+<sub>Исходник: plugin-manager.js:170</sub>
 
 <a id="api-player-registerlayer"></a>
 
@@ -443,7 +452,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `function` — cleanup
 
-<sub>Исходник: plugin-manager.js:183</sub>
+<sub>Исходник: plugin-manager.js:178</sub>
 
 <a id="api-player-show"></a>
 
@@ -457,7 +466,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` |  |
 
-<sub>Исходник: plugin-manager.js:193</sub>
+<sub>Исходник: plugin-manager.js:188</sub>
 
 <a id="api-player-hide"></a>
 
@@ -471,7 +480,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` |  |
 
-<sub>Исходник: plugin-manager.js:201</sub>
+<sub>Исходник: plugin-manager.js:196</sub>
 
 <a id="api-player-isvisible"></a>
 
@@ -489,7 +498,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:209</sub>
+<sub>Исходник: plugin-manager.js:204</sub>
 
 <a id="api-blocks"></a>
 
@@ -501,7 +510,7 @@ context: { wait(), resume(), goto(nodeId) }
 Методы: create, get, getAll, getByType, getActiveByChannel,
 getCurrent, show, hide, remove.
 
-<sub>Исходник: plugin-manager.js:219</sub>
+<sub>Исходник: plugin-manager.js:214</sub>
 
 <a id="api-plugins"></a>
 
@@ -520,7 +529,7 @@ const state = api.plugins.state.api.get();
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugin-manager.js:231</sub>
+<sub>Исходник: plugin-manager.js:226</sub>
 
 ## Plugins
 
@@ -715,32 +724,6 @@ api.plugins.state.api.update({
 
 ## История изменений
 
-### 0.1.2 (2026-10-08)
+### 0.1.2 (2026-10-10)
 
-**Добавлено (8)**
-
-- `ConditionsPlugin`
-- `ConditionsPlugin.evaluate`
-- `StatePlugin`
-- `StatePlugin.get`
-- `StatePlugin.getValue`
-- `StatePlugin.set`
-- `StatePlugin.update`
-- `StatePlugin.storyLoaded`
-
-**Изменено (1)**
-
-- `PluginManager.constructor`
-
-**Удалено (2)**
-
-- `api.conditions`
-- `api.conditions.evaluate`
-
-### 0.1.1 (2026-10-07)
-
-Изменений нет
-
-### 0.1.0 (2026-10-07)
-
-Первая версия: 27 записей
+Первая версия: 33 записей

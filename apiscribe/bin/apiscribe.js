@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 
-const { generate, init } = require('../src');
+const { generate, generateRoadmap, init } = require('../src');
 
 const HELP = `apiscribe — генератор документации API из комментариев с @api-тегами
 
 Использование:
   apiscribe [generate] [опции]   собрать документацию (по умолчанию)
+  apiscribe roadmap              собрать только roadmap.html из ROADMAP.md
   apiscribe init                 создать version.md и apiscribe.config.json
 
 Опции:
@@ -20,6 +21,10 @@ const HELP = `apiscribe — генератор документации API из
   --config <файл>          файл настроек                   (apiscribe.config.json)
   --no-markdown            не создавать Markdown-файл рядом с HTML
   --md-file <имя>          имя Markdown-файла в папке --out  (api.md)
+  --roadmap <файл>         источник roadmap                (ROADMAP.md в корне, если есть)
+  --roadmap-out <файл>     куда писать roadmap.html        (<out>/roadmap.html)
+  --roadmap-version-file   откуда брать текущую версию     (как --version-file)
+  --no-roadmap             не собирать roadmap
   --force                  пересобрать HTML и Markdown, даже если ничего не изменилось
   -q, --quiet              не печатать отчёт
   -h, --help               помощь
@@ -35,6 +40,9 @@ const KEYS = {
   config: 'config',
   exclude: 'exclude',
   'md-file': 'markdownFile',
+  roadmap: 'roadmap',
+  'roadmap-out': 'roadmapOut',
+  'roadmap-version-file': 'roadmapVersionFile',
 };
 
 function parseArgs(argv) {
@@ -46,6 +54,7 @@ function parseArgs(argv) {
     else if (a === '-q' || a === '--quiet') o.quiet = true;
     else if (a === '--force') o.force = true;
     else if (a === '--no-markdown') o.markdown = false;
+    else if (a === '--no-roadmap') o.roadmap = false;
     else if (a.startsWith('--')) {
       let [k, v] = a.slice(2).split(/=(.*)/s);
       if (v === undefined) v = argv[++i];
@@ -73,6 +82,20 @@ function report(r) {
   console.log(`  документация: ${r.outFile}`);
   if (r.mdFile) console.log(`  markdown:     ${r.mdFile}`);
   console.log(`  история:      ${r.historyFile}`);
+  if (r.roadmap) console.log(`  roadmap:      ${r.roadmap.outFile}`);
+  for (const w of r.warnings) console.warn(`  ! ${w}`);
+}
+
+function reportRoadmap(r) {
+  if (!r) {
+    console.log('Roadmap не найден: положите ROADMAP.md в корень проекта или укажите --roadmap <файл>.');
+    return;
+  }
+  const names = { done: 'готово', current: 'сейчас', planned: 'план' };
+  const parts = Object.keys(names).filter((k) => r.stepsByStatus[k]).map((k) => `${names[k]}: ${r.stepsByStatus[k]}`);
+  console.log(`✔ Roadmap: ${r.steps} этапов (${parts.join(', ')}), текущая версия ${r.current || 'не определена'}`);
+  console.log(`  источник: ${r.source}`);
+  console.log(`  страница: ${r.outFile}${r.status === 'unchanged' ? ' (без изменений)' : ''}`);
   for (const w of r.warnings) console.warn(`  ! ${w}`);
 }
 
@@ -84,6 +107,9 @@ try {
     const created = init(opts);
     console.log(created.length ? `Создано: ${created.join(', ')}` : 'Всё уже на месте.');
     console.log('Добавьте в package.json: "scripts": { "docs": "apiscribe", "prestart": "apiscribe" }');
+  } else if (cmd === 'roadmap') {
+    const r = generateRoadmap(opts);
+    if (!opts.quiet) reportRoadmap(r);
   } else if (cmd === 'generate') {
     const r = generate(opts);
     if (!opts.quiet) report(r);

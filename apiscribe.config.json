@@ -1,6 +1,6 @@
 {
   "src": ".",
-  "out": "docsx/api",
+  "out": "docs",
   "versionFile": "VERSION",
   "title": "VN Engine API",
   "lang": "ru",

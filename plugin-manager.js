@@ -2,12 +2,11 @@
  * @class PluginManager
  * @apiGroup PluginManager
  * Устанавливает плагины и предоставляет единый Plugin API
- * (`events`, `game`, `player`, `blocks`, `conditions`, `plugins`).
+ * (`events`, `game`, `player`, `blocks`, `plugins`).
  */
 export class PluginManager {
     #plugins = new Map();
     #api;
-
     /**
      * @apiName constructor
      * @apiGroup PluginManager
@@ -41,14 +40,12 @@ export class PluginManager {
      * @param {VN} game
      * @param {Player} player
      * @param {BlockManager} blocks
-     * @param {ConditionEvaluator} conditions
      */
     constructor(
         bus,
         game,
         player,
-        blocks,
-        conditions
+        blocks
     ) {
         /**
          * Единый API, передаваемый в `plugin.install(api)`.
@@ -70,8 +67,6 @@ export class PluginManager {
          * @property {function(string): void} player.hide
          * @property {function(string): boolean} player.isVisible
          * @property {BlockManager} blocks — менеджер визуальных блоков
-         * @property {Object} conditions
-         * @property {function(Object, Object): boolean} conditions.evaluate — проверка условия
          * @property {Object} plugins — Proxy: `api.plugins.<name>.api`
          */
         this.#api = {
@@ -262,104 +257,159 @@ export class PluginManager {
         };
     }
 
-    /**
-     * @apiName use
-     * @apiGroup PluginManager
-     * Устанавливает плагин. Плагин обязан иметь `name` и `install(api)`.
-     * @param {Object} plugin
-     * @param {string} plugin.name Уникальное имя
-     * @param {function} plugin.install Функция установки, получает api
-     * @returns {PluginManager} this (chainable)
-     * @throws {TypeError} Если нет install
-     * @throws {Error} Если нет name или плагин уже установлен
-     * @example
-     * plugins.use(DialoguePlugin).use(ChoicePlugin);
-     */
-    use(plugin) {
+
+/**
+ * @apiName PluginManager.use
+ * @apiGroup PluginManager
+ *
+ * Устанавливает плагин после проверки его зависимостей.
+ *
+ * @param {Object} plugin Устанавливаемый плагин.
+ * @returns {PluginManager} Текущий экземпляр менеджера.
+ * @throws {Error} Если плагин некорректен, уже установлен
+ * или его зависимости отсутствуют.
+ *
+ * @example
+ * plugins.use(ConditionsPlugin);
+ * plugins.use(ChoicePlugin);
+ */
+use(plugin) {
+    if (
+        !plugin ||
+        typeof plugin.install !== 'function'
+    ) {
+        throw new TypeError(
+            'Плагин должен содержать метод install(api)'
+        );
+    }
+
+    const name = plugin.name;
+
+    if (!name) {
+        throw new Error(
+            'У плагина должно быть имя'
+        );
+    }
+
+    if (this.#plugins.has(name)) {
+        throw new Error(
+            `Плагин "${name}" уже установлен`
+        );
+    }
+
+    const dependencies = plugin.dependencies ?? [];
+
+    if (!Array.isArray(dependencies)) {
+        throw new TypeError(
+            `PluginManager: dependencies плагина "${name}" должны быть массивом`
+        );
+    }
+
+     let dep = []
+    for (const dependency of dependencies) {
+        if (!this.#plugins.has(dependency)) {
+            dep.push(dependency)
+           
+        }
+    }
+
+
+        if(dep.length){
+         throw new Error(
+                `PluginManager: плагин "${name}" требует установленный плагины "${dep.join(', ')}"`
+            );
+
+            }
+    const result = plugin.install(this.#api);
+
+    let pluginApi = {};
+    let cleanup = null;
+
+    if (result) {
         if (
-            !plugin ||
-            typeof plugin.install !== 'function'
+            result.api &&
+            typeof result.api === 'object'
         ) {
-            throw new TypeError(
-                'Плагин должен содержать метод install(api)'
-            );
+            pluginApi = result.api;
         }
 
-        const name = plugin.name;
-
-        if (!name) {
-            throw new Error(
-                'У плагина должно быть имя'
-            );
+        if (typeof result.cleanup === 'function') {
+            cleanup = result.cleanup;
         }
-
-        if (this.#plugins.has(name)) {
-            throw new Error(
-                `Плагин "${name}" уже установлен`
-            );
-        }
-
-        const result =
-            plugin.install(this.#api);
-
-        let pluginApi = {};
-        let cleanup = null;
-
-        if (result) {
-            if (
-                result.api &&
-                typeof result.api === 'object'
-            ) {
-                pluginApi = result.api;
-            }
-
-            if (
-                typeof result.cleanup === 'function'
-            ) {
-                cleanup = result.cleanup;
-            }
-        }
-
-        this.#plugins.set(name, {
-            plugin,
-            api: pluginApi,
-            cleanup
-        });
-
-        console.log(
-            `[PluginManager] Плагин "${name}" установлен`
-        );
-
-        return this;
     }
+
+    this.#plugins.set(name, {
+        plugin,
+        api: pluginApi,
+        cleanup
+    });
+
+    console.log(
+        `[PluginManager] Плагин "${name}" установлен`
+    );
+
+    return this;
+}
+
+
 
     /**
-     * @apiName remove
-     * @apiGroup PluginManager
-     * Удаляет плагин и вызывает его cleanup, если он есть.
-     * @param {string} name Имя плагина
-     * @returns {boolean} true, если плагин был удалён
-     */
-    remove(name) {
-        const entry =
-            this.#plugins.get(name);
+ * @apiName PluginManager.remove
+ * @apiGroup PluginManager
+ *
+ * Удаляет установленный плагин, если от него
+ * не зависят другие установленные плагины.
+ *
+ * @param {string} name Имя удаляемого плагина.
+ * @returns {boolean} true, если плагин удалён,
+ * или false, если он не был установлен.
+ * @throws {Error} Если от плагина зависят другие
+ * установленные плагины.
+ *
+ * @example
+ * plugins.remove('choice');
+ */
+remove(name) {
+    const entry = this.#plugins.get(name);
 
-        if (!entry) {
-            return false;
-        }
-
-        if (entry.cleanup) {
-            entry.cleanup();
-        }
-
-        this.#plugins.delete(name);
-
-        console.log(
-            `[PluginManager] Плагин "${name}" удалён`
-        );
-
-        return true;
+    if (!entry) {
+        return false;
     }
+
+    const dependents = [];
+
+    for (const [pluginName, pluginEntry] of this.#plugins) {
+        if (pluginName === name) {
+            continue;
+        }
+
+        const dependencies =
+            pluginEntry.plugin.dependencies ?? [];
+
+        if (dependencies.includes(name)) {
+            dependents.push(pluginName);
+        }
+    }
+
+    if (dependents.length > 0) {
+        throw new Error(
+            `PluginManager: нельзя удалить плагин "${name}", ` +
+            `поскольку от него зависят: ${dependents.join(', ')}`
+        );
+    }
+
+    if (entry.cleanup) {
+        entry.cleanup();
+    }
+
+    this.#plugins.delete(name);
+
+    console.log(
+        `[PluginManager] Плагин "${name}" удалён`
+    );
+
+    return true;
+}
 
     /**
      * @apiName has

@@ -3,7 +3,7 @@ import { Player } from './player.js';
 import { BlockManager } from './block-manager.js';
 import { Project } from './project.js';
 import { FlowResolver } from './flow.js';
-import { ConditionsPlugin } from './plugins/conditions-plugin.js';
+
 
 
 import { PluginManager }
@@ -20,10 +20,12 @@ import { BackgroundPlugin }
 
 import { WaitPlugin }
     from './plugins/wait-plugin.js';
+    import { StatePlugin }
+    from './plugins/state-plugin.js';
+    import { ConditionsPlugin } from './plugins/conditions-plugin.js';
 import { ChoicePlugin }
     from './plugins/choice-plugin.js';
-import { StatePlugin }
-    from './plugins/state-plugin.js';
+
     import {TopLeftHUDPlugin}
     from './plugins/TopLeftHUDPlugin.js'
 
@@ -49,10 +51,14 @@ plugins.use(DialoguePlugin);
 plugins.use(NarrationPlugin);
 plugins.use(BackgroundPlugin);
 plugins.use(WaitPlugin);
-plugins.use(ChoicePlugin);
+
 plugins.use(ConditionsPlugin);
-
-
+plugins.use(ChoicePlugin);
+try {
+    plugins.remove('state');
+} catch (error) {
+    console.error(error.message);
+}
 document.addEventListener(
     'click',
     (event) => {
