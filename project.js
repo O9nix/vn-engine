@@ -68,4 +68,5 @@ getSceneForNode(nodeId) {
     getAssets() {
         return this.#assets;
     }
+
 }

@@ -90,6 +90,10 @@ export const TopLeftHUDPlugin = {
     console.log('[StatePlugin] Инициализированное состояние:', state);
 });
 
+api.events.on('validator:errors',({data})=>{
+    console.log('err', data)
+})
+
               const unsubscribeStoryLoaded = api.events.on('story:loaded', () => {
             console.log('[TopLeftHUD] Получено событие story:loaded');
             

@@ -5,7 +5,7 @@
     {
       "version": "0.1.2",
       "date": "2026-10-10",
-      "updatedAt": "2026-10-10T19:12:11.760Z",
+      "updatedAt": "2026-10-12T07:10:52.947Z",
       "endpoints": [
         {
           "key": "PluginManager",
@@ -1316,6 +1316,106 @@
             "file": "plugins/state-plugin.js",
             "line": 89
           },
+          "doc": true
+        },
+        {
+          "key": "ProjectValidator",
+          "method": "CLASS",
+          "path": "ProjectValidator",
+          "title": "ProjectValidator",
+          "group": "ProjectValidator",
+          "description": "Проверяет проект на типовые и базовые ошибки. Такие как:\n1. Метка (goto) не ведет ни к одному из существующих узлов",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "ProjectValidator.js",
+            "line": 4
+          },
+          "doc": true
+        },
+        {
+          "key": "ProjectValidator.constructor",
+          "method": "METHOD",
+          "path": "ProjectValidator.constructor",
+          "title": "ProjectValidator.constructor(project)",
+          "group": "ProjectValidator",
+          "description": "Получает проект для валидации",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "project",
+                "name": "project",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "ProjectValidator.js",
+            "line": 13
+          },
+          "sig": "(project)",
+          "doc": true
+        },
+        {
+          "key": "ProjectValidator.validateGotos",
+          "method": "METHOD",
+          "path": "ProjectValidator.validateGotos",
+          "title": "ProjectValidator.validateGotos()",
+          "group": "ProjectValidator",
+          "description": "Проверяет метки goto",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "Возвращает объект",
+              "content": "const validator = new ProjectValidator(project);\nconst result = validator.validateGotos();\n//Возвращяет объект\n{\n  valid: boolean,       // прошла ли валидация успешно\n  hasGoto: boolean,     // найден ли хотя бы один goto\n  gotoCount: number,    // сколько всего найдено goto\n  nodeCount: number,    // сколько уникальных узлов найдено\n  errors: Array<{       // список ошибок\n      target: any,\n      path: string,\n      message: string\n  }>\n}"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "ProjectValidator.js",
+            "line": 23
+          },
+          "sig": "()",
           "doc": true
         }
       ]

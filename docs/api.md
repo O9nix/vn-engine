@@ -1,6 +1,6 @@
 # VN Engine API
 
-**Версия 0.1.2** · Дата 2026-10-10 · 33 записей
+**Версия 0.1.2** · Дата 2026-10-10 · 36 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
@@ -44,6 +44,10 @@
   - [StatePlugin.set(name, value)](#stateplugin-set)
   - [StatePlugin.update(values)](#stateplugin-update)
   - [StatePlugin.storyLoaded](#stateplugin-storyloaded)
+- **ProjectValidator**
+  - [ProjectValidator](#projectvalidator)
+    - [ProjectValidator.constructor(project)](#projectvalidator-constructor)
+    - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - [История изменений](#changelog)
 
 ## PluginManager
@@ -720,10 +724,77 @@ api.plugins.state.api.update({
 
 <sub>Исходник: plugins/state-plugin.js:89</sub>
 
+## ProjectValidator
+
+<a id="projectvalidator"></a>
+
+### `ProjectValidator`
+
+*Класс*
+
+Проверяет проект на типовые и базовые ошибки. Такие как:
+1. Метка (goto) не ведет ни к одному из существующих узлов
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`ProjectValidator.constructor(project)`](#projectvalidator-constructor) | Получает проект для валидации |
+| [`ProjectValidator.validateGotos()`](#projectvalidator-validategotos) | Проверяет метки goto |
+
+<sub>Исходник: ProjectValidator.js:4</sub>
+
+<a id="projectvalidator-constructor"></a>
+
+#### `ProjectValidator.constructor(project)`
+
+*Метод*
+
+Получает проект для валидации
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `project` *(обязательное)* | `project` |  |
+
+<sub>Исходник: ProjectValidator.js:13</sub>
+
+<a id="projectvalidator-validategotos"></a>
+
+#### `ProjectValidator.validateGotos()`
+
+*Метод*
+
+Проверяет метки goto
+
+##### Примеры
+
+**Возвращает объект**
+
+```js
+const validator = new ProjectValidator(project);
+const result = validator.validateGotos();
+//Возвращяет объект
+{
+  valid: boolean,       // прошла ли валидация успешно
+  hasGoto: boolean,     // найден ли хотя бы один goto
+  gotoCount: number,    // сколько всего найдено goto
+  nodeCount: number,    // сколько уникальных узлов найдено
+  errors: Array<{       // список ошибок
+      target: any,
+      path: string,
+      message: string
+  }>
+}
+```
+
+<sub>Исходник: ProjectValidator.js:23</sub>
+
 <a id="changelog"></a>
 
 ## История изменений
 
 ### 0.1.2 (2026-10-10)
 
-Первая версия: 33 записей
+Первая версия: 36 записей

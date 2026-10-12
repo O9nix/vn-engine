@@ -2,8 +2,7 @@ import { VN } from './core.js';
 import { Player } from './player.js';
 import { BlockManager } from './block-manager.js';
 import { Project } from './project.js';
-import { FlowResolver } from './flow.js';
-
+import { ProjectValidator } from './ProjectValidator.js';
 
 
 import { PluginManager }
@@ -55,7 +54,7 @@ plugins.use(WaitPlugin);
 plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 try {
-    plugins.remove('state');
+    // plugins.remove('state');
 } catch (error) {
     console.error(error.message);
 }
@@ -121,7 +120,7 @@ const project = new Project({
                                    
                                     text: 'Пойдём домой',
 
-                                    goto: 'home'
+                                    goto: 'home1'
                                 }
                             ]
                         }
@@ -155,6 +154,12 @@ const project = new Project({
         }
     ]
 });
+
+const validator = new ProjectValidator(project,bus);
+
+const result = validator.validateGotos();
+
+console.log(result);
 
 
 game.loadProject(project);

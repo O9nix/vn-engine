@@ -45,7 +45,8 @@ export class PluginManager {
         bus,
         game,
         player,
-        blocks
+        blocks,
+        validator
     ) {
         /**
          * Единый API, передаваемый в `plugin.install(api)`.
