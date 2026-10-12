@@ -1,5 +1,7 @@
 export const BackgroundPlugin = {
     name: 'background',
+    version: '0.1.0',
+    nodeTypes: ['background'],
 
     install(api) {
         api.game.registerNodeType(
@@ -36,3 +38,5 @@ export const BackgroundPlugin = {
         };
     }
 };
+
+export default BackgroundPlugin;

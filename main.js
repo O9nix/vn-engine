@@ -3,76 +3,28 @@ import { Player } from './player.js';
 import { BlockManager } from './block-manager.js';
 import { Project } from './project.js';
 import { ProjectValidator } from './ProjectValidator.js';
+import { PluginRegistry } from './plugin-registry.js';
+import { localPluginLoader } from './local-plugin-loader.js';
+import { loadProjectPlugins } from './plugin-loader.js';
+import { PluginManager } from './plugin-manager.js';
 
-
-import { PluginManager }
-    from './plugin-manager.js';
-
-import { DialoguePlugin }
-    from './plugins/dialogue-plugin.js';
-
-import { NarrationPlugin }
-    from './plugins/narration-plugin.js';
-
-import { BackgroundPlugin }
-    from './plugins/background-plugin.js';
-
-import { WaitPlugin }
-    from './plugins/wait-plugin.js';
-    import { StatePlugin }
-    from './plugins/state-plugin.js';
-    import { ConditionsPlugin } from './plugins/conditions-plugin.js';
-import { ChoicePlugin }
-    from './plugins/choice-plugin.js';
-
-    import {TopLeftHUDPlugin}
-    from './plugins/TopLeftHUDPlugin.js'
-
-const game = new VN();
-
-const bus = game.getBus();
-
-const player = new Player();
-
-const blocks = new BlockManager(
-    player.getPluginLayer()
-);
-
-const plugins = new PluginManager(
-    bus,
-    game,
-    player,
-    blocks,
-);
-plugins.use(StatePlugin);
-plugins.use(TopLeftHUDPlugin);
-plugins.use(DialoguePlugin);
-plugins.use(NarrationPlugin);
-plugins.use(BackgroundPlugin);
-plugins.use(WaitPlugin);
-
-plugins.use(ConditionsPlugin);
-plugins.use(ChoicePlugin);
-try {
-    // plugins.remove('state');
-} catch (error) {
-    console.error(error.message);
-}
-document.addEventListener(
-    'click',
-    (event) => {
-        if (event.target.closest('button')) {
-            return;
-        }
-
-        bus.emit(
-            'click-game',
-            event
-        );
-    }
-);
+// Плагины загружаются по именам из проекта. Позже загрузчик можно
+// заменить на получение плагинов из внешнего сервиса.
+const registry = new PluginRegistry({ loader: localPluginLoader });
 
 const project = new Project({
+    // Плагины, нужные проекту. Порядок зависимостей определяется автоматически.
+    plugins: [
+        'state',
+        'top-left-hud',
+        'dialogue',
+        'narration',
+        'background',
+        'wait',
+        'conditions',
+        'choice'
+    ],
+
      config:{state :{
             health: 7
         }},
@@ -155,11 +107,58 @@ const project = new Project({
     ]
 });
 
-const validator = new ProjectValidator(project,bus);
 
-const result = validator.validateGotos();
+const game = new VN();
 
-console.log(result);
+const bus = game.getBus();
 
+const player = new Player();
 
-game.loadProject(project);
+const blocks = new BlockManager(
+    player.getPluginLayer()
+);
+
+const plugins = new PluginManager(
+    bus,
+    game,
+    player,
+    blocks,
+);
+
+document.addEventListener(
+    'click',
+    (event) => {
+        if (event.target.closest('button')) {
+            return;
+        }
+
+        bus.emit(
+            'click-game',
+            event
+        );
+    }
+);
+
+async function start() {
+    await loadProjectPlugins(project, registry, plugins);
+
+    const validator = new ProjectValidator(project, bus);
+
+    const result = validator.validateGotos();
+
+    console.log(result);
+
+    game.loadProject(project);
+}
+
+start().catch((error) => {
+    console.error(error);
+
+    // Ошибка запуска не должна оставлять пустой экран.
+    const box = document.createElement('pre');
+
+    box.textContent =
+        `Не удалось запустить проект:\n${error.message}`;
+
+    document.body.appendChild(box);
+});

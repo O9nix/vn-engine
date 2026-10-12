@@ -1,14 +1,44 @@
+/**
+ * @class Project
+ * @apiGroup Project
+ *
+ * Единый источник данных игры: сцены, узлы, конфигурация,
+ * ресурсы и список плагинов, которые нужны проекту.
+ */
 export class Project {
+    #plugins;
     #metadata;
     #scenes;
     #config;
     #assets;
 
     constructor(data = {}) {
+        this.#plugins = data.plugins ?? [];
         this.#metadata = data.metadata ?? {};
         this.#scenes = data.scenes ?? [];
         this.#config = data.config ?? {};
         this.#assets = data.assets ?? {};
+    }
+
+    /**
+     * @apiName Project.getPlugins
+     * @apiGroup Project
+     *
+     * Возвращает плагины, которые объявлены в проекте.
+     * Элемент списка — имя плагина или объект `{ name, version }`.
+     * Сами плагины устанавливает `loadProjectPlugins()`.
+     *
+     * @returns {Array} Список объявленных плагинов: строки
+     * или объекты `{ name, version }`.
+     *
+     * @example
+     * const project = new Project({
+     *     plugins: ['state', { name: 'choice', version: '0.1.0' }]
+     * });
+     * project.getPlugins();
+     */
+    getPlugins() {
+        return this.#plugins;
     }
 
     getMetadata() {

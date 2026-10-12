@@ -1,5 +1,7 @@
 export const DialoguePlugin = {
     name: 'dialogue',
+    version: '0.1.0',
+    nodeTypes: ['dialogue'],
 
     install(api) {
         api.game.registerNodeType(
@@ -74,3 +76,5 @@ export const DialoguePlugin = {
         };
     }
 };
+
+export default DialoguePlugin;

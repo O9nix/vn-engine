@@ -1,11 +1,23 @@
 # VN Engine API
 
-**Версия 0.1.2** · Дата 2026-10-10 · 36 записей
+**Версия 0.1.3** · Дата 2026-10-12 · 48 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
 ## Содержание
 
+- **PluginRegistry**
+  - [localPluginLoader(name)](#localpluginloader)
+  - [PluginRegistry](#pluginregistry)
+    - [PluginRegistry.constructor(options)](#pluginregistry-constructor)
+    - [PluginRegistry.register(plugin)](#pluginregistry-register)
+    - [PluginRegistry.resolve(name, version)](#pluginregistry-resolve)
+    - [PluginRegistry.has(name)](#pluginregistry-has)
+    - [PluginRegistry.list()](#pluginregistry-list)
+- **PluginLoader**
+  - [normalizePluginRefs(refs)](#normalizepluginrefs)
+  - [orderPlugins(plugins)](#orderplugins)
+  - [loadProjectPlugins(project, registry, manager)](#loadprojectplugins)
 - **PluginManager**
   - [PluginManager](#pluginmanager)
     - [PluginManager.constructor(bus, game, player, blocks)](#pluginmanager-constructor)
@@ -44,11 +56,323 @@
   - [StatePlugin.set(name, value)](#stateplugin-set)
   - [StatePlugin.update(values)](#stateplugin-update)
   - [StatePlugin.storyLoaded](#stateplugin-storyloaded)
+- **Project**
+  - [Project](#project)
+    - [Project.getPlugins()](#project-getplugins)
 - **ProjectValidator**
   - [ProjectValidator](#projectvalidator)
     - [ProjectValidator.constructor(project)](#projectvalidator-constructor)
     - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - [История изменений](#changelog)
+
+## PluginRegistry
+
+<a id="localpluginloader"></a>
+
+### `localPluginLoader(name)`
+
+*Метод*
+
+Загрузчик плагинов из папки `plugins/` рядом с движком.
+
+Плагин `choice` ищется в файле `plugins/choice-plugin.js` и должен
+экспортировать объект плагина через `export default`. Имя плагина
+проверяет `PluginRegistry` до вызова загрузчика, поэтому в путь
+попадают только безопасные имена.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя плагина. |
+
+#### Возвращает
+
+`Promise` — Промис с объектом плагина.
+
+#### Исключения
+
+- `Error` — Если файла нет или модуль не экспортирует плагин через `export default`.
+
+#### Примеры
+
+```js
+const registry = new PluginRegistry({ loader: localPluginLoader });
+```
+
+<sub>Исходник: local-plugin-loader.js:1</sub>
+
+<a id="pluginregistry"></a>
+
+### `PluginRegistry`
+
+*Класс*
+
+Каталог доступных плагинов: по имени отдаёт объект плагина.
+
+Плагин можно добавить вручную (`register()`) или дать каталогу
+загрузчик (`loader`), который получает плагин по имени. Интерфейс
+`resolve()` асинхронный, поэтому загрузчик может быть как
+локальным, так и обращаться к внешнему сервису: остальной код
+движка об этом не знает.
+
+Имя плагина должно состоять из строчных латинских букв, цифр
+и дефисов (`choice`, `top-left-hud`). Это проверяется до вызова
+загрузчика, потому что имя приходит из данных проекта.
+
+Минимальный манифест плагина:
+```
+{
+    name: 'choice',                        // обязательно, уникальное имя
+    version: '0.1.0',                      // версия плагина
+    dependencies: ['state', 'conditions'], // имена нужных плагинов
+    nodeTypes: ['choice'],                 // типы узлов, которые даёт плагин
+    install(api) { ... }                   // обязательно
+}
+```
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`PluginRegistry.constructor(options)`](#pluginregistry-constructor) | Создаёт каталог. |
+| [`PluginRegistry.register(plugin)`](#pluginregistry-register) | Добавляет плагин в каталог вручную. |
+| [`PluginRegistry.resolve(name, version)`](#pluginregistry-resolve) | Возвращает плагин по имени. Если плагина нет среди добавленных вручную или уже загруженных, вызывает загрузчик. |
+| [`PluginRegistry.has(name)`](#pluginregistry-has) |  |
+| [`PluginRegistry.list()`](#pluginregistry-list) |  |
+
+<sub>Исходник: plugin-registry.js:3</sub>
+
+<a id="pluginregistry-constructor"></a>
+
+#### `PluginRegistry.constructor(options)`
+
+*Метод*
+
+Создаёт каталог.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `options` *(необязательное)* | `Object` | Параметры каталога. |
+| `options.loader` *(необязательное)* | `function` | Загрузчик `(name) => Promise`: по имени плагина возвращает промис с его объектом. Вызывается, только если плагина нет среди добавленных вручную или уже загруженных. Результат запоминается. |
+
+##### Примеры
+
+```js
+const registry = new PluginRegistry({ loader: localPluginLoader });
+```
+
+<sub>Исходник: plugin-registry.js:35</sub>
+
+<a id="pluginregistry-register"></a>
+
+#### `PluginRegistry.register(plugin)`
+
+*Метод*
+
+Добавляет плагин в каталог вручную.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `plugin` *(обязательное)* | `Object` | Плагин с полями `name` и `install`. |
+
+##### Возвращает
+
+`PluginRegistry` — Текущий каталог (для цепочки вызовов).
+
+##### Исключения
+
+- `Error` — Если у плагина нет имени или метода `install`, либо плагин с таким именем уже есть.
+
+##### Примеры
+
+```js
+const registry = new PluginRegistry();
+registry.register(StatePlugin).register(ChoicePlugin);
+```
+
+<sub>Исходник: plugin-registry.js:61</sub>
+
+<a id="pluginregistry-resolve"></a>
+
+#### `PluginRegistry.resolve(name, version)`
+
+*Метод*
+
+Возвращает плагин по имени. Если плагина нет среди добавленных
+вручную или уже загруженных, вызывает загрузчик.
+
+Версия сейчас сравнивается только на точное совпадение
+(диапазоны вроде `^1.0` пока не поддерживаются).
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя плагина. |
+| `version` *(необязательное)* | `string` | Требуемая версия. Если не указана, подойдёт любая. |
+
+##### Возвращает
+
+`Promise` — Промис с объектом плагина.
+
+##### Исключения
+
+- `Error` — Если имя недопустимо, плагин не найден или не загрузился, имя загруженного плагина не совпадает с запрошенным либо версия не совпадает с требуемой.
+
+##### Примеры
+
+```js
+const plugin = await registry.resolve('choice');
+```
+
+<sub>Исходник: plugin-registry.js:104</sub>
+
+<a id="pluginregistry-has"></a>
+
+#### `PluginRegistry.has(name)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя плагина |
+
+##### Возвращает
+
+`boolean` — Есть ли плагин среди добавленных или
+уже загруженных
+
+<sub>Исходник: plugin-registry.js:203</sub>
+
+<a id="pluginregistry-list"></a>
+
+#### `PluginRegistry.list()`
+
+*Метод*
+
+##### Возвращает
+
+`string[]` — Имена добавленных и уже загруженных плагинов
+
+<sub>Исходник: plugin-registry.js:214</sub>
+
+## PluginLoader
+
+<a id="normalizepluginrefs"></a>
+
+### `normalizePluginRefs(refs)`
+
+*Метод*
+
+Приводит список плагинов проекта к единому виду.
+Элемент списка может быть строкой (имя) или объектом
+`{ name, version }`.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `refs` *(необязательное)* | `Array` | Список плагинов из `project.getPlugins()`. Каждый элемент — строка или объект `{ name, version }`. |
+
+#### Возвращает
+
+`Object[]` — Нормализованный список объектов
+`{ name, version }` в порядке объявления.
+
+#### Исключения
+
+- `Error` — Если элемент некорректен или плагин объявлен дважды.
+
+#### Примеры
+
+```js
+normalizePluginRefs(['state', { name: 'choice', version: '0.1.0' }]);
+// [{ name: 'state', version: undefined },
+//  { name: 'choice', version: '0.1.0' }]
+```
+
+<sub>Исходник: plugin-loader.js:1</sub>
+
+<a id="orderplugins"></a>
+
+### `orderPlugins(plugins)`
+
+*Метод*
+
+Сортирует плагины так, чтобы каждый шёл после своих зависимостей.
+Среди независимых плагинов сохраняется порядок объявления.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `plugins` *(обязательное)* | `Object[]` | Плагины в порядке объявления в проекте. |
+
+#### Возвращает
+
+`Object[]` — Плагины в порядке установки.
+
+#### Исключения
+
+- `Error` — Если зависимость не объявлена в проекте или зависимости образуют цикл.
+
+#### Примеры
+
+```js
+const ordered = orderPlugins([ChoicePlugin, StatePlugin, ConditionsPlugin]);
+// state, conditions, choice
+```
+
+<sub>Исходник: plugin-loader.js:66</sub>
+
+<a id="loadprojectplugins"></a>
+
+### `loadProjectPlugins(project, registry, manager)`
+
+*Метод*
+
+Устанавливает плагины, объявленные в проекте.
+
+Получает плагины из каталога по именам из `project.getPlugins()`,
+сортирует их по зависимостям и устанавливает через `PluginManager`.
+Если установка какого-то плагина завершилась ошибкой, уже
+установленные плагины удаляются, и ошибка пробрасывается дальше.
+
+Вызывать нужно до `game.loadProject(project)`, чтобы плагины
+успели подписаться на `story:loaded`.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `project` *(обязательное)* | `Project` | Проект с объявленными плагинами. |
+| `registry` *(обязательное)* | `PluginRegistry` | Каталог доступных плагинов. |
+| `manager` *(обязательное)* | `PluginManager` | Менеджер, устанавливающий плагины. |
+
+#### Возвращает
+
+`Promise` — Промис с массивом имён установленных плагинов
+в порядке установки.
+
+#### Исключения
+
+- `Error` — Если плагин не найден, зависимости не объявлены, есть цикл или установка завершилась ошибкой.
+
+#### Примеры
+
+```js
+const installed = await loadProjectPlugins(project, registry, plugins);
+game.loadProject(project);
+```
+
+<sub>Исходник: plugin-loader.js:143</sub>
 
 ## PluginManager
 
@@ -146,7 +470,7 @@ plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:261</sub>
+<sub>Исходник: plugin-manager.js:262</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -178,7 +502,7 @@ plugins.use(ChoicePlugin);
 plugins.remove('choice');
 ```
 
-<sub>Исходник: plugin-manager.js:356</sub>
+<sub>Исходник: plugin-manager.js:357</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -196,7 +520,7 @@ plugins.remove('choice');
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:414</sub>
+<sub>Исходник: plugin-manager.js:415</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -214,7 +538,7 @@ plugins.remove('choice');
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:424</sub>
+<sub>Исходник: plugin-manager.js:425</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -226,7 +550,7 @@ plugins.remove('choice');
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:434</sub>
+<sub>Исходник: plugin-manager.js:435</sub>
 
 ## PluginAPI
 
@@ -245,7 +569,7 @@ plugins.remove('choice');
 | [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
 | [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
 
-<sub>Исходник: plugin-manager.js:73</sub>
+<sub>Исходник: plugin-manager.js:74</sub>
 
 <a id="api-events-on"></a>
 
@@ -272,7 +596,7 @@ plugins.remove('choice');
 obj.doThing('x');
 ```
 
-<sub>Исходник: plugin-manager.js:79</sub>
+<sub>Исходник: plugin-manager.js:80</sub>
 
 <a id="api-events-emit"></a>
 
@@ -289,7 +613,7 @@ obj.doThing('x');
 | `event` *(обязательное)* | `string` | Имя события |
 | `payload` *(необязательное)* | `*` | Данные |
 
-<sub>Исходник: plugin-manager.js:92</sub>
+<sub>Исходник: plugin-manager.js:93</sub>
 
 <a id="api-game"></a>
 
@@ -310,7 +634,7 @@ obj.doThing('x');
 | [`api.game.hide(name)`](#api-game-hide) |  |
 | [`api.game.isVisible(name)`](#api-game-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:103</sub>
+<sub>Исходник: plugin-manager.js:104</sub>
 
 <a id="api-game-getpluginlayer"></a>
 
@@ -322,7 +646,7 @@ obj.doThing('x');
 
 `HTMLElement` — DOM-слой плагинов
 
-<sub>Исходник: plugin-manager.js:109</sub>
+<sub>Исходник: plugin-manager.js:110</sub>
 
 <a id="api-game-registerlayer"></a>
 
@@ -341,7 +665,7 @@ obj.doThing('x');
 
 `function` — cleanup
 
-<sub>Исходник: plugin-manager.js:117</sub>
+<sub>Исходник: plugin-manager.js:118</sub>
 
 <a id="api-game-registernodetype"></a>
 
@@ -359,7 +683,7 @@ context: { wait(), resume(), goto(nodeId) }
 | `type` *(обязательное)* | `string` | Имя типа узла |
 | `handler` *(обязательное)* | `function` | (node, context) => void |
 
-<sub>Исходник: plugin-manager.js:127</sub>
+<sub>Исходник: plugin-manager.js:128</sub>
 
 <a id="api-game-show"></a>
 
@@ -373,7 +697,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя |
 
-<sub>Исходник: plugin-manager.js:138</sub>
+<sub>Исходник: plugin-manager.js:139</sub>
 
 <a id="api-game-hide"></a>
 
@@ -387,7 +711,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя |
 
-<sub>Исходник: plugin-manager.js:146</sub>
+<sub>Исходник: plugin-manager.js:147</sub>
 
 <a id="api-game-isvisible"></a>
 
@@ -405,7 +729,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:154</sub>
+<sub>Исходник: plugin-manager.js:155</sub>
 
 <a id="api-player"></a>
 
@@ -425,7 +749,7 @@ context: { wait(), resume(), goto(nodeId) }
 | [`api.player.hide(name)`](#api-player-hide) |  |
 | [`api.player.isVisible(name)`](#api-player-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:164</sub>
+<sub>Исходник: plugin-manager.js:165</sub>
 
 <a id="api-player-getpluginlayer"></a>
 
@@ -437,7 +761,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `HTMLElement`
 
-<sub>Исходник: plugin-manager.js:170</sub>
+<sub>Исходник: plugin-manager.js:171</sub>
 
 <a id="api-player-registerlayer"></a>
 
@@ -456,7 +780,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `function` — cleanup
 
-<sub>Исходник: plugin-manager.js:178</sub>
+<sub>Исходник: plugin-manager.js:179</sub>
 
 <a id="api-player-show"></a>
 
@@ -470,7 +794,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` |  |
 
-<sub>Исходник: plugin-manager.js:188</sub>
+<sub>Исходник: plugin-manager.js:189</sub>
 
 <a id="api-player-hide"></a>
 
@@ -484,7 +808,7 @@ context: { wait(), resume(), goto(nodeId) }
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` |  |
 
-<sub>Исходник: plugin-manager.js:196</sub>
+<sub>Исходник: plugin-manager.js:197</sub>
 
 <a id="api-player-isvisible"></a>
 
@@ -502,7 +826,7 @@ context: { wait(), resume(), goto(nodeId) }
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:204</sub>
+<sub>Исходник: plugin-manager.js:205</sub>
 
 <a id="api-blocks"></a>
 
@@ -514,7 +838,7 @@ context: { wait(), resume(), goto(nodeId) }
 Методы: create, get, getAll, getByType, getActiveByChannel,
 getCurrent, show, hide, remove.
 
-<sub>Исходник: plugin-manager.js:214</sub>
+<sub>Исходник: plugin-manager.js:215</sub>
 
 <a id="api-plugins"></a>
 
@@ -533,7 +857,7 @@ const state = api.plugins.state.api.get();
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugin-manager.js:226</sub>
+<sub>Исходник: plugin-manager.js:227</sub>
 
 ## Plugins
 
@@ -613,7 +937,7 @@ const result =
     );
 ```
 
-<sub>Исходник: plugins/conditions-plugin.js:17</sub>
+<sub>Исходник: plugins/conditions-plugin.js:19</sub>
 
 ## StatePlugin
 
@@ -636,7 +960,7 @@ const state = api.plugins.state.api.get();
 console.log(state.health);
 ```
 
-<sub>Исходник: plugins/state-plugin.js:22</sub>
+<sub>Исходник: plugins/state-plugin.js:24</sub>
 
 <a id="stateplugin-getvalue"></a>
 
@@ -663,7 +987,7 @@ const health =
     api.plugins.state.api.getValue('health');
 ```
 
-<sub>Исходник: plugins/state-plugin.js:38</sub>
+<sub>Исходник: plugins/state-plugin.js:40</sub>
 
 <a id="stateplugin-set"></a>
 
@@ -686,7 +1010,7 @@ const health =
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugins/state-plugin.js:55</sub>
+<sub>Исходник: plugins/state-plugin.js:57</sub>
 
 <a id="stateplugin-update"></a>
 
@@ -711,7 +1035,7 @@ api.plugins.state.api.update({
 });
 ```
 
-<sub>Исходник: plugins/state-plugin.js:71</sub>
+<sub>Исходник: plugins/state-plugin.js:73</sub>
 
 <a id="stateplugin-storyloaded"></a>
 
@@ -722,7 +1046,52 @@ api.plugins.state.api.update({
 Инициализирует runtime-состояние из конфигурации проекта
 после загрузки истории.
 
-<sub>Исходник: plugins/state-plugin.js:89</sub>
+<sub>Исходник: plugins/state-plugin.js:91</sub>
+
+## Project
+
+<a id="project"></a>
+
+### `Project`
+
+*Класс*
+
+Единый источник данных игры: сцены, узлы, конфигурация,
+ресурсы и список плагинов, которые нужны проекту.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`Project.getPlugins()`](#project-getplugins) | Возвращает плагины, которые объявлены в проекте. Элемент списка — имя плагина или объект `{ name, version }`. Сами плагины устанавливает ... |
+
+<sub>Исходник: project.js:1</sub>
+
+<a id="project-getplugins"></a>
+
+#### `Project.getPlugins()`
+
+*Метод*
+
+Возвращает плагины, которые объявлены в проекте.
+Элемент списка — имя плагина или объект `{ name, version }`.
+Сами плагины устанавливает `loadProjectPlugins()`.
+
+##### Возвращает
+
+`Array` — Список объявленных плагинов: строки
+или объекты `{ name, version }`.
+
+##### Примеры
+
+```js
+const project = new Project({
+    plugins: ['state', { name: 'choice', version: '0.1.0' }]
+});
+project.getPlugins();
+```
+
+<sub>Исходник: project.js:23</sub>
 
 ## ProjectValidator
 
@@ -789,12 +1158,65 @@ const result = validator.validateGotos();
 }
 ```
 
-<sub>Исходник: ProjectValidator.js:23</sub>
+<sub>Исходник: ProjectValidator.js:24</sub>
 
 <a id="changelog"></a>
 
 ## История изменений
 
-### 0.1.2 (2026-10-10)
+### 0.1.3 (2026-10-12)
 
-Первая версия: 36 записей
+**Добавлено (15)**
+
+- `localPluginLoader`
+- `normalizePluginRefs`
+- `orderPlugins`
+- `loadProjectPlugins`
+- `PluginRegistry`
+- `PluginRegistry.constructor`
+- `PluginRegistry.register`
+- `PluginRegistry.resolve`
+- `PluginRegistry.has`
+- `PluginRegistry.list`
+- `Project`
+- `Project.getPlugins`
+- `ProjectValidator`
+- `ProjectValidator.constructor`
+- `ProjectValidator.validateGotos`
+
+**Изменено (4)**
+
+- `PluginManager`
+- `PluginManager.constructor`
+- `PluginManager.use`
+- `PluginManager.remove`
+
+### 0.1.2 (2026-10-08)
+
+**Добавлено (8)**
+
+- `ConditionsPlugin`
+- `ConditionsPlugin.evaluate`
+- `StatePlugin`
+- `StatePlugin.get`
+- `StatePlugin.getValue`
+- `StatePlugin.set`
+- `StatePlugin.update`
+- `StatePlugin.storyLoaded`
+
+**Изменено (1)**
+
+- `PluginManager.constructor`
+
+**Удалено (2)**
+
+- `api.conditions`
+- `api.conditions.evaluate`
+
+### 0.1.1 (2026-10-07)
+
+Изменений нет
+
+### 0.1.0 (2026-10-07)
+
+Первая версия: 27 записей

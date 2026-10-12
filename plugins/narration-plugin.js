@@ -1,5 +1,7 @@
 export const NarrationPlugin = {
     name: 'narration',
+    version: '0.1.0',
+    nodeTypes: ['narration'],
 
     install(api) {
         api.game.registerNodeType(
@@ -63,3 +65,5 @@ export const NarrationPlugin = {
         };
     }
 };
+
+export default NarrationPlugin;

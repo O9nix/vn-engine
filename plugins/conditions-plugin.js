@@ -12,6 +12,8 @@
  */
 export const ConditionsPlugin = {
     name: 'conditions',
+    version: '0.1.0',
+    nodeTypes: [],
 
     install(api) {
         /**
@@ -91,3 +93,5 @@ export const ConditionsPlugin = {
         };
     }
 };
+
+export default ConditionsPlugin;

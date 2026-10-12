@@ -1,5 +1,7 @@
 export const ChoicePlugin = {
     name: 'choice',
+    version: '0.1.0',
+    nodeTypes: ['choice'],
     dependencies: [ 'state', 'conditions' ],
     install(api) {
         let activeBlock = null;
@@ -170,3 +172,5 @@ function resolveVariant(option, state) {
         };
     }
 };
+
+export default ChoicePlugin;

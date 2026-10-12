@@ -15,6 +15,8 @@
  */
 export const StatePlugin = {
     name: 'state',
+    version: '0.1.0',
+    nodeTypes: [],
 
     install(api) {
         const state = {};
@@ -131,3 +133,5 @@ export const StatePlugin = {
         };
     }
 };
+
+export default StatePlugin;

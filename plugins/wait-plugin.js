@@ -1,5 +1,7 @@
 export const WaitPlugin = {
     name: 'wait',
+    version: '0.1.0',
+    nodeTypes: ['wait'],
 
     install(api) {
         let timeoutId = null;
@@ -152,3 +154,5 @@ export const WaitPlugin = {
         };
     }
 };
+
+export default WaitPlugin;
