@@ -54,8 +54,8 @@ export class ProjectValidator {
                 ? this.#project.getScenes()
                 : this.#project?.scenes;
         let data= validateProjectScenes(scenes);
-        console.log(data)
-        if(data.errors)  this.#bus.emit('validator:errors',{errors: data.errors})
+        console.log('ошибочки',data)
+        if(data.errors)  this.#bus.emit('validator:errors',{'errors': data.errors})
             
             return data
 

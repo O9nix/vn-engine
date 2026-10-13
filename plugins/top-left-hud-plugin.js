@@ -9,7 +9,7 @@ export const TopLeftHUDPlugin = {
         // 1. Создание UI-элемента
         const element = document.createElement('div');
         element.className = 'top-left-hud';
-        
+
         // ДОБАВЛЕНО: display: 'block' и яркая рамка для отладки
         Object.assign(element.style, {
             position: 'absolute',
@@ -65,7 +65,7 @@ export const TopLeftHUDPlugin = {
         render();
         console.log('[TopLeftHUD] Первичный рендер выполнен. Элемент:', element);
 
-             // 2. Регистрация слоя и явное добавление в DOM
+        // 2. Регистрация слоя и явное добавление в DOM
         if (api.player && typeof api.player.registerLayer === 'function') {
             api.player.registerLayer('top-left-hud', element);
             console.log('[TopLeftHUD] Слой зарегистрирован в api.player');
@@ -86,30 +86,30 @@ export const TopLeftHUDPlugin = {
 
         // 3. Подписка на события
         api.events.on('story:loaded', ({ project }) => {
-    const config = project.getConfig();
-    // Если в конфиге есть ключ state, берем его. Иначе берем весь конфиг.
-   let state = config.state || config; 
-    console.log('[StatePlugin] Инициализированное состояние:', state);
-});
+            const config = project.getConfig();
+            // Если в конфиге есть ключ state, берем его. Иначе берем весь конфиг.
+            let state = config.state || config;
+            console.log('[StatePlugin] Инициализированное состояние:', state);
+        });
 
-api.events.on('validator:errors',({data})=>{
-    console.log('err', data)
-})
+        api.events.on('validator:errors', ({ data }) => {
+            console.log('err', data)
+        })
 
-              const unsubscribeStoryLoaded = api.events.on('story:loaded', () => {
+        const unsubscribeStoryLoaded = api.events.on('story:loaded', () => {
             console.log('[TopLeftHUD] Получено событие story:loaded');
-            
+
             if (api.plugins && api.plugins.state) {
                 const stateApi = api.plugins.state.api;
                 let state = stateApi.get();
-                
+
                 // Защита от вложенности (если state всё ещё вернется как { state: {...} })
                 if (state.state && typeof state.state === 'object') {
                     state = state.state;
                 }
-                
+
                 console.log('[TopLeftHUD] Итоговое состояние для рендера:', state);
-                
+
                 const displayKeys = ['health', 'mana', 'gold', 'score', 'level'];
                 let hasData = false;
                 for (const key of displayKeys) {
@@ -118,7 +118,7 @@ api.events.on('validator:errors',({data})=>{
                         hasData = true;
                     }
                 }
-                
+
                 if (hasData) {
                     displayData.title = 'Статус героя';
                     render();

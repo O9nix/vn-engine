@@ -168,7 +168,7 @@ export function orderPlugins(plugins) {
  */
 export async function loadProjectPlugins(project, registry, manager) {
     const refs = normalizePluginRefs(project.getPlugins());
-
+    console.log(refs)
     const results = await Promise.allSettled(
         refs.map(ref => registry.resolve(ref.name, ref.version))
     );
