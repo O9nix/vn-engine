@@ -255,3 +255,31 @@ test('PluginRegistry + localPluginLoader: реальные плагины и п�
 
     assert.deepEqual(result, ['state', 'conditions', 'choice']);
 });
+
+test('plugins/*-plugin.js: dependencies указывают на существующие плагины', async () => {
+    const { readdir } = await import('node:fs/promises');
+    const { localPluginLoader } = await import('../local-plugin-loader.js');
+
+    const dir = new URL('../plugins/', import.meta.url);
+    const names = (await readdir(dir))
+        .filter(f => f.endsWith('-plugin.js'))
+        .map(f => f.replace(/-plugin\.js$/, ''));
+
+    for (const name of names) {
+        const plugin = await localPluginLoader(name);
+
+        for (const dependency of plugin.dependencies ?? []) {
+            assert.ok(
+                names.includes(dependency),
+                `${name}: зависимость "${dependency}" не найдена среди плагинов`
+            );
+        }
+    }
+});
+
+test('top-left-hud зависит от state (иначе он увидит пустое состояние)', async () => {
+    const { localPluginLoader } = await import('../local-plugin-loader.js');
+    const hud = await localPluginLoader('top-left-hud');
+
+    assert.ok(hud.dependencies.includes('state'));
+});

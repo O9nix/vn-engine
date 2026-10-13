@@ -1,6 +1,6 @@
 # VN Engine API
 
-**Версия 0.1.3** · Дата 2026-10-12 · 48 записей
+**Версия 0.1.3** · Дата 2026-10-13 · 54 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
@@ -48,6 +48,7 @@
 - **Plugins**
   - [ConditionsPlugin](#conditionsplugin)
   - [StatePlugin](#stateplugin)
+  - [TopLeftHUDPlugin](#toplefthudplugin)
 - **ConditionsPlugin**
   - [ConditionsPlugin.evaluate(condition, state)](#conditionsplugin-evaluate)
 - **StatePlugin**
@@ -56,6 +57,12 @@
   - [StatePlugin.set(name, value)](#stateplugin-set)
   - [StatePlugin.update(values)](#stateplugin-update)
   - [StatePlugin.storyLoaded](#stateplugin-storyloaded)
+- **TopLeftHUDPlugin**
+  - [TopLeftHUDPlugin.set(key, value)](#toplefthudplugin-set)
+  - [TopLeftHUDPlugin.setTitle(title)](#toplefthudplugin-settitle)
+  - [TopLeftHUDPlugin.update(values)](#toplefthudplugin-update)
+  - [TopLeftHUDPlugin.show()](#toplefthudplugin-show)
+  - [TopLeftHUDPlugin.hide()](#toplefthudplugin-hide)
 - **Project**
   - [Project](#project)
     - [Project.getPlugins()](#project-getplugins)
@@ -896,6 +903,25 @@ Runtime-состояние изменяется через публичный AP
 
 <sub>Исходник: plugins/state-plugin.js:1</sub>
 
+<a id="toplefthudplugin"></a>
+
+### `TopLeftHUDPlugin`
+
+*Класс*
+
+Показывает в левом верхнем углу панель статуса героя.
+
+После загрузки истории панель подхватывает из состояния игры
+значения `health`, `mana`, `gold`, `score` и `level`. Остальные
+значения можно выводить через публичный API плагина:
+
+`api.plugins['top-left-hud'].api`
+
+Плагин зависит от `state`: он должен быть установлен раньше,
+чтобы состояние уже было готово к моменту события `story:loaded`.
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:1</sub>
+
 ## ConditionsPlugin
 
 <a id="conditionsplugin-evaluate"></a>
@@ -1048,6 +1074,89 @@ api.plugins.state.api.update({
 
 <sub>Исходник: plugins/state-plugin.js:91</sub>
 
+## TopLeftHUDPlugin
+
+<a id="toplefthudplugin-set"></a>
+
+### `TopLeftHUDPlugin.set(key, value)`
+
+*Метод*
+
+Выводит значение в панели.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `key` *(обязательное)* | `string` | Название строки. |
+| `value` *(обязательное)* | `*` | Значение строки. |
+
+#### Примеры
+
+```js
+api.plugins['top-left-hud'].api.set('gold', 50);
+```
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:123</sub>
+
+<a id="toplefthudplugin-settitle"></a>
+
+### `TopLeftHUDPlugin.setTitle(title)`
+
+*Метод*
+
+Меняет заголовок панели.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `title` *(обязательное)* | `string` | Новый заголовок. |
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:140</sub>
+
+<a id="toplefthudplugin-update"></a>
+
+### `TopLeftHUDPlugin.update(values)`
+
+*Метод*
+
+Выводит сразу несколько значений.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `values` *(обязательное)* | `Object` | Объект вида `{ название: значение }`. |
+
+#### Примеры
+
+```js
+api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
+```
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:153</sub>
+
+<a id="toplefthudplugin-show"></a>
+
+### `TopLeftHUDPlugin.show()`
+
+*Метод*
+
+Показывает панель.
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:169</sub>
+
+<a id="toplefthudplugin-hide"></a>
+
+### `TopLeftHUDPlugin.hide()`
+
+*Метод*
+
+Скрывает панель.
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:179</sub>
+
 ## Project
 
 <a id="project"></a>
@@ -1164,9 +1273,9 @@ const result = validator.validateGotos();
 
 ## История изменений
 
-### 0.1.3 (2026-10-12)
+### 0.1.3 (2026-10-13)
 
-**Добавлено (15)**
+**Добавлено (18)**
 
 - `localPluginLoader`
 - `normalizePluginRefs`
@@ -1178,8 +1287,27 @@ const result = validator.validateGotos();
 - `PluginRegistry.resolve`
 - `PluginRegistry.has`
 - `PluginRegistry.list`
+- `TopLeftHUDPlugin`
+- `TopLeftHUDPlugin.set`
+- `TopLeftHUDPlugin.setTitle`
+- `TopLeftHUDPlugin.update`
+- `TopLeftHUDPlugin.show`
+- `TopLeftHUDPlugin.hide`
 - `Project`
 - `Project.getPlugins`
+
+### 0.1.2 (2026-10-08)
+
+**Добавлено (11)**
+
+- `ConditionsPlugin`
+- `ConditionsPlugin.evaluate`
+- `StatePlugin`
+- `StatePlugin.get`
+- `StatePlugin.getValue`
+- `StatePlugin.set`
+- `StatePlugin.update`
+- `StatePlugin.storyLoaded`
 - `ProjectValidator`
 - `ProjectValidator.constructor`
 - `ProjectValidator.validateGotos`
@@ -1190,23 +1318,6 @@ const result = validator.validateGotos();
 - `PluginManager.constructor`
 - `PluginManager.use`
 - `PluginManager.remove`
-
-### 0.1.2 (2026-10-08)
-
-**Добавлено (8)**
-
-- `ConditionsPlugin`
-- `ConditionsPlugin.evaluate`
-- `StatePlugin`
-- `StatePlugin.get`
-- `StatePlugin.getValue`
-- `StatePlugin.set`
-- `StatePlugin.update`
-- `StatePlugin.storyLoaded`
-
-**Изменено (1)**
-
-- `PluginManager.constructor`
 
 **Удалено (2)**
 

@@ -1,161 +1,195 @@
+/**
+ * @class TopLeftHUDPlugin
+ * @apiGroup Plugins
+ *
+ * Показывает в левом верхнем углу панель статуса героя.
+ *
+ * После загрузки истории панель подхватывает из состояния игры
+ * значения `health`, `mana`, `gold`, `score` и `level`. Остальные
+ * значения можно выводить через публичный API плагина:
+ *
+ * `api.plugins['top-left-hud'].api`
+ *
+ * Плагин зависит от `state`: он должен быть установлен раньше,
+ * чтобы состояние уже было готово к моменту события `story:loaded`.
+ */
 export const TopLeftHUDPlugin = {
     name: 'top-left-hud',
     version: '0.1.0',
+    dependencies: ['state'],
     nodeTypes: [],
 
     install(api) {
-        console.log('[TopLeftHUD] Начало установки плагина...');
+        const LAYER_NAME = 'top-left-hud';
+        const STATE_KEYS = ['health', 'mana', 'gold', 'score', 'level'];
 
-        // 1. Создание UI-элемента
         const element = document.createElement('div');
+
         element.className = 'top-left-hud';
 
-        // ДОБАВЛЕНО: display: 'block' и яркая рамка для отладки
         Object.assign(element.style, {
             position: 'absolute',
             top: '20px',
             left: '20px',
-            display: 'block', // Явно указываем, что элемент должен быть видимым
-            minWidth: '260px',
-            padding: '15px',
-            background: 'rgba(255, 0, 0, 0.5)', // Временно красный полупрозрачный фон, чтобы точно увидеть!
-            color: '#ffffff',
+            minWidth: '220px',
+            padding: '12px 15px',
+            background: 'rgba(0, 0, 0, 0.6)',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
             borderRadius: '8px',
             fontSize: '16px',
             lineHeight: '1.5',
-            border: '2px solid yellow', // Яркая рамка для отладки
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.6)',
             pointerEvents: 'none',
-            zIndex: '9999', // Максимальный z-index, чтобы быть поверх всего
-            transition: 'opacity 0.3s ease'
+            zIndex: '50'
         });
 
-        const displayData = {
-            title: 'Отладка HUD',
-            items: { 'Статус': 'Ожидание данных...' }
+        const data = {
+            title: 'Статус',
+            items: {}
         };
 
+        // Текст выводится через textContent: значения состояния
+        // не должны интерпретироваться как HTML.
         function render() {
-            console.log('[TopLeftHUD] Вызов render(). Данные:', displayData);
-            let html = `
-                <div style="
-                    font-weight: bold; 
-                    color: #ffff00; 
-                    margin-bottom: 12px; 
-                    padding-bottom: 8px; 
-                    border-bottom: 1px solid rgba(255,255,255,0.5);
-                    font-size: 18px;
-                ">
-                    ${displayData.title}
-                </div>
-            `;
+            element.replaceChildren();
 
-            for (const [key, value] of Object.entries(displayData.items)) {
-                html += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span>${key}:</span>
-                        <span style="font-weight: bold;">${value}</span>
-                    </div>
-                `;
+            const title = document.createElement('div');
+
+            title.textContent = data.title;
+
+            Object.assign(title.style, {
+                fontWeight: 'bold',
+                marginBottom: '8px',
+                paddingBottom: '6px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.4)'
+            });
+
+            element.appendChild(title);
+
+            for (const [key, value] of Object.entries(data.items)) {
+                const row = document.createElement('div');
+
+                Object.assign(row.style, {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '16px'
+                });
+
+                const name = document.createElement('span');
+                const val = document.createElement('span');
+
+                name.textContent = `${key}:`;
+                val.textContent = String(value);
+                val.style.fontWeight = 'bold';
+
+                row.append(name, val);
+                element.appendChild(row);
             }
-            element.innerHTML = html;
         }
 
-        // Первичный рендер (обязательно!)
         render();
-        console.log('[TopLeftHUD] Первичный рендер выполнен. Элемент:', element);
 
-        // 2. Регистрация слоя и явное добавление в DOM
-        if (api.player && typeof api.player.registerLayer === 'function') {
-            api.player.registerLayer('top-left-hud', element);
-            console.log('[TopLeftHUD] Слой зарегистрирован в api.player');
-        }
+        const removeLayer = api.player.registerLayer(
+            LAYER_NAME,
+            element
+        );
 
-        // ГАРАНТИРОВАННОЕ ДОБАВЛЕНИЕ В DOM:
-        // Получаем корневой контейнер для плагинов и добавляем наш элемент туда
-        const pluginLayer = api.player.getPluginLayer();
-        if (pluginLayer && !pluginLayer.contains(element)) {
-            pluginLayer.appendChild(element);
-            console.log('[TopLeftHUD] Элемент явно добавлен в DOM через getPluginLayer()');
-        }
+        api.player.getPluginLayer().appendChild(element);
 
-        if (api.player && typeof api.player.show === 'function') {
-            api.player.show('top-left-hud');
-            console.log('[TopLeftHUD] Вызован api.player.show("top-left-hud")');
-        }
+        const unsubscribeStoryLoaded = api.events.on(
+            'story:loaded',
+            () => {
+                const state = api.plugins.state.api.get();
 
-        // 3. Подписка на события
-        api.events.on('story:loaded', ({ project }) => {
-            const config = project.getConfig();
-            // Если в конфиге есть ключ state, берем его. Иначе берем весь конфиг.
-            let state = config.state || config;
-            console.log('[StatePlugin] Инициализированное состояние:', state);
-        });
+                let found = false;
 
-        api.events.on('validator:errors', ({ data }) => {
-            console.log('err', data)
-        })
-
-        const unsubscribeStoryLoaded = api.events.on('story:loaded', () => {
-            console.log('[TopLeftHUD] Получено событие story:loaded');
-
-            if (api.plugins && api.plugins.state) {
-                const stateApi = api.plugins.state.api;
-                let state = stateApi.get();
-
-                // Защита от вложенности (если state всё ещё вернется как { state: {...} })
-                if (state.state && typeof state.state === 'object') {
-                    state = state.state;
-                }
-
-                console.log('[TopLeftHUD] Итоговое состояние для рендера:', state);
-
-                const displayKeys = ['health', 'mana', 'gold', 'score', 'level'];
-                let hasData = false;
-                for (const key of displayKeys) {
+                for (const key of STATE_KEYS) {
                     if (state[key] !== undefined) {
-                        displayData.items[key] = state[key];
-                        hasData = true;
+                        data.items[key] = state[key];
+                        found = true;
                     }
                 }
 
-                if (hasData) {
-                    displayData.title = 'Статус героя';
-                    render();
+                if (found) {
+                    data.title = 'Статус героя';
                 }
-            }
-        });
 
-        // 4. Возврат API
+                render();
+            }
+        );
+
         return {
             api: {
+                /**
+                 * @apiName TopLeftHUDPlugin.set
+                 * @apiGroup TopLeftHUDPlugin
+                 *
+                 * Выводит значение в панели.
+                 *
+                 * @param {string} key Название строки.
+                 * @param {*} value Значение строки.
+                 *
+                 * @example
+                 * api.plugins['top-left-hud'].api.set('gold', 50);
+                 */
                 set(key, value) {
-                    displayData.items[key] = value;
+                    data.items[key] = value;
                     render();
                 },
+
+                /**
+                 * @apiName TopLeftHUDPlugin.setTitle
+                 * @apiGroup TopLeftHUDPlugin
+                 *
+                 * Меняет заголовок панели.
+                 *
+                 * @param {string} title Новый заголовок.
+                 */
                 setTitle(title) {
-                    displayData.title = title;
+                    data.title = title;
                     render();
                 },
+
+                /**
+                 * @apiName TopLeftHUDPlugin.update
+                 * @apiGroup TopLeftHUDPlugin
+                 *
+                 * Выводит сразу несколько значений.
+                 *
+                 * @param {Object} values Объект вида `{ название: значение }`.
+                 *
+                 * @example
+                 * api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
+                 */
                 update(values) {
-                    Object.assign(displayData.items, values);
+                    Object.assign(data.items, values);
                     render();
                 },
+
+                /**
+                 * @apiName TopLeftHUDPlugin.show
+                 * @apiGroup TopLeftHUDPlugin
+                 *
+                 * Показывает панель.
+                 */
                 show() {
-                    element.style.display = 'block';
-                    if (api.player?.show) api.player.show('top-left-hud');
+                    api.player.show(LAYER_NAME);
                 },
+
+                /**
+                 * @apiName TopLeftHUDPlugin.hide
+                 * @apiGroup TopLeftHUDPlugin
+                 *
+                 * Скрывает панель.
+                 */
                 hide() {
-                    element.style.display = 'none';
-                    if (api.player?.hide) api.player.hide('top-left-hud');
+                    api.player.hide(LAYER_NAME);
                 }
             },
 
             cleanup() {
-                console.log('[TopLeftHUD] Очистка плагина');
                 unsubscribeStoryLoaded();
-                unsubscribeStateChange();
-                if (api.player?.hide) api.player.hide('top-left-hud');
+                removeLayer();
             }
         };
     }

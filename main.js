@@ -16,8 +16,7 @@ const project = new Project({
     // Плагины, нужные проекту. Порядок зависимостей определяется автоматически.
     plugins: [
         'state',
-        'noty',
-        // 'top-left-hud',
+        'top-left-hud',
         'dialogue',
         'narration',
         'background',
@@ -27,7 +26,7 @@ const project = new Project({
     ],
 
      config:{state :{
-            health: 4
+            health: 7
         }},
     scenes: [
         {
@@ -73,7 +72,7 @@ const project = new Project({
                                    
                                     text: 'Пойдём домой',
 
-                                    goto: 'home'
+                                    goto: 'home1'
                                 }
                             ]
                         }
