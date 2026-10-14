@@ -1,3 +1,8 @@
+/**
+ * @class BlockManager
+ * @apiGroup BlockManager
+ * Хранит визуальные блоки (диалог, выбор и т.п.) и размещает их в корневом элементе.
+ */
 export class BlockManager {
     #root;
     #blocks = new Map();
@@ -14,6 +19,20 @@ export class BlockManager {
         this.#root = root;
     }
 
+    /**
+     * @apiName BlockManager.create
+     * @apiGroup BlockManager
+     *
+     * Создаёт блок и добавляет его элемент в корень.
+     *
+     * Опции: `channel` (строка, по умолчанию default), `element` (HTMLElement),
+     * `data`, `meta` и `replace` (true — сначала удалить все блоки этого канала,
+     * чтобы старые не накапливались).
+     *
+     * @param {string} type Тип блока.
+     * @param {Object} [options] Параметры блока.
+     * @returns {Object} Созданный блок.
+     */
     create(type, options = {}) {
         if (!type || typeof type !== 'string') {
             throw new TypeError(
@@ -25,13 +44,22 @@ export class BlockManager {
             channel = 'default',
             element,
             data = {},
-            meta = {}
+            meta = {},
+            replace = false
         } = options;
 
         if (!(element instanceof HTMLElement)) {
             throw new TypeError(
                 `BlockManager.create(): element для блока "${type}" должен быть HTMLElement`
             );
+        }
+
+        if (replace) {
+            for (const old of this.getAll()) {
+                if (old.channel === channel) {
+                    this.remove(old.id);
+                }
+            }
         }
 
         const id = `${type}-${this.#nextId++}`;

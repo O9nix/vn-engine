@@ -153,7 +153,7 @@ function resolveVariant(option, state) {
                         }
                     );
 
-                context.wait();
+                context.wait({ lock: true });
             }
         );
 

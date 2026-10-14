@@ -41,6 +41,7 @@ export const NarrationPlugin = {
                         'narration',
                         {
                             channel: 'content',
+                            replace: true,
                             element,
                             data: {
                                 text: node.text
@@ -60,9 +61,7 @@ export const NarrationPlugin = {
             }
         );
 
-        return () => {
-            // Пока нечего удалять.
-        };
+        // Блоки и типы узлов движок снимает сам.
     }
 };
 

@@ -21,18 +21,27 @@ export const ExamplePlugin = {
     // Они обязаны быть объявлены в списке plugins проекта.
     dependencies: [],
 
+    // Версия Plugin API движка (необязательно). Если указана и не совпадает
+    // с версией движка, плагин не устанавливается.
+    apiVersion: 1,
+
     // Типы узлов, которые плагин обрабатывает (для проверок и редактора).
     nodeTypes: ['example'],
 
     install(api) {
         // Обработчик узла: node — данные узла, context — управление ходом.
-        //   context.wait()   остановить выполнение до resume()
+        //   context.wait()   остановить выполнение до resume() или клика игрока
+        //   context.wait({ lock: true })  то же, но клик не продолжает (только resume/goto)
         //   context.resume() продолжить со следующего узла
         //   context.goto(id) перейти к узлу с этим id
         api.game.registerNodeType('example', (node, context) => {
             console.log('example:', node.text);
         });
 
+        // Всё, что плагин регистрирует через api (события, слои, типы узлов,
+        // блоки), движок снимает сам при удалении плагина или сбое установки.
+        // Ошибка в обработчике узла останавливает проект и даёт событие story:error.
+        // Логи с именем плагина: api.log.info / warn / error.
         // Подписка на события: api.events.on('story:loaded', ({ project }) => {...});
         // Другие плагины: api.plugins.state.api.get();
         // Визуальные блоки: api.blocks.create('example', { channel, element });

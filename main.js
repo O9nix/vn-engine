@@ -15,13 +15,14 @@ const registry = new PluginRegistry({ loader: localPluginLoader });
 const project = new Project({
     // Плагины, нужные проекту. Порядок зависимостей определяется автоматически.
     plugins: [
+        'noty',
         'state',
         'top-left-hud',
         'dialogue',
         'narration',
         'background',
         'wait',
-        'conditions',
+        // 'conditions',
         'choice'
     ],
 
@@ -139,14 +140,56 @@ document.addEventListener(
     }
 );
 
+function showFatal(text) {
+    // Запасной вывод, если уведомления недоступны.
+    const box = document.createElement('pre');
+    box.className =
+                    'box-fatal-error';
+
+                Object.assign(
+                    box.style,
+                    {
+                        position: 'absolute',
+    top: '10px'
+                    }
+                );
+    
+    box.textContent = text;
+    document.body.appendChild(box);
+}
+
 async function start() {
-    await loadProjectPlugins(project, registry, plugins);
+    const report = await loadProjectPlugins(project, registry, plugins);
+
+    // Интерфейс плеера и плагины уведомлений уже работают; сообщаем о сбоях.
+    for (const failure of report.failed) {
+        console.error(
+            `Плагин "${failure.name}" (${failure.stage}):`,
+            failure.error
+        );
+
+        bus.emit('plugin:error', {
+            name: failure.name,
+            stage: failure.stage,
+            message: failure.message
+        });
+    }
+
+    if (report.failed.length > 0) {
+        if (!plugins.has('noty')) {
+            showFatal(
+                'Проект не запущен, плагины с ошибками:\n' +
+                report.failed.map(f => `- ${f.name}: ${f.message}`).join('\n')
+            );
+        }
+
+        // История не запускается, пока не работают все плагины проекта.
+        return;
+    }
 
     const validator = new ProjectValidator(project, bus);
 
-    const result = validator.validateGotos();
-
-    console.log(result);
+    validator.validateGotos();
 
     game.loadProject(project);
 }
@@ -154,11 +197,5 @@ async function start() {
 start().catch((error) => {
     console.error(error);
 
-    // Ошибка запуска не должна оставлять пустой экран.
-    const box = document.createElement('pre');
-
-    box.textContent =
-        `Не удалось запустить проект:\n${error.message}`;
-
-    document.body.appendChild(box);
+    showFatal(`Не удалось запустить проект:\n${error.message}`);
 });

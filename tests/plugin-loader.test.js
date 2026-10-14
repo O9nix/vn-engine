@@ -107,32 +107,92 @@ test('loadProjectPlugins: ставит в порядке зависимосте�
 
     const result = await loadProjectPlugins(project, registry, manager);
 
-    assert.deepEqual(result, ['state', 'choice']);
+    assert.deepEqual(result.installed, ['state', 'choice']);
+    assert.deepEqual(result.failed, []);
     assert.deepEqual(manager.installed, ['state', 'choice']);
 });
 
-test('loadProjectPlugins: собирает все ненайденные плагины', async () => {
-    const registry = new PluginRegistry();
-    const project = new Project({ plugins: ['x', 'y'] });
+test('loadProjectPlugins: ненайденные плагины попадают в failed, а не бросают', async () => {
+    const registry = new PluginRegistry().register(make('ok'));
+    const project = new Project({ plugins: ['x', 'ok', 'y'] });
+    const manager = fakeManager();
 
-    await assert.rejects(
-        loadProjectPlugins(project, registry, fakeManager()),
-        /"x".*\n- .*"y"/s
+    const report = await loadProjectPlugins(project, registry, manager);
+
+    assert.deepEqual(report.installed, ['ok']);
+    assert.deepEqual(report.failed.map(f => f.name), ['x', 'y']);
+    assert.ok(report.failed.every(f => f.stage === 'load'));
+    assert.match(report.failed[0].message, /"x"/);
+});
+
+test('loadProjectPlugins: сбой установки не откатывает остальные плагины', async () => {
+    const registry = new PluginRegistry()
+        .register(make('a'))
+        .register(make('b'))
+        .register(make('c'));
+    const manager = fakeManager({ failOn: 'b' });
+    const project = new Project({ plugins: ['a', 'b', 'c'] });
+
+    const report = await loadProjectPlugins(project, registry, manager);
+
+    assert.deepEqual(manager.installed, ['a', 'c']);
+    assert.deepEqual(report.installed, ['a', 'c']);
+    assert.equal(report.failed.length, 1);
+    assert.equal(report.failed[0].name, 'b');
+    assert.equal(report.failed[0].stage, 'install');
+    assert.match(report.failed[0].message, /boom/);
+});
+
+test('loadProjectPlugins: плагины, зависящие от сбойного, пропускаются цепочкой', async () => {
+    const registry = new PluginRegistry()
+        .register(make('state'))
+        .register(make('conditions', ['state']))
+        .register(make('choice', ['state', 'conditions']))
+        .register(make('free'));
+    const manager = fakeManager({ failOn: 'state' });
+    const project = new Project({
+        plugins: ['state', 'conditions', 'choice', 'free']
+    });
+
+    const report = await loadProjectPlugins(project, registry, manager);
+
+    assert.deepEqual(report.installed, ['free']);
+    assert.deepEqual(
+        report.failed.map(f => `${f.name}:${f.stage}`).sort(),
+        ['choice:dependency', 'conditions:dependency', 'state:install']
     );
 });
 
-test('loadProjectPlugins: откат при ошибке установки', async () => {
+test('loadProjectPlugins: зависимость, не загрузившаяся из каталога, пропускает зависимых', async () => {
     const registry = new PluginRegistry()
-        .register(make('a'))
-        .register(make('b'));
-    const manager = fakeManager({ failOn: 'b' });
-    const project = new Project({ plugins: ['a', 'b'] });
+        .register(make('choice', ['state']));
+    const project = new Project({ plugins: ['state', 'choice'] });
+
+    const report = await loadProjectPlugins(project, registry, fakeManager());
+
+    assert.deepEqual(report.installed, []);
+    assert.deepEqual(
+        report.failed.map(f => `${f.name}:${f.stage}`),
+        ['state:load', 'choice:dependency']
+    );
+});
+
+test('loadProjectPlugins: необъявленная зависимость и цикл по-прежнему бросают', async () => {
+    const noDep = new PluginRegistry().register(make('choice', ['state']));
 
     await assert.rejects(
-        loadProjectPlugins(project, registry, manager),
-        /boom/
+        loadProjectPlugins(new Project({ plugins: ['choice'] }), noDep, fakeManager()),
+        /"choice" требует "state"/
     );
-    assert.deepEqual(manager.installed, []);
+
+    const cycle = new PluginRegistry()
+        .register(make('a', ['b']))
+        .register(make('b', ['a']));
+
+    await assert.rejects(
+        loadProjectPlugins(new Project({ plugins: ['a', 'b'] }), cycle, fakeManager()),
+        /a → b → a/
+    );
 });
 
 test('loadProjectPlugins: проект без плагинов', async () => {
@@ -142,7 +202,7 @@ test('loadProjectPlugins: проект без плагинов', async () => {
         fakeManager()
     );
 
-    assert.deepEqual(result, []);
+    assert.deepEqual(result, { installed: [], failed: [] });
 });
 
 test('PluginRegistry: загрузчик вызывается один раз и результат кэшируется', async () => {
@@ -253,7 +313,8 @@ test('PluginRegistry + localPluginLoader: реальные плагины и п�
 
     const result = await loadProjectPlugins(project, registry, manager);
 
-    assert.deepEqual(result, ['state', 'conditions', 'choice']);
+    assert.deepEqual(result.installed, ['state', 'conditions', 'choice']);
+    assert.deepEqual(result.failed, []);
 });
 
 test('plugins/*-plugin.js: dependencies указывают на существующие плагины', async () => {

@@ -4,13 +4,26 @@
  * Устанавливает плагины и предоставляет единый Plugin API
  * (`events`, `game`, `player`, `blocks`, `plugins`).
  */
+/**
+ * Версия Plugin API, которую поддерживает движок. Плагин может указать
+ * `apiVersion` в манифесте; несовпадение версии — ошибка установки.
+ */
+export const PLUGIN_API_VERSION = 1;
+
 export class PluginManager {
     #plugins = new Map();
-    #api;
+    #bus;
+    #game;
+    #player;
+    #blocks;
+    #pluginsProxy;
     /**
      * @apiName constructor
      * @apiGroup PluginManager
-     * Собирает объект `api`, который каждый плагин получает в `install(api)`.
+     * Запоминает зависимости движка. Для каждого плагина при установке
+     * создаётся собственный `api`: всё, что плагин через него зарегистрировал
+     * (подписки на события, слои, типы узлов), движок снимает сам при удалении
+     * плагина или при сбое установки.
      *
      * Структура api:
      * ```
@@ -48,214 +61,154 @@ export class PluginManager {
         blocks,
         validator
     ) {
-        /**
-         * Единый API, передаваемый в `plugin.install(api)`.
-         * @type {Object}
-         * @property {Object} events
-         * @property {function(string, function): function} events.on — подписка; возвращает функцию отписки
-         * @property {function(string, *): void} events.emit — эмит события
-         * @property {Object} game
-         * @property {function(): HTMLElement} game.getPluginLayer — слой плагинов
-         * @property {function(string, HTMLElement): function} game.registerLayer — регистрация слоя
-         * @property {function(string, function): void} game.registerNodeType — регистрация типа узла
-         * @property {function(string): void} game.show — показать слой
-         * @property {function(string): void} game.hide — скрыть слой
-         * @property {function(string): boolean} game.isVisible — видим ли слой
-         * @property {Object} player
-         * @property {function(): HTMLElement} player.getPluginLayer
-         * @property {function(string, HTMLElement): function} player.registerLayer
-         * @property {function(string): void} player.show
-         * @property {function(string): void} player.hide
-         * @property {function(string): boolean} player.isVisible
-         * @property {BlockManager} blocks — менеджер визуальных блоков
-         * @property {Object} plugins — Proxy: `api.plugins.<name>.api`
-         */
-        this.#api = {
-            /**
-             * @apiName api.events
-             * @apiGroup PluginAPI
-             * Обёртка над EventBus.
-             */
-            events: {
-                /**
-                 * @apiName api.events.on
-                 * @apiGroup PluginAPI
-                 * Подписка на событие.
-                 * @param {string} event Имя события
-                 * @param {function} handler Callback
-                 * @returns {function} Функция отписки
-                 * @example
-                 * obj.doThing('x');
-                 */
-                on: (event, handler) =>
-                    bus.on(event, handler),
+        this.#bus = bus;
+        this.#game = game;
+        this.#player = player;
+        this.#blocks = blocks;
 
-                /**
-                 * @apiName api.events.emit
-                 * @apiGroup PluginAPI
-                 * Эмит события.
-                 * @param {string} event Имя события
-                 * @param {*} [payload] Данные
-                 */
-                emit: (event, payload) =>
-                    bus.emit(event, payload)
-            },
+        // Общий для всех плагинов доступ к публичным API друг друга.
+        this.#pluginsProxy = new Proxy(
+            {},
+            {
+                get: (_, name) => {
+                    const entry = this.#plugins.get(name);
 
-            /**
-             * @apiName api.game
-             * @apiGroup PluginAPI
-             * Фасад к VN + Player: регистрация типов узлов и работа со слоями.
-             */
-            game: {
-                /**
-                 * @apiName api.game.getPluginLayer
-                 * @apiGroup PluginAPI
-                 * @returns {HTMLElement} DOM-слой плагинов
-                 */
-                getPluginLayer: () =>
-                    player.getPluginLayer(),
+                    if (!entry) {
+                        console.warn(
+                            `[PluginManager] Плагин "${String(name)}" не установлен`
+                        );
 
-                /**
-                 * @apiName api.game.registerLayer
-                 * @apiGroup PluginAPI
-                 * @param {string} name Имя слоя
-                 * @param {HTMLElement} element DOM-элемент
-                 * @returns {function} cleanup
-                 */
-                registerLayer: (name, element) =>
-                    player.registerLayer(name, element),
-
-                /**
-                 * @apiName api.game.registerNodeType
-                 * @apiGroup PluginAPI
-                 * Регистрирует обработчик типа узла сценария.
-                 * context: { wait(), resume(), goto(nodeId) }
-                 * @param {string} type Имя типа узла
-                 * @param {function} handler (node, context) => void
-                 */
-                registerNodeType: (type, handler) =>
-                    game.registerNodeType(type, handler),
-
-                /**
-                 * @apiName api.game.show
-                 * @apiGroup PluginAPI
-                 * @param {string} name Имя слоя
-                 */
-                show: (name) =>
-                    player.show(name),
-
-                /**
-                 * @apiName api.game.hide
-                 * @apiGroup PluginAPI
-                 * @param {string} name Имя слоя
-                 */
-                hide: (name) =>
-                    player.hide(name),
-
-                /**
-                 * @apiName api.game.isVisible
-                 * @apiGroup PluginAPI
-                 * @param {string} name Имя слоя
-                 * @returns {boolean}
-                 */
-                isVisible: (name) =>
-                    player.isVisible(name)
-            },
-
-            /**
-             * @apiName api.player
-             * @apiGroup PluginAPI
-             * Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.
-             */
-            player: {
-                /**
-                 * @apiName api.player.getPluginLayer
-                 * @apiGroup PluginAPI
-                 * @returns {HTMLElement}
-                 */
-                getPluginLayer: () =>
-                    player.getPluginLayer(),
-
-                /**
-                 * @apiName api.player.registerLayer
-                 * @apiGroup PluginAPI
-                 * @param {string} name
-                 * @param {HTMLElement} element
-                 * @returns {function} cleanup
-                 */
-                registerLayer: (name, element) =>
-                    player.registerLayer(name, element),
-
-                /**
-                 * @apiName api.player.show
-                 * @apiGroup PluginAPI
-                 * @param {string} name
-                 */
-                show: (name) =>
-                    player.show(name),
-
-                /**
-                 * @apiName api.player.hide
-                 * @apiGroup PluginAPI
-                 * @param {string} name
-                 */
-                hide: (name) =>
-                    player.hide(name),
-
-                /**
-                 * @apiName api.player.isVisible
-                 * @apiGroup PluginAPI
-                 * @param {string} name
-                 * @returns {boolean}
-                 */
-                isVisible: (name) =>
-                    player.isVisible(name)
-            },
-
-            /**
-             * @apiName api.blocks
-             * @apiGroup PluginAPI
-             * Экземпляр BlockManager.
-             * Методы: create, get, getAll, getByType, getActiveByChannel,
-             * getCurrent, show, hide, remove.
-             * @type {BlockManager}
-             */
-            blocks,
-
-            
-
-            /**
-             * @apiName api.plugins
-             * @apiGroup PluginAPI
-             * Proxy к API установленных плагинов.
-             * Доступ: `api.plugins.<name>.api`
-             * Если плагин не установлен — null + warning в консоль.
-             * @example
-             * const state = api.plugins.state.api.get();
-             * api.plugins.state.api.set('health', 10);
-             */
-            plugins: new Proxy(
-                {},
-                {
-                    get: (_, name) => {
-                        const entry =
-                            this.#plugins.get(name);
-
-                        if (!entry) {
-                            console.warn(
-                                `[PluginManager] Плагин "${String(name)}" не установлен`
-                            );
-
-                            return null;
-                        }
-
-                        return {
-                            api: entry.api
-                        };
+                        return null;
                     }
+
+                    return {
+                        api: entry.api
+                    };
                 }
-            )
+            }
+        );
+    }
+
+
+    /**
+     * Создаёт собственный api плагина и учёт его ресурсов.
+     * Ресурсы записываются в `release` и снимаются в обратном порядке.
+     */
+    #createScope(pluginName) {
+        const release = [];
+        const bus = this.#bus;
+        const game = this.#game;
+        const player = this.#player;
+
+        const track = (fn) => {
+            release.push(fn);
         };
+
+        const registerLayer = (name, element) => {
+            const remove = player.registerLayer(name, element);
+
+            track(remove);
+
+            return remove;
+        };
+
+        // Блоки, созданные плагином, удаляются вместе с ним.
+        const blocks = this.#blocks;
+        const ownBlocks = new Set();
+
+        const scopedBlocks = {
+            create: (type, options) => {
+                const block = blocks.create(type, options);
+
+                ownBlocks.add(block.id);
+
+                return block;
+            },
+            get: (id) => blocks.get(id),
+            getAll: () => blocks.getAll(),
+            getByType: (type) => blocks.getByType(type),
+            getActiveByChannel: (channel) => blocks.getActiveByChannel(channel),
+            getCurrent: (channel) => blocks.getCurrent(channel),
+            show: (id) => blocks.show(id),
+            hide: (id) => blocks.hide(id),
+            remove: (id) => {
+                ownBlocks.delete(id);
+
+                return blocks.remove(id);
+            }
+        };
+
+        track(() => {
+            for (const id of ownBlocks) {
+                if (blocks.get?.(id)) {
+                    blocks.remove(id);
+                }
+            }
+
+            ownBlocks.clear();
+        });
+
+        const api = {
+            plugin: { name: pluginName },
+
+            // Сообщения в консоль с именем плагина.
+            log: {
+                info: (...args) => console.log(`[${pluginName}]`, ...args),
+                warn: (...args) => console.warn(`[${pluginName}]`, ...args),
+                error: (...args) => console.error(`[${pluginName}]`, ...args)
+            },
+
+            events: {
+                on: (event, handler) => {
+                    const off = bus.on(event, handler);
+
+                    track(off);
+
+                    return off;
+                },
+                emit: (event, payload) => bus.emit(event, payload)
+            },
+
+            game: {
+                getPluginLayer: () => player.getPluginLayer(),
+                registerLayer,
+                registerNodeType: (type, handler) => {
+                    game.registerNodeType(type, handler);
+
+                    track(() => game.unregisterNodeType?.(type));
+                },
+                show: (name) => player.show(name),
+                hide: (name) => player.hide(name),
+                isVisible: (name) => player.isVisible(name)
+            },
+
+            player: {
+                getPluginLayer: () => player.getPluginLayer(),
+                registerLayer,
+                show: (name) => player.show(name),
+                hide: (name) => player.hide(name),
+                isVisible: (name) => player.isVisible(name)
+            },
+
+            blocks: scopedBlocks,
+
+            plugins: this.#pluginsProxy
+        };
+
+        const dispose = () => {
+            while (release.length) {
+                try {
+                    release.pop()();
+                } catch (error) {
+                    console.warn(
+                        `[PluginManager] Ошибка при освобождении ресурсов плагина "${pluginName}":`,
+                        error
+                    );
+                }
+            }
+        };
+
+        return { api, dispose };
     }
 
 
@@ -298,6 +251,16 @@ use(plugin) {
         );
     }
 
+    if (
+        plugin.apiVersion !== undefined &&
+        plugin.apiVersion !== PLUGIN_API_VERSION
+    ) {
+        throw new Error(
+            `PluginManager: плагин "${name}" рассчитан на Plugin API v${plugin.apiVersion}, ` +
+            `движок поддерживает v${PLUGIN_API_VERSION}`
+        );
+    }
+
     const dependencies = plugin.dependencies ?? [];
 
     if (!Array.isArray(dependencies)) {
@@ -321,12 +284,25 @@ use(plugin) {
             );
 
             }
-    const result = plugin.install(this.#api);
+    const scope = this.#createScope(name);
+
+    let result;
+
+    try {
+        result = plugin.install(scope.api);
+    } catch (error) {
+        // Сбой установки: освобождаем всё, что плагин успел занять.
+        scope.dispose();
+
+        throw error;
+    }
 
     let pluginApi = {};
     let cleanup = null;
 
-    if (result) {
+    if (typeof result === 'function') {
+        cleanup = result;
+    } else if (result) {
         if (
             result.api &&
             typeof result.api === 'object'
@@ -342,7 +318,8 @@ use(plugin) {
     this.#plugins.set(name, {
         plugin,
         api: pluginApi,
-        cleanup
+        cleanup,
+        dispose: scope.dispose
     });
 
     console.log(
@@ -399,9 +376,17 @@ remove(name) {
         );
     }
 
-    if (entry.cleanup) {
-        entry.cleanup();
+    try {
+        entry.cleanup?.();
+    } catch (error) {
+        console.warn(
+            `[PluginManager] Ошибка в cleanup плагина "${name}":`,
+            error
+        );
     }
+
+    // Освобождаем то, что плагин не снял сам.
+    entry.dispose();
 
     this.#plugins.delete(name);
 

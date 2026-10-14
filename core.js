@@ -6,11 +6,18 @@ export class VN {
     #project = null;
     #currentNodeId = null;
     #isWaiting = false;
+    #failed = false;
+    #isLocked = false;
 
     #nodeTypes = new Map();
 
     constructor() {
         this.#bus.on('click-game', () => {
+            // Ожидание с lock (например, выбор) клик не пропускает.
+            if (this.#isLocked) {
+                return;
+            }
+
             this.#continue();
         });
     }
@@ -35,10 +42,26 @@ export class VN {
         this.#nodeTypes.set(type, handler);
     }
 
+    /**
+     * @apiName VN.unregisterNodeType
+     * @apiGroup VN
+     *
+     * Снимает обработчик типа узла. Нужен, чтобы плагин можно было
+     * удалить и поставить заново.
+     *
+     * @param {string} type Имя типа узла.
+     * @returns {boolean} true, если тип был зарегистрирован.
+     */
+    unregisterNodeType(type) {
+        return this.#nodeTypes.delete(type);
+    }
+
     loadProject(project) {
         this.#project = project;
         this.#currentNodeId = null;
         this.#isWaiting = false;
+        this.#isLocked = false;
+        this.#failed = false;
 
         this.#bus.emit('story:loaded', {
     project: this.#project
@@ -68,7 +91,7 @@ export class VN {
     }
 
     next() {
-        if (this.#isWaiting) {
+        if (this.#isWaiting || this.#failed) {
             return;
         }
 
@@ -89,6 +112,10 @@ export class VN {
         this.#processNode(node);
     }
 #goto(nodeId) {
+    if (this.#failed) {
+        return;
+    }
+
     const node = this.#project.getNode(nodeId);
 
     if (!node) {
@@ -101,6 +128,7 @@ export class VN {
 
     this.#currentNodeId = nodeId;
     this.#isWaiting = false;
+    this.#isLocked = false;
 
     this.next();
 }
@@ -120,9 +148,42 @@ export class VN {
             return;
         }
 
+        try {
+            this.#runHandler(handler, node);
+        } catch (error) {
+            this.#fail(node, error);
+
+            return;
+        }
+
+        if (!this.#isWaiting && !this.#failed) {
+            this.#moveToNextNode(node);
+        }
+    }
+
+    // Ошибка узла останавливает выполнение проекта.
+    #fail(node, error) {
+        this.#failed = true;
+        this.#isWaiting = false;
+        this.#isLocked = false;
+
+        console.error(
+            `Ошибка в узле "${node?.id}" (тип "${node?.type}"):`,
+            error
+        );
+
+        this.#bus.emit('story:error', {
+            node,
+            error,
+            message: error?.message ?? String(error)
+        });
+    }
+
+    #runHandler(handler, node) {
         handler(node, {
-            wait: () => {
+            wait: (options) => {
                 this.#isWaiting = true;
+                this.#isLocked = options?.lock === true;
             },
 
             resume: () => {
@@ -132,10 +193,6 @@ export class VN {
     this.#goto(nodeId);
 },
         });
-
-        if (!this.#isWaiting) {
-            this.#moveToNextNode(node);
-        }
     }
 
     #moveToNextNode(node) {
@@ -177,6 +234,7 @@ export class VN {
         }
 
         this.#isWaiting = false;
+        this.#isLocked = false;
 
         const node =
             this.#project.getNode(

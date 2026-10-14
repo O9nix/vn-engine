@@ -32,23 +32,25 @@ export const DialoguePlugin = {
                     }
                 );
 
-                element.innerHTML = `
-                    <strong
-                        style="color: #ffd700;"
-                    >
-                        ${node.character ?? ''}
-                    </strong>
+                // Текст выводится через textContent: сценарий
+                // не должен вставлять в страницу произвольный HTML.
+                const name = document.createElement('strong');
 
-                    <br>
+                name.style.color = '#ffd700';
+                name.textContent = node.character ?? '';
 
-                    ${node.text ?? ''}
-                `;
+                element.append(
+                    name,
+                    document.createElement('br'),
+                    document.createTextNode(node.text ?? '')
+                );
 
                 const block =
                     api.blocks.create(
                         'dialogue',
                         {
                             channel: 'content',
+                            replace: true,
                             element,
                             data: {
                                 character:
@@ -71,9 +73,7 @@ export const DialoguePlugin = {
             }
         );
 
-        return () => {
-           
-        };
+        // Блоки и типы узлов движок снимает сам.
     }
 };
 

@@ -5781,6 +5781,1826 @@
           "doc": true
         }
       ]
+    },
+    {
+      "version": "0.1.4",
+      "date": "2026-10-14",
+      "updatedAt": "2026-10-14T01:11:02.678Z",
+      "endpoints": [
+        {
+          "key": "BlockManager",
+          "method": "CLASS",
+          "path": "BlockManager",
+          "title": "BlockManager",
+          "group": "BlockManager",
+          "description": "Хранит визуальные блоки (диалог, выбор и т.п.) и размещает их в корневом элементе.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "block-manager.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "BlockManager.create",
+          "method": "METHOD",
+          "path": "BlockManager.create",
+          "title": "BlockManager.create(type, options)",
+          "group": "BlockManager",
+          "description": "Создаёт блок и добавляет его элемент в корень.\n\nОпции: `channel` (строка, по умолчанию default), `element` (HTMLElement),\n`data`, `meta` и `replace` (true — сначала удалить все блоки этого канала,\nчтобы старые не накапливались).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "type",
+                "optional": false,
+                "description": "Тип блока."
+              },
+              {
+                "group": null,
+                "type": "Object",
+                "name": "options",
+                "optional": true,
+                "description": "Параметры блока."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "block-manager.js",
+            "line": 22
+          },
+          "returns": {
+            "type": "Object",
+            "description": "Созданный блок."
+          },
+          "sig": "(type, options)",
+          "doc": true
+        },
+        {
+          "key": "VN.unregisterNodeType",
+          "method": "METHOD",
+          "path": "VN.unregisterNodeType",
+          "title": "VN.unregisterNodeType(type)",
+          "group": "VN",
+          "description": "Снимает обработчик типа узла. Нужен, чтобы плагин можно было\nудалить и поставить заново.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "type",
+                "optional": false,
+                "description": "Имя типа узла."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "core.js",
+            "line": 45
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "true, если тип был зарегистрирован."
+          },
+          "sig": "(type)",
+          "doc": true
+        },
+        {
+          "key": "EventBus",
+          "method": "CLASS",
+          "path": "EventBus",
+          "title": "EventBus",
+          "group": "EventBus",
+          "description": "Шина событий. Ошибка в одном подписчике не мешает остальным:\nона попадает в консоль и в событие `handler:error`\nс данными `{ event, error }`.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "events.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "EventBus.on",
+          "method": "METHOD",
+          "path": "EventBus.on",
+          "title": "EventBus.on(type, handler)",
+          "group": "EventBus",
+          "description": "Подписывает обработчик на событие.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "type",
+                "optional": false,
+                "description": "Имя события."
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "handler",
+                "optional": false,
+                "description": "Обработчик."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "events.js",
+            "line": 12
+          },
+          "returns": {
+            "type": "function",
+            "description": "Функция отписки."
+          },
+          "sig": "(type, handler)",
+          "doc": true
+        },
+        {
+          "key": "EventBus.off",
+          "method": "METHOD",
+          "path": "EventBus.off",
+          "title": "EventBus.off(type, handler)",
+          "group": "EventBus",
+          "description": "Снимает обработчик с события.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "type",
+                "optional": false,
+                "description": "Имя события."
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "handler",
+                "optional": false,
+                "description": "Ранее добавленный обработчик."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "events.js",
+            "line": 32
+          },
+          "sig": "(type, handler)",
+          "doc": true
+        },
+        {
+          "key": "EventBus.emit",
+          "method": "METHOD",
+          "path": "EventBus.emit",
+          "title": "EventBus.emit(type, payload)",
+          "group": "EventBus",
+          "description": "Вызывает всех подписчиков события по порядку подписки.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "type",
+                "optional": false,
+                "description": "Имя события."
+              },
+              {
+                "group": null,
+                "type": "*",
+                "name": "payload",
+                "optional": true,
+                "description": "Данные события."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "events.js",
+            "line": 45
+          },
+          "sig": "(type, payload)",
+          "doc": true
+        },
+        {
+          "key": "localPluginLoader",
+          "method": "METHOD",
+          "path": "localPluginLoader",
+          "title": "localPluginLoader(name)",
+          "group": "PluginRegistry",
+          "description": "Загрузчик плагинов из папки `plugins/` рядом с движком.\n\nПлагин `choice` ищется в файле `plugins/choice-plugin.js` и должен\nэкспортировать объект плагина через `export default`. Имя плагина\nпроверяет `PluginRegistry` до вызова загрузчика, поэтому в путь\nпопадают только безопасные имена.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const registry = new PluginRegistry({ loader: localPluginLoader });"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "local-plugin-loader.js",
+            "line": 1
+          },
+          "returns": {
+            "type": "Promise",
+            "description": "Промис с объектом плагина."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если файла нет или модуль не экспортирует\nплагин через `export default`."
+            }
+          ],
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "normalizePluginRefs",
+          "method": "METHOD",
+          "path": "normalizePluginRefs",
+          "title": "normalizePluginRefs(refs)",
+          "group": "PluginLoader",
+          "description": "Приводит список плагинов проекта к единому виду.\nЭлемент списка может быть строкой (имя) или объектом\n`{ name, version }`.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Array",
+                "name": "refs",
+                "optional": true,
+                "description": "Список плагинов из `project.getPlugins()`.\nКаждый элемент — строка или объект `{ name, version }`."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "normalizePluginRefs(['state', { name: 'choice', version: '0.1.0' }]);\n// [{ name: 'state', version: undefined },\n//  { name: 'choice', version: '0.1.0' }]"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-loader.js",
+            "line": 1
+          },
+          "returns": {
+            "type": "Object[]",
+            "description": "Нормализованный список объектов\n`{ name, version }` в порядке объявления."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если элемент некорректен или плагин объявлен дважды."
+            }
+          ],
+          "sig": "(refs)",
+          "doc": true
+        },
+        {
+          "key": "orderPlugins",
+          "method": "METHOD",
+          "path": "orderPlugins",
+          "title": "orderPlugins(plugins)",
+          "group": "PluginLoader",
+          "description": "Сортирует плагины так, чтобы каждый шёл после своих зависимостей.\nСреди независимых плагинов сохраняется порядок объявления.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object[]",
+                "name": "plugins",
+                "optional": false,
+                "description": "Плагины в порядке объявления в проекте."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const ordered = orderPlugins([ChoicePlugin, StatePlugin, ConditionsPlugin]);\n// state, conditions, choice"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-loader.js",
+            "line": 66
+          },
+          "returns": {
+            "type": "Object[]",
+            "description": "Плагины в порядке установки."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если зависимость не объявлена в проекте\nили зависимости образуют цикл."
+            }
+          ],
+          "sig": "(plugins)",
+          "doc": true
+        },
+        {
+          "key": "loadProjectPlugins",
+          "method": "METHOD",
+          "path": "loadProjectPlugins",
+          "title": "loadProjectPlugins(project, registry, manager)",
+          "group": "PluginLoader",
+          "description": "Устанавливает плагины, объявленные в проекте.\n\nПолучает плагины из каталога по именам из `project.getPlugins()`,\nсортирует их по зависимостям и устанавливает через `PluginManager`.\n\nСбой одного плагина не отменяет остальные: плагин, который не удалось\nполучить или установить, попадает в `failed`, а плагины, которые от него\nзависят, пропускаются (тоже попадают в `failed`). Остальные плагины\nостаются установленными. Решение, запускать ли историю при наличии\nсбоев, принимает вызывающий код.\n\nВызывать нужно до `game.loadProject(project)`, чтобы плагины\nуспели подписаться на `story:loaded`.\n\nОшибки в самом описании проекта (некорректный список плагинов,\nзависимость, не объявленная в проекте, цикл) пробрасываются исключением:\nс таким проектом работать нельзя.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Project",
+                "name": "project",
+                "optional": false,
+                "description": "Проект с объявленными плагинами."
+              },
+              {
+                "group": null,
+                "type": "PluginRegistry",
+                "name": "registry",
+                "optional": false,
+                "description": "Каталог доступных плагинов."
+              },
+              {
+                "group": null,
+                "type": "PluginManager",
+                "name": "manager",
+                "optional": false,
+                "description": "Менеджер, устанавливающий плагины."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const report = await loadProjectPlugins(project, registry, plugins);\nif (report.failed.length === 0) {\n    game.loadProject(project);\n}"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-loader.js",
+            "line": 143
+          },
+          "returns": {
+            "type": "Promise",
+            "description": "Промис с отчётом `{ installed, failed }`:\n`installed` — имена установленных плагинов в порядке установки,\n`failed` — массив объектов `{ name, stage, message, error }`,\nгде `stage` — `load`, `install` или `dependency`."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если описание плагинов в проекте некорректно."
+            }
+          ],
+          "sig": "(project, registry, manager)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager",
+          "method": "CLASS",
+          "path": "PluginManager",
+          "title": "PluginManager",
+          "group": "PluginManager",
+          "description": "Устанавливает плагины и предоставляет единый Plugin API\n(`events`, `game`, `player`, `blocks`, `plugins`).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "PluginManager.constructor",
+          "method": "METHOD",
+          "path": "PluginManager.constructor",
+          "title": "PluginManager.constructor(bus, game, player, blocks)",
+          "group": "PluginManager",
+          "description": "Запоминает зависимости движка. Для каждого плагина при установке\nсоздаётся собственный `api`: всё, что плагин через него зарегистрировал\n(подписки на события, слои, типы узлов), движок снимает сам при удалении\nплагина или при сбое установки.\n\nСтруктура api:\n```\napi\n├── events\n│   ├── on(event, handler) → unsubscribe\n│   └── emit(event, payload)\n├── game\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── registerNodeType(type, handler)\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── player\n│   ├── getPluginLayer() → HTMLElement\n│   ├── registerLayer(name, element) → cleanup\n│   ├── show(name)\n│   ├── hide(name)\n│   └── isVisible(name) → boolean\n├── blocks          → BlockManager\n└── plugins         → Proxy\n    └── <name>.api  → публичный API плагина\n```",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "EventBus",
+                "name": "bus",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "VN",
+                "name": "game",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "Player",
+                "name": "player",
+                "optional": false,
+                "description": ""
+              },
+              {
+                "group": null,
+                "type": "BlockManager",
+                "name": "blocks",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 20
+          },
+          "sig": "(bus, game, player, blocks)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.use",
+          "method": "METHOD",
+          "path": "PluginManager.use",
+          "title": "PluginManager.use(plugin)",
+          "group": "PluginManager",
+          "description": "Устанавливает плагин после проверки его зависимостей.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "plugin",
+                "optional": false,
+                "description": "Устанавливаемый плагин."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "plugins.use(ConditionsPlugin);\nplugins.use(ChoicePlugin);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 215
+          },
+          "returns": {
+            "type": "PluginManager",
+            "description": "Текущий экземпляр менеджера."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если плагин некорректен, уже установлен\nили его зависимости отсутствуют."
+            }
+          ],
+          "sig": "(plugin)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.remove",
+          "method": "METHOD",
+          "path": "PluginManager.remove",
+          "title": "PluginManager.remove(name)",
+          "group": "PluginManager",
+          "description": "Удаляет установленный плагин, если от него\nне зависят другие установленные плагины.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя удаляемого плагина."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "plugins.remove('choice');"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 334
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "true, если плагин удалён,\nили false, если он не был установлен."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если от плагина зависят другие\nустановленные плагины."
+            }
+          ],
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.has",
+          "method": "METHOD",
+          "path": "PluginManager.has",
+          "title": "PluginManager.has(name)",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 400
+          },
+          "returns": {
+            "type": "boolean",
+            "description": ""
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.get",
+          "method": "METHOD",
+          "path": "PluginManager.get",
+          "title": "PluginManager.get(name)",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 410
+          },
+          "returns": {
+            "type": "Object|undefined",
+            "description": "Исходный объект плагина"
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginManager.list",
+          "method": "METHOD",
+          "path": "PluginManager.list",
+          "title": "PluginManager.list()",
+          "group": "PluginManager",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 420
+          },
+          "returns": {
+            "type": "string[]",
+            "description": "Имена установленных плагинов"
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "PluginRegistry",
+          "method": "CLASS",
+          "path": "PluginRegistry",
+          "title": "PluginRegistry",
+          "group": "PluginRegistry",
+          "description": "Каталог доступных плагинов: по имени отдаёт объект плагина.\n\nПлагин можно добавить вручную (`register()`) или дать каталогу\nзагрузчик (`loader`), который получает плагин по имени. Интерфейс\n`resolve()` асинхронный, поэтому загрузчик может быть как\nлокальным, так и обращаться к внешнему сервису: остальной код\nдвижка об этом не знает.\n\nИмя плагина должно состоять из строчных латинских букв, цифр\nи дефисов (`choice`, `top-left-hud`). Это проверяется до вызова\nзагрузчика, потому что имя приходит из данных проекта.\n\nМинимальный манифест плагина:\n```\n{\n    name: 'choice',                        // обязательно, уникальное имя\n    version: '0.1.0',                      // версия плагина\n    dependencies: ['state', 'conditions'], // имена нужных плагинов\n    nodeTypes: ['choice'],                 // типы узлов, которые даёт плагин\n    install(api) { ... }                   // обязательно\n}\n```",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-registry.js",
+            "line": 3
+          },
+          "doc": true
+        },
+        {
+          "key": "PluginRegistry.constructor",
+          "method": "METHOD",
+          "path": "PluginRegistry.constructor",
+          "title": "PluginRegistry.constructor(options)",
+          "group": "PluginRegistry",
+          "description": "Создаёт каталог.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "options",
+                "optional": true,
+                "description": "Параметры каталога."
+              },
+              {
+                "group": null,
+                "type": "function",
+                "name": "options.loader",
+                "optional": true,
+                "description": "Загрузчик `(name) => Promise`: по имени плагина возвращает\nпромис с его объектом. Вызывается,\nтолько если плагина нет среди добавленных вручную или уже\nзагруженных. Результат запоминается."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const registry = new PluginRegistry({ loader: localPluginLoader });"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-registry.js",
+            "line": 35
+          },
+          "sig": "(options)",
+          "doc": true
+        },
+        {
+          "key": "PluginRegistry.register",
+          "method": "METHOD",
+          "path": "PluginRegistry.register",
+          "title": "PluginRegistry.register(plugin)",
+          "group": "PluginRegistry",
+          "description": "Добавляет плагин в каталог вручную.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "plugin",
+                "optional": false,
+                "description": "Плагин с полями `name` и `install`."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const registry = new PluginRegistry();\nregistry.register(StatePlugin).register(ChoicePlugin);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-registry.js",
+            "line": 61
+          },
+          "returns": {
+            "type": "PluginRegistry",
+            "description": "Текущий каталог (для цепочки вызовов)."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если у плагина нет имени или метода `install`,\nлибо плагин с таким именем уже есть."
+            }
+          ],
+          "sig": "(plugin)",
+          "doc": true
+        },
+        {
+          "key": "PluginRegistry.resolve",
+          "method": "METHOD",
+          "path": "PluginRegistry.resolve",
+          "title": "PluginRegistry.resolve(name, version)",
+          "group": "PluginRegistry",
+          "description": "Возвращает плагин по имени. Если плагина нет среди добавленных\nвручную или уже загруженных, вызывает загрузчик.\n\nВерсия сейчас сравнивается только на точное совпадение\n(диапазоны вроде `^1.0` пока не поддерживаются).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина."
+              },
+              {
+                "group": null,
+                "type": "string",
+                "name": "version",
+                "optional": true,
+                "description": "Требуемая версия. Если не указана,\nподойдёт любая."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const plugin = await registry.resolve('choice');"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-registry.js",
+            "line": 104
+          },
+          "returns": {
+            "type": "Promise",
+            "description": "Промис с объектом плагина."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если имя недопустимо, плагин не найден или не\nзагрузился, имя загруженного плагина не совпадает с запрошенным\nлибо версия не совпадает с требуемой."
+            }
+          ],
+          "sig": "(name, version)",
+          "doc": true
+        },
+        {
+          "key": "PluginRegistry.has",
+          "method": "METHOD",
+          "path": "PluginRegistry.has",
+          "title": "PluginRegistry.has(name)",
+          "group": "PluginRegistry",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя плагина"
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-registry.js",
+            "line": 203
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "Есть ли плагин среди добавленных или\nуже загруженных"
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "PluginRegistry.list",
+          "method": "METHOD",
+          "path": "PluginRegistry.list",
+          "title": "PluginRegistry.list()",
+          "group": "PluginRegistry",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-registry.js",
+            "line": 214
+          },
+          "returns": {
+            "type": "string[]",
+            "description": "Имена добавленных и уже загруженных плагинов"
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "ConditionsPlugin",
+          "method": "CLASS",
+          "path": "ConditionsPlugin",
+          "title": "ConditionsPlugin",
+          "group": "Plugins",
+          "description": "Проверяет игровые условия.\n\nПредоставляет другим плагинам метод evaluate()\nчерез api.plugins.conditions.api.\n\nПоддерживаемые операторы:\n==, !=, >, >=, <, <=",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/conditions-plugin.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "ConditionsPlugin.evaluate",
+          "method": "METHOD",
+          "path": "ConditionsPlugin.evaluate",
+          "title": "ConditionsPlugin.evaluate(condition, state)",
+          "group": "ConditionsPlugin",
+          "description": "Проверяет условие относительно переданного состояния.\n\nЕсли условие не задано, возвращает true.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "condition",
+                "optional": false,
+                "description": "Условие проверки."
+              },
+              {
+                "group": null,
+                "type": "Object",
+                "name": "state",
+                "optional": false,
+                "description": "Состояние, относительно которого\nпроверяется условие."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const result =\n    api.plugins.conditions.api.evaluate(\n        {\n            variable: 'health',\n            operator: '>',\n            value: 5\n        },\n        { health: 10 }\n    );"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/conditions-plugin.js",
+            "line": 19
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "Результат проверки."
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если оператор условия неизвестен."
+            }
+          ],
+          "sig": "(condition, state)",
+          "doc": true
+        },
+        {
+          "key": "NotyPlugin",
+          "method": "CLASS",
+          "path": "NotyPlugin",
+          "title": "NotyPlugin",
+          "group": "Plugins",
+          "description": "Показывает всплывающие уведомления в правом верхнем углу.\n\nСам реагирует на события движка:\n`validator:errors` (ошибки проверки проекта),\n`plugin:error` (плагин не загрузился или не установился),\n`story:error` (ошибка во время выполнения узла).\n\nПубличный API: `api.plugins.noty.api`\n(`notify`, `success`, `error`, `warning`, `info`).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/noty-plugin.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "StatePlugin",
+          "method": "CLASS",
+          "path": "StatePlugin",
+          "title": "StatePlugin",
+          "group": "Plugins",
+          "description": "Управляет runtime-состоянием игры.\n\nПлагин хранит состояние независимо от Project.\nНачальное состояние загружается из `project.config.state`\nпри событии `story:loaded`.\n\nRuntime-состояние изменяется через публичный API плагина\nи доступно другим плагинам через:\n\n`api.plugins.state.api`",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.get",
+          "method": "METHOD",
+          "path": "StatePlugin.get",
+          "title": "StatePlugin.get()",
+          "group": "StatePlugin",
+          "description": "Возвращает копию текущего runtime-состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const state = api.plugins.state.api.get();\nconsole.log(state.health);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 24
+          },
+          "returns": {
+            "type": "Object",
+            "description": "Копия текущего состояния."
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.getValue",
+          "method": "METHOD",
+          "path": "StatePlugin.getValue",
+          "title": "StatePlugin.getValue(name)",
+          "group": "StatePlugin",
+          "description": "Возвращает значение переменной состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя переменной."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const health =\n    api.plugins.state.api.getValue('health');"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 40
+          },
+          "returns": {
+            "type": "*",
+            "description": "Значение переменной."
+          },
+          "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.set",
+          "method": "METHOD",
+          "path": "StatePlugin.set",
+          "title": "StatePlugin.set(name, value)",
+          "group": "StatePlugin",
+          "description": "Устанавливает значение переменной состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "name",
+                "optional": false,
+                "description": "Имя переменной."
+              },
+              {
+                "group": null,
+                "type": "*",
+                "name": "value",
+                "optional": false,
+                "description": "Новое значение."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "api.plugins.state.api.set('health', 10);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 57
+          },
+          "sig": "(name, value)",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.update",
+          "method": "METHOD",
+          "path": "StatePlugin.update",
+          "title": "StatePlugin.update(values)",
+          "group": "StatePlugin",
+          "description": "Обновляет несколько переменных состояния.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "values",
+                "optional": false,
+                "description": "Объект с новыми значениями."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "api.plugins.state.api.update({\n    health: 10,\n    money: 100\n});"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 73
+          },
+          "sig": "(values)",
+          "doc": true
+        },
+        {
+          "key": "StatePlugin.storyLoaded",
+          "method": "PROP",
+          "path": "StatePlugin.storyLoaded",
+          "title": "StatePlugin.storyLoaded",
+          "group": "StatePlugin",
+          "description": "Инициализирует runtime-состояние из конфигурации проекта\nпосле загрузки истории.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/state-plugin.js",
+            "line": 91
+          },
+          "doc": true
+        },
+        {
+          "key": "TopLeftHUDPlugin",
+          "method": "CLASS",
+          "path": "TopLeftHUDPlugin",
+          "title": "TopLeftHUDPlugin",
+          "group": "Plugins",
+          "description": "Показывает в левом верхнем углу панель статуса героя.\n\nПосле загрузки истории панель подхватывает из состояния игры\nзначения `health`, `mana`, `gold`, `score` и `level`. Остальные\nзначения можно выводить через публичный API плагина:\n\n`api.plugins['top-left-hud'].api`\n\nПлагин зависит от `state`: он должен быть установлен раньше,\nчтобы состояние уже было готово к моменту события `story:loaded`.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/top-left-hud-plugin.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "TopLeftHUDPlugin.set",
+          "method": "METHOD",
+          "path": "TopLeftHUDPlugin.set",
+          "title": "TopLeftHUDPlugin.set(key, value)",
+          "group": "TopLeftHUDPlugin",
+          "description": "Выводит значение в панели.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "key",
+                "optional": false,
+                "description": "Название строки."
+              },
+              {
+                "group": null,
+                "type": "*",
+                "name": "value",
+                "optional": false,
+                "description": "Значение строки."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "api.plugins['top-left-hud'].api.set('gold', 50);"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/top-left-hud-plugin.js",
+            "line": 123
+          },
+          "sig": "(key, value)",
+          "doc": true
+        },
+        {
+          "key": "TopLeftHUDPlugin.setTitle",
+          "method": "METHOD",
+          "path": "TopLeftHUDPlugin.setTitle",
+          "title": "TopLeftHUDPlugin.setTitle(title)",
+          "group": "TopLeftHUDPlugin",
+          "description": "Меняет заголовок панели.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "title",
+                "optional": false,
+                "description": "Новый заголовок."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/top-left-hud-plugin.js",
+            "line": 140
+          },
+          "sig": "(title)",
+          "doc": true
+        },
+        {
+          "key": "TopLeftHUDPlugin.update",
+          "method": "METHOD",
+          "path": "TopLeftHUDPlugin.update",
+          "title": "TopLeftHUDPlugin.update(values)",
+          "group": "TopLeftHUDPlugin",
+          "description": "Выводит сразу несколько значений.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "values",
+                "optional": false,
+                "description": "Объект вида `{ название: значение }`."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/top-left-hud-plugin.js",
+            "line": 153
+          },
+          "sig": "(values)",
+          "doc": true
+        },
+        {
+          "key": "TopLeftHUDPlugin.show",
+          "method": "METHOD",
+          "path": "TopLeftHUDPlugin.show",
+          "title": "TopLeftHUDPlugin.show()",
+          "group": "TopLeftHUDPlugin",
+          "description": "Показывает панель.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/top-left-hud-plugin.js",
+            "line": 169
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "TopLeftHUDPlugin.hide",
+          "method": "METHOD",
+          "path": "TopLeftHUDPlugin.hide",
+          "title": "TopLeftHUDPlugin.hide()",
+          "group": "TopLeftHUDPlugin",
+          "description": "Скрывает панель.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugins/top-left-hud-plugin.js",
+            "line": 179
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "Project",
+          "method": "CLASS",
+          "path": "Project",
+          "title": "Project",
+          "group": "Project",
+          "description": "Единый источник данных игры: сцены, узлы, конфигурация,\nресурсы и список плагинов, которые нужны проекту.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "project.js",
+            "line": 1
+          },
+          "doc": true
+        },
+        {
+          "key": "Project.getPlugins",
+          "method": "METHOD",
+          "path": "Project.getPlugins",
+          "title": "Project.getPlugins()",
+          "group": "Project",
+          "description": "Возвращает плагины, которые объявлены в проекте.\nЭлемент списка — имя плагина или объект `{ name, version }`.\nСами плагины устанавливает `loadProjectPlugins()`.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "const project = new Project({\n    plugins: ['state', { name: 'choice', version: '0.1.0' }]\n});\nproject.getPlugins();"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "project.js",
+            "line": 23
+          },
+          "returns": {
+            "type": "Array",
+            "description": "Список объявленных плагинов: строки\nили объекты `{ name, version }`."
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "ProjectValidator",
+          "method": "CLASS",
+          "path": "ProjectValidator",
+          "title": "ProjectValidator",
+          "group": "ProjectValidator",
+          "description": "Проверяет проект на типовые и базовые ошибки. Такие как:\n1. Метка (goto) не ведет ни к одному из существующих узлов",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "ProjectValidator.js",
+            "line": 4
+          },
+          "doc": true
+        },
+        {
+          "key": "ProjectValidator.constructor",
+          "method": "METHOD",
+          "path": "ProjectValidator.constructor",
+          "title": "ProjectValidator.constructor(project)",
+          "group": "ProjectValidator",
+          "description": "Получает проект для валидации",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "project",
+                "name": "project",
+                "optional": false,
+                "description": ""
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "ProjectValidator.js",
+            "line": 13
+          },
+          "sig": "(project)",
+          "doc": true
+        },
+        {
+          "key": "ProjectValidator.validateGotos",
+          "method": "METHOD",
+          "path": "ProjectValidator.validateGotos",
+          "title": "ProjectValidator.validateGotos()",
+          "group": "ProjectValidator",
+          "description": "Проверяет метки goto",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "Возвращает объект",
+              "content": "const validator = new ProjectValidator(project);\nconst result = validator.validateGotos();\n//Возвращяет объект\n{\n  valid: boolean,       // прошла ли валидация успешно\n  hasGoto: boolean,     // найден ли хотя бы один goto\n  gotoCount: number,    // сколько всего найдено goto\n  nodeCount: number,    // сколько уникальных узлов найдено\n  errors: Array<{       // список ошибок\n      target: any,\n      path: string,\n      message: string\n  }>\n}"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "ProjectValidator.js",
+            "line": 24
+          },
+          "sig": "()",
+          "doc": true
+        }
+      ]
     }
   ]
 }

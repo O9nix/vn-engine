@@ -148,23 +148,34 @@ export function orderPlugins(plugins) {
  *
  * Получает плагины из каталога по именам из `project.getPlugins()`,
  * сортирует их по зависимостям и устанавливает через `PluginManager`.
- * Если установка какого-то плагина завершилась ошибкой, уже
- * установленные плагины удаляются, и ошибка пробрасывается дальше.
+ *
+ * Сбой одного плагина не отменяет остальные: плагин, который не удалось
+ * получить или установить, попадает в `failed`, а плагины, которые от него
+ * зависят, пропускаются (тоже попадают в `failed`). Остальные плагины
+ * остаются установленными. Решение, запускать ли историю при наличии
+ * сбоев, принимает вызывающий код.
  *
  * Вызывать нужно до `game.loadProject(project)`, чтобы плагины
  * успели подписаться на `story:loaded`.
  *
+ * Ошибки в самом описании проекта (некорректный список плагинов,
+ * зависимость, не объявленная в проекте, цикл) пробрасываются исключением:
+ * с таким проектом работать нельзя.
+ *
  * @param {Project} project Проект с объявленными плагинами.
  * @param {PluginRegistry} registry Каталог доступных плагинов.
  * @param {PluginManager} manager Менеджер, устанавливающий плагины.
- * @returns {Promise} Промис с массивом имён установленных плагинов
- * в порядке установки.
- * @throws {Error} Если плагин не найден, зависимости не объявлены,
- * есть цикл или установка завершилась ошибкой.
+ * @returns {Promise} Промис с отчётом `{ installed, failed }`:
+ * `installed` — имена установленных плагинов в порядке установки,
+ * `failed` — массив объектов `{ name, stage, message, error }`,
+ * где `stage` — `load`, `install` или `dependency`.
+ * @throws {Error} Если описание плагинов в проекте некорректно.
  *
  * @example
- * const installed = await loadProjectPlugins(project, registry, plugins);
- * game.loadProject(project);
+ * const report = await loadProjectPlugins(project, registry, plugins);
+ * if (report.failed.length === 0) {
+ *     game.loadProject(project);
+ * }
  */
 export async function loadProjectPlugins(project, registry, manager) {
     const refs = normalizePluginRefs(project.getPlugins());
@@ -173,45 +184,85 @@ export async function loadProjectPlugins(project, registry, manager) {
         refs.map(ref => registry.resolve(ref.name, ref.version))
     );
 
-    const resolved = [];
-    const failures = [];
+    const failed = [];
+    const failedNames = new Set();
+    let resolved = [];
 
-    results.forEach((result) => {
+    const fail = (name, stage, error) => {
+        failedNames.add(name);
+
+        failed.push({
+            name,
+            stage,
+            message: error?.message ?? String(error),
+            error
+        });
+    };
+
+    results.forEach((result, index) => {
         if (result.status === 'fulfilled') {
             resolved.push(result.value);
         } else {
-            failures.push(
-                result.reason?.message ?? String(result.reason)
-            );
+            fail(refs[index].name, 'load', result.reason);
         }
     });
 
-    if (failures.length > 0) {
-        throw new Error(
-            'PluginLoader: не удалось получить плагины:\n- ' +
-            failures.join('\n- ')
-        );
+    // Плагины, зависящие от не загрузившихся, пропускаем (цепочкой).
+    let changed = true;
+
+    while (changed) {
+        changed = false;
+
+        resolved = resolved.filter((plugin) => {
+            const broken = dependenciesOf(plugin).filter(
+                dependency => failedNames.has(dependency)
+            );
+
+            if (broken.length === 0) {
+                return true;
+            }
+
+            fail(
+                plugin.name,
+                'dependency',
+                new Error(
+                    `не установлен, так как не работают его зависимости: ${broken.join(', ')}`
+                )
+            );
+
+            changed = true;
+
+            return false;
+        });
     }
 
     const ordered = orderPlugins(resolved);
     const installed = [];
 
-    try {
-        for (const plugin of ordered) {
+    for (const plugin of ordered) {
+        const broken = dependenciesOf(plugin).filter(
+            dependency => failedNames.has(dependency)
+        );
+
+        if (broken.length > 0) {
+            fail(
+                plugin.name,
+                'dependency',
+                new Error(
+                    `не установлен, так как не работают его зависимости: ${broken.join(', ')}`
+                )
+            );
+
+            continue;
+        }
+
+        try {
             manager.use(plugin);
             installed.push(plugin.name);
+        } catch (error) {
+            fail(plugin.name, 'install', error);
         }
-    } catch (error) {
-        for (const name of installed.reverse()) {
-            try {
-                manager.remove(name);
-            } catch {
-                // Откат best-effort: исходная ошибка важнее.
-            }
-        }
-
-        throw error;
     }
 
-    return installed;
+    return { installed, failed };
 }

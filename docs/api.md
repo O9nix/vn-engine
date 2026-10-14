@@ -1,11 +1,21 @@
 # VN Engine API
 
-**Версия 0.1.3** · Дата 2026-10-13 · 54 записей
+**Версия 0.1.4** · Дата 2026-10-14 · 44 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
 ## Содержание
 
+- **BlockManager**
+  - [BlockManager](#blockmanager)
+    - [BlockManager.create(type, options)](#blockmanager-create)
+- **VN**
+  - [VN.unregisterNodeType(type)](#vn-unregisternodetype)
+- **EventBus**
+  - [EventBus](#eventbus)
+    - [EventBus.on(type, handler)](#eventbus-on)
+    - [EventBus.off(type, handler)](#eventbus-off)
+    - [EventBus.emit(type, payload)](#eventbus-emit)
 - **PluginRegistry**
   - [localPluginLoader(name)](#localpluginloader)
   - [PluginRegistry](#pluginregistry)
@@ -26,27 +36,9 @@
     - [PluginManager.has(name)](#pluginmanager-has)
     - [PluginManager.get(name)](#pluginmanager-get)
     - [PluginManager.list()](#pluginmanager-list)
-- **PluginAPI**
-  - [api.events](#api-events)
-    - [api.events.on(event, handler)](#api-events-on)
-    - [api.events.emit(event, payload)](#api-events-emit)
-  - [api.game](#api-game)
-    - [api.game.getPluginLayer()](#api-game-getpluginlayer)
-    - [api.game.registerLayer(name, element)](#api-game-registerlayer)
-    - [api.game.registerNodeType(type, handler)](#api-game-registernodetype)
-    - [api.game.show(name)](#api-game-show)
-    - [api.game.hide(name)](#api-game-hide)
-    - [api.game.isVisible(name)](#api-game-isvisible)
-  - [api.player](#api-player)
-    - [api.player.getPluginLayer()](#api-player-getpluginlayer)
-    - [api.player.registerLayer(name, element)](#api-player-registerlayer)
-    - [api.player.show(name)](#api-player-show)
-    - [api.player.hide(name)](#api-player-hide)
-    - [api.player.isVisible(name)](#api-player-isvisible)
-  - [api.blocks](#api-blocks)
-  - [api.plugins](#api-plugins)
 - **Plugins**
   - [ConditionsPlugin](#conditionsplugin)
+  - [NotyPlugin](#notyplugin)
   - [StatePlugin](#stateplugin)
   - [TopLeftHUDPlugin](#toplefthudplugin)
 - **ConditionsPlugin**
@@ -71,6 +63,149 @@
     - [ProjectValidator.constructor(project)](#projectvalidator-constructor)
     - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - [История изменений](#changelog)
+
+## BlockManager
+
+<a id="blockmanager"></a>
+
+### `BlockManager`
+
+*Класс*
+
+Хранит визуальные блоки (диалог, выбор и т.п.) и размещает их в корневом элементе.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`BlockManager.create(type, options)`](#blockmanager-create) | Создаёт блок и добавляет его элемент в корень. |
+
+<sub>Исходник: block-manager.js:1</sub>
+
+<a id="blockmanager-create"></a>
+
+#### `BlockManager.create(type, options)`
+
+*Метод*
+
+Создаёт блок и добавляет его элемент в корень.
+
+Опции: `channel` (строка, по умолчанию default), `element` (HTMLElement),
+`data`, `meta` и `replace` (true — сначала удалить все блоки этого канала,
+чтобы старые не накапливались).
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Тип блока. |
+| `options` *(необязательное)* | `Object` | Параметры блока. |
+
+##### Возвращает
+
+`Object` — Созданный блок.
+
+<sub>Исходник: block-manager.js:22</sub>
+
+## VN
+
+<a id="vn-unregisternodetype"></a>
+
+### `VN.unregisterNodeType(type)`
+
+*Метод*
+
+Снимает обработчик типа узла. Нужен, чтобы плагин можно было
+удалить и поставить заново.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Имя типа узла. |
+
+#### Возвращает
+
+`boolean` — true, если тип был зарегистрирован.
+
+<sub>Исходник: core.js:45</sub>
+
+## EventBus
+
+<a id="eventbus"></a>
+
+### `EventBus`
+
+*Класс*
+
+Шина событий. Ошибка в одном подписчике не мешает остальным:
+она попадает в консоль и в событие `handler:error`
+с данными `{ event, error }`.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`EventBus.on(type, handler)`](#eventbus-on) | Подписывает обработчик на событие. |
+| [`EventBus.off(type, handler)`](#eventbus-off) | Снимает обработчик с события. |
+| [`EventBus.emit(type, payload)`](#eventbus-emit) | Вызывает всех подписчиков события по порядку подписки. |
+
+<sub>Исходник: events.js:1</sub>
+
+<a id="eventbus-on"></a>
+
+#### `EventBus.on(type, handler)`
+
+*Метод*
+
+Подписывает обработчик на событие.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Имя события. |
+| `handler` *(обязательное)* | `function` | Обработчик. |
+
+##### Возвращает
+
+`function` — Функция отписки.
+
+<sub>Исходник: events.js:12</sub>
+
+<a id="eventbus-off"></a>
+
+#### `EventBus.off(type, handler)`
+
+*Метод*
+
+Снимает обработчик с события.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Имя события. |
+| `handler` *(обязательное)* | `function` | Ранее добавленный обработчик. |
+
+<sub>Исходник: events.js:32</sub>
+
+<a id="eventbus-emit"></a>
+
+#### `EventBus.emit(type, payload)`
+
+*Метод*
+
+Вызывает всех подписчиков события по порядку подписки.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Имя события. |
+| `payload` *(необязательное)* | `*` | Данные события. |
+
+<sub>Исходник: events.js:45</sub>
 
 ## PluginRegistry
 
@@ -349,11 +484,19 @@ const ordered = orderPlugins([ChoicePlugin, StatePlugin, ConditionsPlugin]);
 
 Получает плагины из каталога по именам из `project.getPlugins()`,
 сортирует их по зависимостям и устанавливает через `PluginManager`.
-Если установка какого-то плагина завершилась ошибкой, уже
-установленные плагины удаляются, и ошибка пробрасывается дальше.
+
+Сбой одного плагина не отменяет остальные: плагин, который не удалось
+получить или установить, попадает в `failed`, а плагины, которые от него
+зависят, пропускаются (тоже попадают в `failed`). Остальные плагины
+остаются установленными. Решение, запускать ли историю при наличии
+сбоев, принимает вызывающий код.
 
 Вызывать нужно до `game.loadProject(project)`, чтобы плагины
 успели подписаться на `story:loaded`.
+
+Ошибки в самом описании проекта (некорректный список плагинов,
+зависимость, не объявленная в проекте, цикл) пробрасываются исключением:
+с таким проектом работать нельзя.
 
 #### Параметры
 
@@ -365,18 +508,22 @@ const ordered = orderPlugins([ChoicePlugin, StatePlugin, ConditionsPlugin]);
 
 #### Возвращает
 
-`Promise` — Промис с массивом имён установленных плагинов
-в порядке установки.
+`Promise` — Промис с отчётом `{ installed, failed }`:
+`installed` — имена установленных плагинов в порядке установки,
+`failed` — массив объектов `{ name, stage, message, error }`,
+где `stage` — `load`, `install` или `dependency`.
 
 #### Исключения
 
-- `Error` — Если плагин не найден, зависимости не объявлены, есть цикл или установка завершилась ошибкой.
+- `Error` — Если описание плагинов в проекте некорректно.
 
 #### Примеры
 
 ```js
-const installed = await loadProjectPlugins(project, registry, plugins);
-game.loadProject(project);
+const report = await loadProjectPlugins(project, registry, plugins);
+if (report.failed.length === 0) {
+    game.loadProject(project);
+}
 ```
 
 <sub>Исходник: plugin-loader.js:143</sub>
@@ -396,7 +543,7 @@ game.loadProject(project);
 
 | Имя | Описание |
 | --- | --- |
-| [`PluginManager.constructor(bus, game, player, blocks)`](#pluginmanager-constructor) | Собирает объект `api`, который каждый плагин получает в `install(api)`. |
+| [`PluginManager.constructor(bus, game, player, blocks)`](#pluginmanager-constructor) | Запоминает зависимости движка. Для каждого плагина при установке создаётся собственный `api`: всё, что плагин через него зарегистрировал ... |
 | [`PluginManager.use(plugin)`](#pluginmanager-use) | Устанавливает плагин после проверки его зависимостей. |
 | [`PluginManager.remove(name)`](#pluginmanager-remove) | Удаляет установленный плагин, если от него не зависят другие установленные плагины. |
 | [`PluginManager.has(name)`](#pluginmanager-has) |  |
@@ -411,7 +558,10 @@ game.loadProject(project);
 
 *Метод*
 
-Собирает объект `api`, который каждый плагин получает в `install(api)`.
+Запоминает зависимости движка. Для каждого плагина при установке
+создаётся собственный `api`: всё, что плагин через него зарегистрировал
+(подписки на события, слои, типы узлов), движок снимает сам при удалении
+плагина или при сбое установки.
 
 Структура api:
 ```
@@ -446,7 +596,7 @@ api
 | `player` *(обязательное)* | `Player` |  |
 | `blocks` *(обязательное)* | `BlockManager` |  |
 
-<sub>Исходник: plugin-manager.js:10</sub>
+<sub>Исходник: plugin-manager.js:20</sub>
 
 <a id="pluginmanager-use"></a>
 
@@ -477,7 +627,7 @@ plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:262</sub>
+<sub>Исходник: plugin-manager.js:215</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -509,7 +659,7 @@ plugins.use(ChoicePlugin);
 plugins.remove('choice');
 ```
 
-<sub>Исходник: plugin-manager.js:357</sub>
+<sub>Исходник: plugin-manager.js:334</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -527,7 +677,7 @@ plugins.remove('choice');
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:415</sub>
+<sub>Исходник: plugin-manager.js:400</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -545,7 +695,7 @@ plugins.remove('choice');
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:425</sub>
+<sub>Исходник: plugin-manager.js:410</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -557,314 +707,7 @@ plugins.remove('choice');
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:435</sub>
-
-## PluginAPI
-
-<a id="api-events"></a>
-
-### `api.events`
-
-*Группа*
-
-Обёртка над EventBus.
-
-#### Содержимое
-
-| Имя | Описание |
-| --- | --- |
-| [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
-| [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
-
-<sub>Исходник: plugin-manager.js:74</sub>
-
-<a id="api-events-on"></a>
-
-#### `api.events.on(event, handler)`
-
-*Метод*
-
-Подписка на событие.
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `event` *(обязательное)* | `string` | Имя события |
-| `handler` *(обязательное)* | `function` | Callback |
-
-##### Возвращает
-
-`function` — Функция отписки
-
-##### Примеры
-
-```js
-obj.doThing('x');
-```
-
-<sub>Исходник: plugin-manager.js:80</sub>
-
-<a id="api-events-emit"></a>
-
-#### `api.events.emit(event, payload)`
-
-*Метод*
-
-Эмит события.
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `event` *(обязательное)* | `string` | Имя события |
-| `payload` *(необязательное)* | `*` | Данные |
-
-<sub>Исходник: plugin-manager.js:93</sub>
-
-<a id="api-game"></a>
-
-### `api.game`
-
-*Группа*
-
-Фасад к VN + Player: регистрация типов узлов и работа со слоями.
-
-#### Содержимое
-
-| Имя | Описание |
-| --- | --- |
-| [`api.game.getPluginLayer()`](#api-game-getpluginlayer) |  |
-| [`api.game.registerLayer(name, element)`](#api-game-registerlayer) |  |
-| [`api.game.registerNodeType(type, handler)`](#api-game-registernodetype) | Регистрирует обработчик типа узла сценария. context: { wait(), resume(), goto(nodeId) } |
-| [`api.game.show(name)`](#api-game-show) |  |
-| [`api.game.hide(name)`](#api-game-hide) |  |
-| [`api.game.isVisible(name)`](#api-game-isvisible) |  |
-
-<sub>Исходник: plugin-manager.js:104</sub>
-
-<a id="api-game-getpluginlayer"></a>
-
-#### `api.game.getPluginLayer()`
-
-*Метод*
-
-##### Возвращает
-
-`HTMLElement` — DOM-слой плагинов
-
-<sub>Исходник: plugin-manager.js:110</sub>
-
-<a id="api-game-registerlayer"></a>
-
-#### `api.game.registerLayer(name, element)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` | Имя слоя |
-| `element` *(обязательное)* | `HTMLElement` | DOM-элемент |
-
-##### Возвращает
-
-`function` — cleanup
-
-<sub>Исходник: plugin-manager.js:118</sub>
-
-<a id="api-game-registernodetype"></a>
-
-#### `api.game.registerNodeType(type, handler)`
-
-*Метод*
-
-Регистрирует обработчик типа узла сценария.
-context: { wait(), resume(), goto(nodeId) }
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `type` *(обязательное)* | `string` | Имя типа узла |
-| `handler` *(обязательное)* | `function` | (node, context) => void |
-
-<sub>Исходник: plugin-manager.js:128</sub>
-
-<a id="api-game-show"></a>
-
-#### `api.game.show(name)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` | Имя слоя |
-
-<sub>Исходник: plugin-manager.js:139</sub>
-
-<a id="api-game-hide"></a>
-
-#### `api.game.hide(name)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` | Имя слоя |
-
-<sub>Исходник: plugin-manager.js:147</sub>
-
-<a id="api-game-isvisible"></a>
-
-#### `api.game.isVisible(name)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` | Имя слоя |
-
-##### Возвращает
-
-`boolean`
-
-<sub>Исходник: plugin-manager.js:155</sub>
-
-<a id="api-player"></a>
-
-### `api.player`
-
-*Группа*
-
-Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.
-
-#### Содержимое
-
-| Имя | Описание |
-| --- | --- |
-| [`api.player.getPluginLayer()`](#api-player-getpluginlayer) |  |
-| [`api.player.registerLayer(name, element)`](#api-player-registerlayer) |  |
-| [`api.player.show(name)`](#api-player-show) |  |
-| [`api.player.hide(name)`](#api-player-hide) |  |
-| [`api.player.isVisible(name)`](#api-player-isvisible) |  |
-
-<sub>Исходник: plugin-manager.js:165</sub>
-
-<a id="api-player-getpluginlayer"></a>
-
-#### `api.player.getPluginLayer()`
-
-*Метод*
-
-##### Возвращает
-
-`HTMLElement`
-
-<sub>Исходник: plugin-manager.js:171</sub>
-
-<a id="api-player-registerlayer"></a>
-
-#### `api.player.registerLayer(name, element)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` |  |
-| `element` *(обязательное)* | `HTMLElement` |  |
-
-##### Возвращает
-
-`function` — cleanup
-
-<sub>Исходник: plugin-manager.js:179</sub>
-
-<a id="api-player-show"></a>
-
-#### `api.player.show(name)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` |  |
-
-<sub>Исходник: plugin-manager.js:189</sub>
-
-<a id="api-player-hide"></a>
-
-#### `api.player.hide(name)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` |  |
-
-<sub>Исходник: plugin-manager.js:197</sub>
-
-<a id="api-player-isvisible"></a>
-
-#### `api.player.isVisible(name)`
-
-*Метод*
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `name` *(обязательное)* | `string` |  |
-
-##### Возвращает
-
-`boolean`
-
-<sub>Исходник: plugin-manager.js:205</sub>
-
-<a id="api-blocks"></a>
-
-### `api.blocks`
-
-*Свойство · Тип: BlockManager*
-
-Экземпляр BlockManager.
-Методы: create, get, getAll, getByType, getActiveByChannel,
-getCurrent, show, hide, remove.
-
-<sub>Исходник: plugin-manager.js:215</sub>
-
-<a id="api-plugins"></a>
-
-### `api.plugins`
-
-*Свойство*
-
-Proxy к API установленных плагинов.
-Доступ: `api.plugins.<name>.api`
-Если плагин не установлен — null + warning в консоль.
-
-#### Примеры
-
-```js
-const state = api.plugins.state.api.get();
-api.plugins.state.api.set('health', 10);
-```
-
-<sub>Исходник: plugin-manager.js:227</sub>
+<sub>Исходник: plugin-manager.js:420</sub>
 
 ## Plugins
 
@@ -883,6 +726,24 @@ api.plugins.state.api.set('health', 10);
 ==, !=, >, >=, <, <=
 
 <sub>Исходник: plugins/conditions-plugin.js:1</sub>
+
+<a id="notyplugin"></a>
+
+### `NotyPlugin`
+
+*Класс*
+
+Показывает всплывающие уведомления в правом верхнем углу.
+
+Сам реагирует на события движка:
+`validator:errors` (ошибки проверки проекта),
+`plugin:error` (плагин не загрузился или не установился),
+`story:error` (ошибка во время выполнения узла).
+
+Публичный API: `api.plugins.noty.api`
+(`notify`, `success`, `error`, `warning`, `info`).
+
+<sub>Исходник: plugins/noty-plugin.js:1</sub>
 
 <a id="stateplugin"></a>
 
@@ -1272,6 +1133,45 @@ const result = validator.validateGotos();
 <a id="changelog"></a>
 
 ## История изменений
+
+### 0.1.4 (2026-10-14)
+
+**Добавлено (8)**
+
+- `BlockManager`
+- `BlockManager.create`
+- `VN.unregisterNodeType`
+- `EventBus`
+- `EventBus.on`
+- `EventBus.off`
+- `EventBus.emit`
+- `NotyPlugin`
+
+**Изменено (2)**
+
+- `loadProjectPlugins`
+- `PluginManager.constructor`
+
+**Удалено (18)**
+
+- `api.events`
+- `api.events.on`
+- `api.events.emit`
+- `api.game`
+- `api.game.getPluginLayer`
+- `api.game.registerLayer`
+- `api.game.registerNodeType`
+- `api.game.show`
+- `api.game.hide`
+- `api.game.isVisible`
+- `api.player`
+- `api.player.getPluginLayer`
+- `api.player.registerLayer`
+- `api.player.show`
+- `api.player.hide`
+- `api.player.isVisible`
+- `api.blocks`
+- `api.plugins`
 
 ### 0.1.3 (2026-10-13)
 
