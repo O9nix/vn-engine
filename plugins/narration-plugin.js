@@ -3,7 +3,23 @@ export const NarrationPlugin = {
     version: '0.1.0',
     nodeTypes: ['narration'],
 
+
     install(api) {
+ api.log.info('Narration plugin installed');
+
+        // Паттерн: строка начинается с //, дальше любой текст
+        api.ast.addCommand(
+            /^\/\/\s*(.*)$/,
+            'narration',
+            (match, originalLine, index, scene) => {
+                return {
+                    _id: `node_${index}`,
+                    type: 'narration',
+                    text: match[1].trim()
+                };
+            }
+        );
+
         api.game.registerNodeType(
             'narration',
             (node, context) => {

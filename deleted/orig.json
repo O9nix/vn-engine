@@ -1,0 +1,76 @@
+    {
+            "id": "scene-1",
+
+            "nodes": [
+
+                {
+                    "id": "start",
+
+                    "type": "dialogue",
+
+                    "character": "Аня",
+
+                    "text": "Как себя чувствуешь?"
+                },
+
+                {
+                    "id": "choice-1",
+
+                    "type": "choice",
+
+                    "text": "Куда пойдём?",
+
+                    "options": [
+                        {
+                            "id": "go",
+
+                            "variants": [
+                                {
+                                    "condition": {
+                                        "variable": "health",
+                                        "operator": "<=",
+                                        "value": 5
+                                    },
+
+                                    "text": "Сначала в больницу",
+
+                                    "goto": "hospital"
+                                },
+
+                                {
+                                   
+                                    "text": "Пойдём домой",
+
+                                    "goto": "home1"
+                                }
+                            ]
+                        }
+                    ]
+                },
+
+                {
+                    "id": "hospital",
+
+                    "type": "dialogue",
+
+                    "character": "Аня",
+
+                    "text": "Хорошо, сначала в больницу.",
+
+                    "end": true
+                },
+
+                {
+                    "id": "home",
+
+                    "type": "dialogue",
+
+                    "character": "Аня",
+
+                    "text": "Тогда идём домой.",
+
+                    "end": true
+                }
+            ]
+        }
+    

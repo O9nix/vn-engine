@@ -11,6 +11,7 @@ export class Project {
     #scenes;
     #config;
     #assets;
+#sourceText;
 
     constructor(data = {}) {
         this.#plugins = data.plugins ?? [];
@@ -18,6 +19,7 @@ export class Project {
         this.#scenes = data.scenes ?? [];
         this.#config = data.config ?? {};
         this.#assets = data.assets ?? {};
+        this.#sourceText = data.sourceText ?? ''; // <-- принимаем исходный текст
     }
 
     /**
@@ -97,6 +99,13 @@ getSceneForNode(nodeId) {
 
     getAssets() {
         return this.#assets;
+    }
+    /**
+     * Возвращает исходный текст сценария (DSL-текст), если он был передан при создании.
+     * Полезно для редактора и отладки.
+     */
+    getSourceText() {
+        return this.#sourceText;
     }
 
 }

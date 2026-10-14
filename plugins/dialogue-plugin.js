@@ -2,8 +2,26 @@ export const DialoguePlugin = {
     name: 'dialogue',
     version: '0.1.0',
     nodeTypes: ['dialogue'],
+   
 
     install(api) {
+        api.log.info('DialoguePlugin успешно установлен')
+
+        // Регистрируем команду через общий API
+        api.ast.addCommand(
+            /^\[([^\]]+)\]\s*(.*)$/, // Регулярка: [Имя] Текст
+            'dialogue',              // Тип узла
+            (match, originalLine, index, scene) => {
+                // Это функция-обработчик. Она выполняется, когда строка совпала.
+                // match[1] = имя персонажа, match[2] = текст
+                return {
+                    _id: `node_${index}`,
+                    type: 'dialogue',
+                    character: match[1],
+                    text: match[2].trim()
+                };
+            }
+        );
         api.game.registerNodeType(
             'dialogue',
             (node, context) => {

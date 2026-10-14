@@ -16,6 +16,7 @@ export const ConditionsPlugin = {
     nodeTypes: [],
 
     install(api) {
+        api.log.info('Conditions plugin installed');
         /**
          * @apiName ConditionsPlugin.evaluate
          * @apiGroup ConditionsPlugin

@@ -7,9 +7,13 @@ import { PluginRegistry } from './plugin-registry.js';
 import { localPluginLoader } from './local-plugin-loader.js';
 import { loadProjectPlugins } from './plugin-loader.js';
 import { PluginManager } from './plugin-manager.js';
+import {AST} from './AST.js'
+
+// 1. Создаем парсер
+const parser = new AST();
 
 // Плагины загружаются по именам из проекта. Позже загрузчик можно
-// заменить на получение плагинов из внешнего сервиса.
+// заменить на получение плагинов из внешнего сервиса
 const registry = new PluginRegistry({ loader: localPluginLoader });
 
 const project = new Project({
@@ -22,7 +26,7 @@ const project = new Project({
         'narration',
         'background',
         'wait',
-        // 'conditions',
+        'conditions',
         'choice'
     ],
 
@@ -44,7 +48,11 @@ const project = new Project({
 
                     text: 'Как себя чувствуешь?'
                 },
-
+                {
+                    id: 'ddd',
+                    type: 'narration',
+                    text: 'sssssssssssssssssss'
+                },
                 {
                     id: 'choice-1',
 
@@ -124,6 +132,7 @@ const plugins = new PluginManager(
     game,
     player,
     blocks,
+    parser
 );
 
 document.addEventListener(
@@ -191,7 +200,93 @@ async function start() {
 
     validator.validateGotos();
 
-    game.loadProject(project);
+
+
+
+// --- ТЕСТОВЫЙ БЛОК: проверка парсера AST на DSL-синтаксисе ---
+console.group('🧪 Тест парсера AST (DSL → AST)');
+
+// 1. Создаём "сырой" текст сценария в твоём DSL-формате.
+// Здесь мы проверяем сразу три плагина: Dialogue, Narration, Choice.
+const rawSource = `
+# Сцена проверки
+
+// Туман стелется по земле, скрывая очертания домов.
+[Анна] Что это за шум? Мне страшно...
+[Макс] Не волнуйся, я рядом.
+// Макс крепче сжимает рукоять меча.
+
+CHOICE: Куда пойдём дальше? | В подвал → basement | На улицу → street | Подождать здесь → wait
+
+// Тишина повисла в воздухе.
+`;
+
+console.log('Сырой текст для парсинга:\n', rawSource);
+
+// 2. Прогоняем через парсер
+const astResult = parser.parse(rawSource);
+console.log('AST результат:', astResult);
+
+// 3. Проверки по типам узлов
+const hasDialogueNodes = astResult.scenes.some(scene =>
+    scene.nodes.some(node => node.type === 'dialogue')
+);
+
+const hasNarrationNodes = astResult.scenes.some(scene =>
+    scene.nodes.some(node => node.type === 'narration')
+);
+
+const hasChoiceNodes = astResult.scenes.some(scene =>
+    scene.nodes.some(node => node.type === 'choice')
+);
+
+// Вывод результатов проверки
+if (hasDialogueNodes) {
+    console.log('✅ Парсер успешно распознал узлы типа dialogue.');
+} else {
+    console.warn('⚠️ Парсер НЕ создал узлы типа dialogue. Проверь плагин DialoguePlugin.');
+}
+
+if (hasNarrationNodes) {
+    console.log('✅ Парсер успешно распознал узлы типа narration (строки //).');
+} else {
+    console.warn('⚠️ Парсер НЕ создал узлы типа narration. Проверь regex в NarrationPlugin (/^\\/\\/\\s*(.*)$/).');
+}
+
+if (hasChoiceNodes) {
+    const choiceScene = astResult.scenes.find(s => s.nodes.some(n => n.type === 'choice'));
+    if (choiceScene) {
+        const choiceNode = choiceScene.nodes.find(n => n.type === 'choice');
+        const optionsCount = choiceNode?.options?.length || 0;
+        if (optionsCount >= 3) {
+            console.log(`✅ Парсер успешно распознал узел choice и распарсил ${optionsCount} вариантов.`);
+        } else {
+            console.warn(`⚠️ Парсер создал узел choice, но внутри мало вариантов (${optionsCount}). Проверь логику парсинга блока [[...]] в ChoicePlugin.`);
+        }
+    } else {
+        console.warn('⚠️ Парсер не нашёл узел choice в AST.');
+    }
+} else {
+    console.warn('⚠️ Парсер НЕ создал узлы типа choice. Проверь установку ChoicePlugin и его regex.');
+}
+
+// 4. (Опционально) Быстрая проверка структуры первого choice-узла
+const firstChoiceNode = astResult.scenes
+    .flatMap(s => s.nodes)
+    .find(n => n.type === 'choice');
+
+if (firstChoiceNode) {
+    console.log('🔍 Детали первого узла choice:', {
+        text: firstChoiceNode.text,
+        optionsCount: firstChoiceNode.options?.length,
+        firstOption: firstChoiceNode.options?.[0]?.variants?.[0]
+    });
+}
+
+console.groupEnd();
+// -----------------------------------------------
+
+game.loadProject(project);
 }
 
 start().catch((error) => {

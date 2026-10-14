@@ -17,6 +17,7 @@ export class PluginManager {
     #player;
     #blocks;
     #pluginsProxy;
+    #parser;
     /**
      * @apiName constructor
      * @apiGroup PluginManager
@@ -59,13 +60,14 @@ export class PluginManager {
         game,
         player,
         blocks,
-        validator
+        // validator,
+        parser
     ) {
         this.#bus = bus;
         this.#game = game;
         this.#player = player;
         this.#blocks = blocks;
-
+        this.#parser = parser;
         // Общий для всех плагинов доступ к публичным API друг друга.
         this.#pluginsProxy = new Proxy(
             {},
@@ -99,7 +101,7 @@ export class PluginManager {
         const bus = this.#bus;
         const game = this.#game;
         const player = this.#player;
-
+        const parser = this.#parser;
         const track = (fn) => {
             release.push(fn);
         };
@@ -189,7 +191,16 @@ export class PluginManager {
                 hide: (name) => player.hide(name),
                 isVisible: (name) => player.isVisible(name)
             },
-
+            ast: {
+                addCommand: (pattern,node,handler)=> {
+                    console.log(parser)
+                     if (!parser) {
+                        console.error(`[PluginManager] Ошибка: parser не передан в менеджер! Плагин "${pluginName}" не может зарегистрировать команду.`);
+                        return;
+                    }
+                        parser.addCommand(pattern,node,handler)
+                } 
+            },
             blocks: scopedBlocks,
 
             plugins: this.#pluginsProxy
