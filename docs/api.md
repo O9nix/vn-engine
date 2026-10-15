@@ -1,11 +1,18 @@
 # VN Engine API
 
-**Версия 0.1.4** · Дата 2026-10-14 · 44 записей
+**Версия 0.1.4** · Дата 2026-10-15 · 76 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
 ## Содержание
 
+- **AST**
+  - [AST](#ast)
+    - [AST.constructor(parameters)](#ast-constructor)
+    - [AST.addCommand(pattern, nodeType, handler)](#ast-addcommand)
+    - [AST.removeCommand(pattern)](#ast-removecommand)
+    - [AST.getCommands()](#ast-getcommands)
+    - [AST.parse(source)](#ast-parse)
 - **BlockManager**
   - [BlockManager](#blockmanager)
     - [BlockManager.create(type, options)](#blockmanager-create)
@@ -30,13 +37,40 @@
   - [loadProjectPlugins(project, registry, manager)](#loadprojectplugins)
 - **PluginManager**
   - [PluginManager](#pluginmanager)
-    - [PluginManager.constructor(bus, game, player, blocks)](#pluginmanager-constructor)
+    - [PluginManager.constructor(bus, game, player, blocks, ast)](#pluginmanager-constructor)
     - [PluginManager.use(plugin)](#pluginmanager-use)
     - [PluginManager.remove(name)](#pluginmanager-remove)
     - [PluginManager.has(name)](#pluginmanager-has)
     - [PluginManager.get(name)](#pluginmanager-get)
     - [PluginManager.list()](#pluginmanager-list)
+- **PluginAPI**
+  - [api.plugin](#api-plugin)
+  - [api.log](#api-log)
+    - [api.log.info(args)](#api-log-info)
+    - [api.log.warn(args)](#api-log-warn)
+    - [api.log.error(args)](#api-log-error)
+  - [api.events](#api-events)
+    - [api.events.on(event, handler)](#api-events-on)
+    - [api.events.emit(event, payload)](#api-events-emit)
+  - [api.game](#api-game)
+    - [api.game.getPluginLayer()](#api-game-getpluginlayer)
+    - [api.game.registerLayer(name, element)](#api-game-registerlayer)
+    - [api.game.registerNodeType(type, handler)](#api-game-registernodetype)
+    - [api.game.show(name)](#api-game-show)
+    - [api.game.hide(name)](#api-game-hide)
+    - [api.game.isVisible(name)](#api-game-isvisible)
+  - [api.player](#api-player)
+    - [api.player.getPluginLayer()](#api-player-getpluginlayer)
+    - [api.player.registerLayer(name, element)](#api-player-registerlayer)
+    - [api.player.show(name)](#api-player-show)
+    - [api.player.hide(name)](#api-player-hide)
+    - [api.player.isVisible(name)](#api-player-isvisible)
+  - [api.blocks](#api-blocks)
+  - [api.ast](#api-ast)
+    - [api.ast.addCommand(pattern, nodeType, handler)](#api-ast-addcommand)
+  - [api.plugins](#api-plugins)
 - **Plugins**
+  - [ChoicePlugin](#choiceplugin)
   - [ConditionsPlugin](#conditionsplugin)
   - [NotyPlugin](#notyplugin)
   - [StatePlugin](#stateplugin)
@@ -63,6 +97,147 @@
     - [ProjectValidator.constructor(project)](#projectvalidator-constructor)
     - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - [История изменений](#changelog)
+
+## AST
+
+<a id="ast"></a>
+
+### `AST`
+
+*Класс*
+
+Парсер текста сценария в структуру сцен и узлов.
+
+Сам парсер умеет только делить текст на сцены (строка `# Название`).
+Остальные строки распознают команды, которые регистрируют плагины
+через `api.ast.addCommand`. Строка, которую не узнала ни одна команда,
+становится узлом `text`.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`AST.constructor(parameters)`](#ast-constructor) | Создаёт парсер без команд. |
+| [`AST.addCommand(pattern, nodeType, handler)`](#ast-addcommand) | Регистрирует команду для парсера. |
+| [`AST.removeCommand(pattern)`](#ast-removecommand) | Снимает команду парсера. |
+| [`AST.getCommands()`](#ast-getcommands) | Возвращает зарегистрированные команды в порядке добавления. Парсер перебирает их в цикле. |
+| [`AST.parse(source)`](#ast-parse) | Разбирает текст сценария. |
+
+<sub>Исходник: AST.js:1</sub>
+
+<a id="ast-constructor"></a>
+
+#### `AST.constructor(parameters)`
+
+*Метод*
+
+Создаёт парсер без команд.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `parameters` *(необязательное)* | `Object` | Настройки парсера (пока не используются). |
+
+<sub>Исходник: AST.js:20</sub>
+
+<a id="ast-addcommand"></a>
+
+#### `AST.addCommand(pattern, nodeType, handler)`
+
+*Метод*
+
+Регистрирует команду для парсера.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `pattern` *(обязательное)* | `RegExp` | Регулярное выражение для поиска строки. |
+| `nodeType` *(обязательное)* | `string` | Тип узла, который создаст команда (например, dialogue). |
+| `handler` *(обязательное)* | `function` | Функция (match, line, index, scene), которая превращает совпавшую строку в узел или возвращает null, если строка не подошла. |
+
+##### Возвращает
+
+`function` — Функция, снимающая команду.
+
+##### Исключения
+
+- `Error` — Если pattern не RegExp, handler не функция или команда с таким же регулярным выражением уже есть.
+
+##### Примеры
+
+```js
+parser.addCommand(/^\[([^\]]+)\]\s*(.*)$/, 'dialogue', (match, line, index) => ({
+    type: 'dialogue',
+    character: match[1],
+    text: match[2].trim()
+}));
+```
+
+<sub>Исходник: AST.js:30</sub>
+
+<a id="ast-removecommand"></a>
+
+#### `AST.removeCommand(pattern)`
+
+*Метод*
+
+Снимает команду парсера.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `pattern` *(обязательное)* | `RegExp` | Регулярное выражение, с которым команда была добавлена. |
+
+##### Возвращает
+
+`boolean` — true, если команда была зарегистрирована.
+
+<sub>Исходник: AST.js:72</sub>
+
+<a id="ast-getcommands"></a>
+
+#### `AST.getCommands()`
+
+*Метод*
+
+Возвращает зарегистрированные команды в порядке добавления.
+Парсер перебирает их в цикле.
+
+##### Возвращает
+
+`Object[]` — Массив объектов { pattern, nodeType, handler }.
+
+<sub>Исходник: AST.js:85</sub>
+
+<a id="ast-parse"></a>
+
+#### `AST.parse(source)`
+
+*Метод*
+
+Разбирает текст сценария.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `source` *(обязательное)* | `string` | Текст сценария. |
+
+##### Возвращает
+
+`Object` — Объект { scenes }: массив сцен { id, name, nodes }.
+
+##### Примеры
+
+```js
+const result = parser.parse('# Сцена\n[Анна] Привет');
+// result.scenes[0].nodes[0].type === 'dialogue'
+```
+
+<sub>Исходник: AST.js:98</sub>
 
 ## BlockManager
 
@@ -536,36 +711,44 @@ if (report.failed.length === 0) {
 
 *Класс*
 
-Устанавливает плагины и предоставляет единый Plugin API
-(`events`, `game`, `player`, `blocks`, `plugins`).
+Устанавливает плагины и выдаёт каждому из них собственный Plugin API
+(`plugin`, `log`, `events`, `game`, `player`, `blocks`, `ast`, `plugins`).
+
+Всё, что плагин занял через свой `api` (подписки на события, слои,
+типы узлов, блоки, команды парсера), движок снимает сам при удалении
+плагина или при сбое его установки.
 
 #### Содержимое
 
 | Имя | Описание |
 | --- | --- |
-| [`PluginManager.constructor(bus, game, player, blocks)`](#pluginmanager-constructor) | Запоминает зависимости движка. Для каждого плагина при установке создаётся собственный `api`: всё, что плагин через него зарегистрировал ... |
+| [`PluginManager.constructor(bus, game, player, blocks, ast)`](#pluginmanager-constructor) | Запоминает зависимости движка. Для каждого плагина при установке создаётся собственный `api`, который передаётся в `install(api)`. |
 | [`PluginManager.use(plugin)`](#pluginmanager-use) | Устанавливает плагин после проверки его зависимостей. |
 | [`PluginManager.remove(name)`](#pluginmanager-remove) | Удаляет установленный плагин, если от него не зависят другие установленные плагины. |
 | [`PluginManager.has(name)`](#pluginmanager-has) |  |
 | [`PluginManager.get(name)`](#pluginmanager-get) |  |
 | [`PluginManager.list()`](#pluginmanager-list) |  |
 
-<sub>Исходник: plugin-manager.js:1</sub>
+<sub>Исходник: plugin-manager.js:7</sub>
 
 <a id="pluginmanager-constructor"></a>
 
-#### `PluginManager.constructor(bus, game, player, blocks)`
+#### `PluginManager.constructor(bus, game, player, blocks, ast)`
 
 *Метод*
 
 Запоминает зависимости движка. Для каждого плагина при установке
-создаётся собственный `api`: всё, что плагин через него зарегистрировал
-(подписки на события, слои, типы узлов), движок снимает сам при удалении
-плагина или при сбое установки.
+создаётся собственный `api`, который передаётся в `install(api)`.
 
 Структура api:
 ```
 api
+├── plugin
+│   └── name                → имя этого плагина
+├── log
+│   ├── info(...args)
+│   ├── warn(...args)
+│   └── error(...args)
 ├── events
 │   ├── on(event, handler) → unsubscribe
 │   └── emit(event, payload)
@@ -582,21 +765,24 @@ api
 │   ├── show(name)
 │   ├── hide(name)
 │   └── isVisible(name) → boolean
-├── blocks          → BlockManager
-└── plugins         → Proxy
-    └── <name>.api  → публичный API плагина
+├── blocks                  → BlockManager
+├── ast
+│   └── addCommand(pattern, nodeType, handler)
+└── plugins                 → Proxy
+    └── <name>.api          → публичный API плагина
 ```
 
 ##### Параметры
 
 | Поле | Тип | Описание |
 | --- | --- | --- |
-| `bus` *(обязательное)* | `EventBus` |  |
-| `game` *(обязательное)* | `VN` |  |
-| `player` *(обязательное)* | `Player` |  |
-| `blocks` *(обязательное)* | `BlockManager` |  |
+| `bus` *(обязательное)* | `EventBus` | Шина событий. |
+| `game` *(обязательное)* | `VN` | Ядро: выполняет узлы истории. |
+| `player` *(обязательное)* | `Player` | Плеер со слоями страницы. |
+| `blocks` *(обязательное)* | `BlockManager` | Менеджер визуальных блоков. |
+| `ast` *(необязательное)* | `AST` | Парсер сценария. Без него `api.ast.addCommand` выбрасывает ошибку. |
 
-<sub>Исходник: plugin-manager.js:20</sub>
+<sub>Исходник: plugin-manager.js:26</sub>
 
 <a id="pluginmanager-use"></a>
 
@@ -627,7 +813,7 @@ plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:215</sub>
+<sub>Исходник: plugin-manager.js:424</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -659,7 +845,7 @@ plugins.use(ChoicePlugin);
 plugins.remove('choice');
 ```
 
-<sub>Исходник: plugin-manager.js:334</sub>
+<sub>Исходник: plugin-manager.js:543</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -677,7 +863,7 @@ plugins.remove('choice');
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:400</sub>
+<sub>Исходник: plugin-manager.js:609</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -695,7 +881,7 @@ plugins.remove('choice');
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:410</sub>
+<sub>Исходник: plugin-manager.js:619</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -707,9 +893,474 @@ plugins.remove('choice');
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:420</sub>
+<sub>Исходник: plugin-manager.js:629</sub>
+
+## PluginAPI
+
+<a id="api-plugin"></a>
+
+### `api.plugin`
+
+*Свойство*
+
+Сведения о самом плагине.
+
+#### Свойства
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` | `string` | Имя плагина из манифеста. |
+
+<sub>Исходник: plugin-manager.js:166</sub>
+
+<a id="api-log"></a>
+
+### `api.log`
+
+*Группа*
+
+Сообщения в консоль с именем плагина: `[имя] сообщение`.
+Методы: info, warn, error.
+
+#### Примеры
+
+```js
+api.log.info('Плагин установлен');
+```
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`api.log.info(args)`](#api-log-info) |  |
+| [`api.log.warn(args)`](#api-log-warn) |  |
+| [`api.log.error(args)`](#api-log-error) |  |
+
+<sub>Исходник: plugin-manager.js:174</sub>
+
+<a id="api-log-info"></a>
+
+#### `api.log.info(args)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: plugin-manager.js:183</sub>
+
+<a id="api-log-warn"></a>
+
+#### `api.log.warn(args)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: plugin-manager.js:190</sub>
+
+<a id="api-log-error"></a>
+
+#### `api.log.error(args)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: plugin-manager.js:197</sub>
+
+<a id="api-events"></a>
+
+### `api.events`
+
+*Группа*
+
+Обёртка над EventBus. Подписки плагина снимаются автоматически
+при его удалении.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
+| [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
+
+<sub>Исходник: plugin-manager.js:205</sub>
+
+<a id="api-events-on"></a>
+
+#### `api.events.on(event, handler)`
+
+*Метод*
+
+Подписка на событие.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `event` *(обязательное)* | `string` | Имя события. |
+| `handler` *(обязательное)* | `function` | Обработчик. |
+
+##### Возвращает
+
+`function` — Функция отписки.
+
+##### Примеры
+
+```js
+api.events.on('story:loaded', (data) => {
+    api.log.info('Проект загружен', data.project);
+});
+```
+
+<sub>Исходник: plugin-manager.js:212</sub>
+
+<a id="api-events-emit"></a>
+
+#### `api.events.emit(event, payload)`
+
+*Метод*
+
+Эмит события.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `event` *(обязательное)* | `string` | Имя события. |
+| `payload` *(необязательное)* | `*` | Данные события. |
+
+<sub>Исходник: plugin-manager.js:232</sub>
+
+<a id="api-game"></a>
+
+### `api.game`
+
+*Группа*
+
+Фасад к VN и Player: регистрация типов узлов и работа со слоями.
+Типы узлов и слои плагина снимаются автоматически.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`api.game.getPluginLayer()`](#api-game-getpluginlayer) |  |
+| [`api.game.registerLayer(name, element)`](#api-game-registerlayer) |  |
+| [`api.game.registerNodeType(type, handler)`](#api-game-registernodetype) | Регистрирует обработчик типа узла сценария. context: { wait(options), resume(), goto(nodeId) }. `wait({ lock: true })` — ожидание, которо... |
+| [`api.game.show(name)`](#api-game-show) |  |
+| [`api.game.hide(name)`](#api-game-hide) |  |
+| [`api.game.isVisible(name)`](#api-game-isvisible) |  |
+
+<sub>Исходник: plugin-manager.js:242</sub>
+
+<a id="api-game-getpluginlayer"></a>
+
+#### `api.game.getPluginLayer()`
+
+*Метод*
+
+##### Возвращает
+
+`HTMLElement` — DOM-слой плагинов.
+
+<sub>Исходник: plugin-manager.js:249</sub>
+
+<a id="api-game-registerlayer"></a>
+
+#### `api.game.registerLayer(name, element)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+| `element` *(обязательное)* | `HTMLElement` | DOM-элемент. |
+
+##### Возвращает
+
+`function` — Функция, удаляющая слой.
+
+<sub>Исходник: plugin-manager.js:256</sub>
+
+<a id="api-game-registernodetype"></a>
+
+#### `api.game.registerNodeType(type, handler)`
+
+*Метод*
+
+Регистрирует обработчик типа узла сценария.
+context: { wait(options), resume(), goto(nodeId) }.
+`wait({ lock: true })` — ожидание, которое клик не пропускает.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Имя типа узла. |
+| `handler` *(обязательное)* | `function` | (node, context) => void |
+
+<sub>Исходник: plugin-manager.js:265</sub>
+
+<a id="api-game-show"></a>
+
+#### `api.game.show(name)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+<sub>Исходник: plugin-manager.js:280</sub>
+
+<a id="api-game-hide"></a>
+
+#### `api.game.hide(name)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+<sub>Исходник: plugin-manager.js:287</sub>
+
+<a id="api-game-isvisible"></a>
+
+#### `api.game.isVisible(name)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+##### Возвращает
+
+`boolean`
+
+<sub>Исходник: plugin-manager.js:294</sub>
+
+<a id="api-player"></a>
+
+### `api.player`
+
+*Группа*
+
+Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`api.player.getPluginLayer()`](#api-player-getpluginlayer) |  |
+| [`api.player.registerLayer(name, element)`](#api-player-registerlayer) |  |
+| [`api.player.show(name)`](#api-player-show) |  |
+| [`api.player.hide(name)`](#api-player-hide) |  |
+| [`api.player.isVisible(name)`](#api-player-isvisible) |  |
+
+<sub>Исходник: plugin-manager.js:303</sub>
+
+<a id="api-player-getpluginlayer"></a>
+
+#### `api.player.getPluginLayer()`
+
+*Метод*
+
+##### Возвращает
+
+`HTMLElement`
+
+<sub>Исходник: plugin-manager.js:309</sub>
+
+<a id="api-player-registerlayer"></a>
+
+#### `api.player.registerLayer(name, element)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+| `element` *(обязательное)* | `HTMLElement` | DOM-элемент. |
+
+##### Возвращает
+
+`function` — Функция, удаляющая слой.
+
+<sub>Исходник: plugin-manager.js:316</sub>
+
+<a id="api-player-show"></a>
+
+#### `api.player.show(name)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+<sub>Исходник: plugin-manager.js:325</sub>
+
+<a id="api-player-hide"></a>
+
+#### `api.player.hide(name)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+<sub>Исходник: plugin-manager.js:332</sub>
+
+<a id="api-player-isvisible"></a>
+
+#### `api.player.isVisible(name)`
+
+*Метод*
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+##### Возвращает
+
+`boolean`
+
+<sub>Исходник: plugin-manager.js:339</sub>
+
+<a id="api-blocks"></a>
+
+### `api.blocks`
+
+*Свойство · Тип: BlockManager*
+
+Менеджер блоков. Методы: create, get, getAll, getByType,
+getActiveByChannel, getCurrent, show, hide, remove.
+Блоки, созданные плагином, удаляются вместе с ним.
+`create(type, { replace: true })` сначала убирает блоки того же канала.
+
+<sub>Исходник: plugin-manager.js:348</sub>
+
+<a id="api-ast"></a>
+
+### `api.ast`
+
+*Группа*
+
+Доступ к парсеру сценария: плагин учит его распознавать
+свои строки текста. Команды плагина снимаются при его удалении.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`api.ast.addCommand(pattern, nodeType, handler)`](#api-ast-addcommand) | Регистрирует текстовую команду парсера. |
+
+<sub>Исходник: plugin-manager.js:359</sub>
+
+<a id="api-ast-addcommand"></a>
+
+#### `api.ast.addCommand(pattern, nodeType, handler)`
+
+*Метод*
+
+Регистрирует текстовую команду парсера.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `pattern` *(обязательное)* | `RegExp` | Регулярное выражение для строки сценария. |
+| `nodeType` *(обязательное)* | `string` | Тип узла, который создаёт команда. |
+| `handler` *(обязательное)* | `function` | (match, line, index, scene) => узел |
+
+##### Исключения
+
+- `Error` — Если PluginManager создан без парсера или такая команда уже зарегистрирована.
+
+##### Примеры
+
+```js
+api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
+    type: 'narration',
+    text: match[1].trim()
+}));
+```
+
+<sub>Исходник: plugin-manager.js:366</sub>
+
+<a id="api-plugins"></a>
+
+### `api.plugins`
+
+*Свойство*
+
+Proxy к API установленных плагинов.
+Доступ: `api.plugins.<name>.api`.
+Если плагин не установлен — null + warning в консоль.
+
+#### Примеры
+
+```js
+const state = api.plugins.state.api.get();
+api.plugins.state.api.set('health', 10);
+```
+
+<sub>Исходник: plugin-manager.js:395</sub>
 
 ## Plugins
+
+<a id="choiceplugin"></a>
+
+### `ChoicePlugin`
+
+*Класс*
+
+Узел `choice`: кнопки выбора с условными вариантами и переходом goto.
+Зависит от плагинов `state` и `conditions`.
+
+Для текстового сценария добавляет команду парсера:
+
+`CHOICE: Вопрос | Вариант 1 → метка1 | Вариант 2 → метка2`
+
+Вместо стрелки можно писать `->`. Вариант без стрелки создаётся
+без перехода: история просто продолжится со следующего узла.
+Условия в текстовой записи пока не поддерживаются.
+
+Пока выбор не сделан, клик по экрану историю не продолжает.
+
+<sub>Исходник: plugins/choice-plugin.js:1</sub>
 
 <a id="conditionsplugin"></a>
 
@@ -824,7 +1475,7 @@ const result =
     );
 ```
 
-<sub>Исходник: plugins/conditions-plugin.js:19</sub>
+<sub>Исходник: plugins/conditions-plugin.js:20</sub>
 
 ## StatePlugin
 
@@ -1134,10 +1785,16 @@ const result = validator.validateGotos();
 
 ## История изменений
 
-### 0.1.4 (2026-10-14)
+### 0.1.4 (2026-10-15)
 
-**Добавлено (8)**
+**Добавлено (40)**
 
+- `AST`
+- `AST.constructor`
+- `AST.addCommand`
+- `AST.removeCommand`
+- `AST.getCommands`
+- `AST.parse`
 - `BlockManager`
 - `BlockManager.create`
 - `VN.unregisterNodeType`
@@ -1145,15 +1802,38 @@ const result = validator.validateGotos();
 - `EventBus.on`
 - `EventBus.off`
 - `EventBus.emit`
-- `NotyPlugin`
-
-**Изменено (2)**
-
+- `localPluginLoader`
+- `normalizePluginRefs`
+- `orderPlugins`
 - `loadProjectPlugins`
+- `api.plugin`
+- `api.log`
+- `api.log.info`
+- `api.log.warn`
+- `api.log.error`
+- `api.ast`
+- `api.ast.addCommand`
+- `PluginRegistry`
+- `PluginRegistry.constructor`
+- `PluginRegistry.register`
+- `PluginRegistry.resolve`
+- `PluginRegistry.has`
+- `PluginRegistry.list`
+- `ChoicePlugin`
+- `NotyPlugin`
+- `TopLeftHUDPlugin`
+- `TopLeftHUDPlugin.set`
+- `TopLeftHUDPlugin.setTitle`
+- `TopLeftHUDPlugin.update`
+- `TopLeftHUDPlugin.show`
+- `TopLeftHUDPlugin.hide`
+- `Project`
+- `Project.getPlugins`
+
+**Изменено (18)**
+
+- `PluginManager`
 - `PluginManager.constructor`
-
-**Удалено (18)**
-
 - `api.events`
 - `api.events.on`
 - `api.events.emit`
@@ -1164,37 +1844,12 @@ const result = validator.validateGotos();
 - `api.game.show`
 - `api.game.hide`
 - `api.game.isVisible`
-- `api.player`
-- `api.player.getPluginLayer`
 - `api.player.registerLayer`
 - `api.player.show`
 - `api.player.hide`
 - `api.player.isVisible`
 - `api.blocks`
 - `api.plugins`
-
-### 0.1.3 (2026-10-13)
-
-**Добавлено (18)**
-
-- `localPluginLoader`
-- `normalizePluginRefs`
-- `orderPlugins`
-- `loadProjectPlugins`
-- `PluginRegistry`
-- `PluginRegistry.constructor`
-- `PluginRegistry.register`
-- `PluginRegistry.resolve`
-- `PluginRegistry.has`
-- `PluginRegistry.list`
-- `TopLeftHUDPlugin`
-- `TopLeftHUDPlugin.set`
-- `TopLeftHUDPlugin.setTitle`
-- `TopLeftHUDPlugin.update`
-- `TopLeftHUDPlugin.show`
-- `TopLeftHUDPlugin.hide`
-- `Project`
-- `Project.getPlugins`
 
 ### 0.1.2 (2026-10-08)
 

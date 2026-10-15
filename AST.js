@@ -1,16 +1,52 @@
+/**
+ * @class AST
+ * @apiGroup AST
+ *
+ * Парсер текста сценария в структуру сцен и узлов.
+ *
+ * Сам парсер умеет только делить текст на сцены (строка `# Название`).
+ * Остальные строки распознают команды, которые регистрируют плагины
+ * через `api.ast.addCommand`. Строка, которую не узнала ни одна команда,
+ * становится узлом `text`.
+ */
 export class AST {
-    // Используем Map для хранения команд: key -> { pattern, nodeType, handler }
+    // Команды хранятся по ключу-источнику регулярки: key -> { pattern, nodeType, handler }
     #commands = new Map();
 
+    static #keyOf(pattern) {
+        return `${pattern.source}/${pattern.flags}`;
+    }
+
+    /**
+     * @apiName AST.constructor
+     * @apiGroup AST
+     * Создаёт парсер без команд.
+     * @param {Object} [parameters] Настройки парсера (пока не используются).
+     */
     constructor(parameters = {}) {
         // parameters можно использовать для настроек парсера, если нужно
     }
 
     /**
+     * @apiName AST.addCommand
+     * @apiGroup AST
+     *
      * Регистрирует команду для парсера.
-     * @param {RegExp} pattern - Регулярное выражение для поиска строки.
-     * @param {string} nodeType - Тип узла, который создаст эта команда (например, 'dialogue', 'scene').
-     * @param {Function} handler - Функция, которая превращает совпавшую строку в AST-узел.
+     *
+     * @param {RegExp} pattern Регулярное выражение для поиска строки.
+     * @param {string} nodeType Тип узла, который создаст команда (например, dialogue).
+     * @param {function} handler Функция (match, line, index, scene), которая
+     * превращает совпавшую строку в узел или возвращает null, если строка не подошла.
+     * @returns {function} Функция, снимающая команду.
+     * @throws {Error} Если pattern не RegExp, handler не функция
+     * или команда с таким же регулярным выражением уже есть.
+     *
+     * @example
+     * parser.addCommand(/^\[([^\]]+)\]\s*(.*)$/, 'dialogue', (match, line, index) => ({
+     *     type: 'dialogue',
+     *     character: match[1],
+     *     text: match[2].trim()
+     * }));
      */
     addCommand(pattern, nodeType, handler) {
         if (!(pattern instanceof RegExp)) {
@@ -20,18 +56,58 @@ export class AST {
             throw new Error('Третий аргумент addCommand должен быть функцией-обработчиком');
         }
 
-        const key = pattern.source; // Используем источник регулярки как уникальный ключ
+        const key = AST.#keyOf(pattern); // источник регулярки и флаги — уникальный ключ
+
+        if (this.#commands.has(key)) {
+            throw new Error(
+                `Команда парсера ${pattern} уже зарегистрирована`
+            );
+        }
+
         this.#commands.set(key, { pattern, nodeType, handler });
+
+        return () => this.removeCommand(pattern);
     }
 
     /**
-     * Получает все зарегистрированные команды.
-     * Парсер будет перебирать их в цикле.
+     * @apiName AST.removeCommand
+     * @apiGroup AST
+     *
+     * Снимает команду парсера.
+     *
+     * @param {RegExp} pattern Регулярное выражение, с которым команда была добавлена.
+     * @returns {boolean} true, если команда была зарегистрирована.
+     */
+    removeCommand(pattern) {
+        return this.#commands.delete(AST.#keyOf(pattern));
+    }
+
+    /**
+     * @apiName AST.getCommands
+     * @apiGroup AST
+     *
+     * Возвращает зарегистрированные команды в порядке добавления.
+     * Парсер перебирает их в цикле.
+     *
+     * @returns {Object[]} Массив объектов { pattern, nodeType, handler }.
      */
     getCommands() {
         return Array.from(this.#commands.values());
     }
 
+    /**
+     * @apiName AST.parse
+     * @apiGroup AST
+     *
+     * Разбирает текст сценария.
+     *
+     * @param {string} source Текст сценария.
+     * @returns {Object} Объект { scenes }: массив сцен { id, name, nodes }.
+     *
+     * @example
+     * const result = parser.parse('# Сцена\n[Анна] Привет');
+     * // result.scenes[0].nodes[0].type === 'dialogue'
+     */
     parse(source) {
         const ast = { scenes: [] };
         const lines = source.split('\n');

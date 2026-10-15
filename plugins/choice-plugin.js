@@ -1,3 +1,20 @@
+/**
+ * @class ChoicePlugin
+ * @apiGroup Plugins
+ *
+ * Узел `choice`: кнопки выбора с условными вариантами и переходом goto.
+ * Зависит от плагинов `state` и `conditions`.
+ *
+ * Для текстового сценария добавляет команду парсера:
+ *
+ * `CHOICE: Вопрос | Вариант 1 → метка1 | Вариант 2 → метка2`
+ *
+ * Вместо стрелки можно писать `->`. Вариант без стрелки создаётся
+ * без перехода: история просто продолжится со следующего узла.
+ * Условия в текстовой записи пока не поддерживаются.
+ *
+ * Пока выбор не сделан, клик по экрану историю не продолжает.
+ */
 export const ChoicePlugin = {
     name: 'choice',
     version: '0.1.0',
@@ -5,6 +22,47 @@ export const ChoicePlugin = {
     dependencies: [ 'state', 'conditions' ],
     install(api) {
         let activeBlock = null;
+
+        // Текстовая запись выбора для парсера сценария.
+        api.ast.addCommand(
+            /^CHOICE:\s*(.+)$/,
+            'choice',
+            (match, originalLine, index) => {
+                const parts = match[1]
+                    .split('|')
+                    .map(part => part.trim())
+                    .filter(Boolean);
+
+                const [text, ...rawOptions] = parts;
+
+                if (rawOptions.length === 0) {
+                    api.log.warn(
+                        `CHOICE без вариантов, строка пропущена: ${originalLine}`
+                    );
+
+                    return null;
+                }
+
+                const options = rawOptions.map((raw, i) => {
+                    const found = raw.match(/^(.*?)\s*(?:→|->)\s*(\S+)$/);
+                    const variant = found
+                        ? { text: found[1], goto: found[2] }
+                        : { text: raw };
+
+                    return {
+                        id: `option_${i + 1}`,
+                        variants: [variant]
+                    };
+                });
+
+                return {
+                    _id: `node_${index}`,
+                    type: 'choice',
+                    text,
+                    options
+                };
+            }
+        );
 
 function resolveVariant(option, state) {
     for (const variant of option.variants ?? []) {
@@ -20,77 +78,6 @@ function resolveVariant(option, state) {
 
     return null;
 }
-
-        api.log.info('Choice plugin (parser + renderer) installed');
-
-    // Паттерн: CHOICE: Заголовок | Вариант → label | Вариант → label
-const choiceRegex = /^CHOICE:\s*(.+?)(\s*\|\s*(.+?)\s+→\s+([a-zA-Z0-9_]+))+$/i;
-
-api.ast.addCommand(
-    choiceRegex,
-    'choice',
-    (match, originalLine, index, scene) => {
-        // match[0] = вся строка
-        // match[1] = заголовок
-        // match[2] = последний найденный фрагмент "| Вариант → label" (регулярка так работает)
-        
-        const title = match[1].trim();
-        const options = [];
-
-        // Нам нужно распарсить все варианты. 
-        // Так как стандартная регулярка с + не даёт массив всех совпадений,
-        // используем простой split по разделителю "|"
-        
-        const parts = originalLine.replace(/^CHOICE:\s*/i, '').split(/\|/);
-        
-        parts.forEach((part, idx) => {
-            const trimmed = part.trim();
-            if (!trimmed) return;
-
-            // Пропускаем заголовок, если он первый, или обрабатываем его как первый вариант?
-            // Логичнее: первый элемент после CHOICE: — это заголовок, остальные — варианты.
-            if (idx === 0) {
-                // Заголовок уже есть в переменной title, но на всякий случай проверим
-                return; 
-            }
-
-            // Ищем паттерн "Текст → label" внутри части
-            const variantRegex = /^(.+?)\s+→\s+([a-zA-Z0-9_]+)$/;
-            const m = variantRegex.exec(trimmed);
-
-            if (m) {
-                const text = m[1].trim();
-                const goto = m[2].trim();
-
-                options.push({
-                    id: `opt_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                    variants: [
-                        {
-                            condition: null,
-                            text,
-                            goto
-                        }
-                    ]
-                });
-            } else {
-                console.warn(`[ChoicePlugin] Не удалось распарсить вариант в строке ${index}: "${trimmed}"`);
-            }
-        });
-
-        if (options.length === 0) {
-            console.warn(`[ChoicePlugin] В строке ${index} не найдено валидных вариантов выбора.`);
-            return null; // Или вернуть заглушку, чтобы не ломать сцену
-        }
-
-        return {
-            _id: `node_${index}`,
-            type: 'choice',
-            text: title, // Заголовок выбора
-            options
-        };
-    }
-);
-
 
         api.game.registerNodeType(
             'choice',

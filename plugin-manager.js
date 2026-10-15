@@ -1,34 +1,43 @@
 /**
- * @class PluginManager
- * @apiGroup PluginManager
- * Устанавливает плагины и предоставляет единый Plugin API
- * (`events`, `game`, `player`, `blocks`, `plugins`).
- */
-/**
  * Версия Plugin API, которую поддерживает движок. Плагин может указать
  * `apiVersion` в манифесте; несовпадение версии — ошибка установки.
  */
 export const PLUGIN_API_VERSION = 1;
 
+/**
+ * @class PluginManager
+ * @apiGroup PluginManager
+ * Устанавливает плагины и выдаёт каждому из них собственный Plugin API
+ * (`plugin`, `log`, `events`, `game`, `player`, `blocks`, `ast`, `plugins`).
+ *
+ * Всё, что плагин занял через свой `api` (подписки на события, слои,
+ * типы узлов, блоки, команды парсера), движок снимает сам при удалении
+ * плагина или при сбое его установки.
+ */
 export class PluginManager {
     #plugins = new Map();
     #bus;
     #game;
     #player;
     #blocks;
+    #ast;
     #pluginsProxy;
-    #parser;
+
     /**
      * @apiName constructor
      * @apiGroup PluginManager
      * Запоминает зависимости движка. Для каждого плагина при установке
-     * создаётся собственный `api`: всё, что плагин через него зарегистрировал
-     * (подписки на события, слои, типы узлов), движок снимает сам при удалении
-     * плагина или при сбое установки.
+     * создаётся собственный `api`, который передаётся в `install(api)`.
      *
      * Структура api:
      * ```
      * api
+     * ├── plugin
+     * │   └── name                → имя этого плагина
+     * ├── log
+     * │   ├── info(...args)
+     * │   ├── warn(...args)
+     * │   └── error(...args)
      * ├── events
      * │   ├── on(event, handler) → unsubscribe
      * │   └── emit(event, payload)
@@ -45,29 +54,32 @@ export class PluginManager {
      * │   ├── show(name)
      * │   ├── hide(name)
      * │   └── isVisible(name) → boolean
-     * ├── blocks          → BlockManager
-     * └── plugins         → Proxy
-     *     └── <name>.api  → публичный API плагина
+     * ├── blocks                  → BlockManager
+     * ├── ast
+     * │   └── addCommand(pattern, nodeType, handler)
+     * └── plugins                 → Proxy
+     *     └── <name>.api          → публичный API плагина
      * ```
      *
-     * @param {EventBus} bus
-     * @param {VN} game
-     * @param {Player} player
-     * @param {BlockManager} blocks
+     * @param {EventBus} bus Шина событий.
+     * @param {VN} game Ядро: выполняет узлы истории.
+     * @param {Player} player Плеер со слоями страницы.
+     * @param {BlockManager} blocks Менеджер визуальных блоков.
+     * @param {AST} [ast] Парсер сценария. Без него `api.ast.addCommand` выбрасывает ошибку.
      */
     constructor(
         bus,
         game,
         player,
         blocks,
-        // validator,
-        parser
+        ast
     ) {
         this.#bus = bus;
         this.#game = game;
         this.#player = player;
         this.#blocks = blocks;
-        this.#parser = parser;
+        this.#ast = ast ?? null;
+
         // Общий для всех плагинов доступ к публичным API друг друга.
         this.#pluginsProxy = new Proxy(
             {},
@@ -91,7 +103,6 @@ export class PluginManager {
         );
     }
 
-
     /**
      * Создаёт собственный api плагина и учёт его ресурсов.
      * Ресурсы записываются в `release` и снимаются в обратном порядке.
@@ -101,7 +112,9 @@ export class PluginManager {
         const bus = this.#bus;
         const game = this.#game;
         const player = this.#player;
-        const parser = this.#parser;
+        const ast = this.#ast;
+        const blocks = this.#blocks;
+
         const track = (fn) => {
             release.push(fn);
         };
@@ -115,7 +128,6 @@ export class PluginManager {
         };
 
         // Блоки, созданные плагином, удаляются вместе с ним.
-        const blocks = this.#blocks;
         const ownBlocks = new Set();
 
         const scopedBlocks = {
@@ -151,16 +163,64 @@ export class PluginManager {
         });
 
         const api = {
+            /**
+             * @apiName api.plugin
+             * @apiGroup PluginAPI
+             * Сведения о самом плагине.
+             * @property {string} name Имя плагина из манифеста.
+             */
             plugin: { name: pluginName },
 
-            // Сообщения в консоль с именем плагина.
+            /**
+             * @apiName api.log
+             * @apiGroup PluginAPI
+             * Сообщения в консоль с именем плагина: `[имя] сообщение`.
+             * Методы: info, warn, error.
+             * @example
+             * api.log.info('Плагин установлен');
+             */
             log: {
+                /**
+                 * @apiName api.log.info
+                 * @apiGroup PluginAPI
+                 * @param {*} args Что вывести.
+                 */
                 info: (...args) => console.log(`[${pluginName}]`, ...args),
+
+                /**
+                 * @apiName api.log.warn
+                 * @apiGroup PluginAPI
+                 * @param {*} args Что вывести.
+                 */
                 warn: (...args) => console.warn(`[${pluginName}]`, ...args),
+
+                /**
+                 * @apiName api.log.error
+                 * @apiGroup PluginAPI
+                 * @param {*} args Что вывести.
+                 */
                 error: (...args) => console.error(`[${pluginName}]`, ...args)
             },
 
+            /**
+             * @apiName api.events
+             * @apiGroup PluginAPI
+             * Обёртка над EventBus. Подписки плагина снимаются автоматически
+             * при его удалении.
+             */
             events: {
+                /**
+                 * @apiName api.events.on
+                 * @apiGroup PluginAPI
+                 * Подписка на событие.
+                 * @param {string} event Имя события.
+                 * @param {function} handler Обработчик.
+                 * @returns {function} Функция отписки.
+                 * @example
+                 * api.events.on('story:loaded', (data) => {
+                 *     api.log.info('Проект загружен', data.project);
+                 * });
+                 */
                 on: (event, handler) => {
                     const off = bus.on(event, handler);
 
@@ -168,41 +228,180 @@ export class PluginManager {
 
                     return off;
                 },
+
+                /**
+                 * @apiName api.events.emit
+                 * @apiGroup PluginAPI
+                 * Эмит события.
+                 * @param {string} event Имя события.
+                 * @param {*} [payload] Данные события.
+                 */
                 emit: (event, payload) => bus.emit(event, payload)
             },
 
+            /**
+             * @apiName api.game
+             * @apiGroup PluginAPI
+             * Фасад к VN и Player: регистрация типов узлов и работа со слоями.
+             * Типы узлов и слои плагина снимаются автоматически.
+             */
             game: {
+                /**
+                 * @apiName api.game.getPluginLayer
+                 * @apiGroup PluginAPI
+                 * @returns {HTMLElement} DOM-слой плагинов.
+                 */
                 getPluginLayer: () => player.getPluginLayer(),
+
+                /**
+                 * @apiName api.game.registerLayer
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 * @param {HTMLElement} element DOM-элемент.
+                 * @returns {function} Функция, удаляющая слой.
+                 */
                 registerLayer,
+
+                /**
+                 * @apiName api.game.registerNodeType
+                 * @apiGroup PluginAPI
+                 * Регистрирует обработчик типа узла сценария.
+                 * context: { wait(options), resume(), goto(nodeId) }.
+                 * `wait({ lock: true })` — ожидание, которое клик не пропускает.
+                 * @param {string} type Имя типа узла.
+                 * @param {function} handler (node, context) => void
+                 */
                 registerNodeType: (type, handler) => {
                     game.registerNodeType(type, handler);
 
                     track(() => game.unregisterNodeType?.(type));
                 },
+
+                /**
+                 * @apiName api.game.show
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 */
                 show: (name) => player.show(name),
+
+                /**
+                 * @apiName api.game.hide
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 */
                 hide: (name) => player.hide(name),
+
+                /**
+                 * @apiName api.game.isVisible
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 * @returns {boolean}
+                 */
                 isVisible: (name) => player.isVisible(name)
             },
 
+            /**
+             * @apiName api.player
+             * @apiGroup PluginAPI
+             * Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.
+             */
             player: {
+                /**
+                 * @apiName api.player.getPluginLayer
+                 * @apiGroup PluginAPI
+                 * @returns {HTMLElement}
+                 */
                 getPluginLayer: () => player.getPluginLayer(),
+
+                /**
+                 * @apiName api.player.registerLayer
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 * @param {HTMLElement} element DOM-элемент.
+                 * @returns {function} Функция, удаляющая слой.
+                 */
                 registerLayer,
+
+                /**
+                 * @apiName api.player.show
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 */
                 show: (name) => player.show(name),
+
+                /**
+                 * @apiName api.player.hide
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 */
                 hide: (name) => player.hide(name),
+
+                /**
+                 * @apiName api.player.isVisible
+                 * @apiGroup PluginAPI
+                 * @param {string} name Имя слоя.
+                 * @returns {boolean}
+                 */
                 isVisible: (name) => player.isVisible(name)
             },
-            ast: {
-                addCommand: (pattern,node,handler)=> {
-                    console.log(parser)
-                     if (!parser) {
-                        console.error(`[PluginManager] Ошибка: parser не передан в менеджер! Плагин "${pluginName}" не может зарегистрировать команду.`);
-                        return;
-                    }
-                        parser.addCommand(pattern,node,handler)
-                } 
-            },
+
+            /**
+             * @apiName api.blocks
+             * @apiGroup PluginAPI
+             * Менеджер блоков. Методы: create, get, getAll, getByType,
+             * getActiveByChannel, getCurrent, show, hide, remove.
+             * Блоки, созданные плагином, удаляются вместе с ним.
+             * `create(type, { replace: true })` сначала убирает блоки того же канала.
+             * @type {BlockManager}
+             */
             blocks: scopedBlocks,
 
+            /**
+             * @apiName api.ast
+             * @apiGroup PluginAPI
+             * Доступ к парсеру сценария: плагин учит его распознавать
+             * свои строки текста. Команды плагина снимаются при его удалении.
+             */
+            ast: {
+                /**
+                 * @apiName api.ast.addCommand
+                 * @apiGroup PluginAPI
+                 * Регистрирует текстовую команду парсера.
+                 * @param {RegExp} pattern Регулярное выражение для строки сценария.
+                 * @param {string} nodeType Тип узла, который создаёт команда.
+                 * @param {function} handler (match, line, index, scene) => узел
+                 * @throws {Error} Если PluginManager создан без парсера
+                 * или такая команда уже зарегистрирована.
+                 * @example
+                 * api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
+                 *     type: 'narration',
+                 *     text: match[1].trim()
+                 * }));
+                 */
+                addCommand: (pattern, nodeType, handler) => {
+                    if (!ast) {
+                        throw new Error(
+                            `PluginManager: плагин "${pluginName}" использует api.ast, ` +
+                            'но менеджер создан без парсера'
+                        );
+                    }
+
+                    ast.addCommand(pattern, nodeType, handler);
+
+                    track(() => ast.removeCommand?.(pattern));
+                }
+            },
+
+            /**
+             * @apiName api.plugins
+             * @apiGroup PluginAPI
+             * Proxy к API установленных плагинов.
+             * Доступ: `api.plugins.<name>.api`.
+             * Если плагин не установлен — null + warning в консоль.
+             * @example
+             * const state = api.plugins.state.api.get();
+             * api.plugins.state.api.set('health', 10);
+             */
             plugins: this.#pluginsProxy
         };
 
@@ -221,7 +420,6 @@ export class PluginManager {
 
         return { api, dispose };
     }
-
 
 /**
  * @apiName PluginManager.use
