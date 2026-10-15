@@ -1,6 +1,6 @@
 # VN Engine API
 
-**Версия 0.1.5** · Дата 2026-10-15 · 97 записей
+**Версия 0.1.5** · Дата 2026-10-15 · 133 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
@@ -16,6 +16,14 @@
 - **BlockManager**
   - [BlockManager](#blockmanager)
     - [BlockManager.create(type, options)](#blockmanager-create)
+    - [BlockManager.get(id)](#blockmanager-get)
+    - [BlockManager.getAll()](#blockmanager-getall)
+    - [BlockManager.getByType(type)](#blockmanager-getbytype)
+    - [BlockManager.getActiveByChannel(channel)](#blockmanager-getactivebychannel)
+    - [BlockManager.getCurrent(channel)](#blockmanager-getcurrent)
+    - [BlockManager.show(id)](#blockmanager-show)
+    - [BlockManager.hide(id)](#blockmanager-hide)
+    - [BlockManager.remove(id)](#blockmanager-remove)
 - **ProjectValidator**
   - [validateProjectScenes(scenes)](#validateprojectscenes)
   - [ProjectValidator](#projectvalidator)
@@ -28,7 +36,12 @@
     - [ProjectValidator.validate(project, context, options)](#projectvalidator-validate)
     - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - **VN**
-  - [VN.unregisterNodeType(type)](#vn-unregisternodetype)
+  - [VN](#vn)
+    - [VN.getBus()](#vn-getbus)
+    - [VN.registerNodeType(type, handler)](#vn-registernodetype)
+    - [VN.unregisterNodeType(type)](#vn-unregisternodetype)
+    - [VN.loadProject(project)](#vn-loadproject)
+    - [VN.next()](#vn-next)
 - **EventBus**
   - [EventBus](#eventbus)
     - [EventBus.on(type, handler)](#eventbus-on)
@@ -52,6 +65,13 @@
     - [Logger.info(args)](#logger-info)
     - [Logger.warn(args)](#logger-warn)
     - [Logger.error(args)](#logger-error)
+- **Player**
+  - [Player](#player)
+    - [Player.getPluginLayer()](#player-getpluginlayer)
+    - [Player.registerLayer(name, element)](#player-registerlayer)
+    - [Player.show(name)](#player-show)
+    - [Player.hide(name)](#player-hide)
+    - [Player.isVisible(name)](#player-isvisible)
 - **PluginLoader**
   - [normalizePluginRefs(refs)](#normalizepluginrefs)
   - [orderPlugins(plugins)](#orderplugins)
@@ -96,13 +116,23 @@
     - [api.validation.registerNodeRule(nodeType, rule)](#api-validation-registernoderule)
   - [api.plugins](#api-plugins)
 - **Plugins**
+  - [BackgroundPlugin](#backgroundplugin)
   - [ChoicePlugin](#choiceplugin)
   - [ConditionsPlugin](#conditionsplugin)
+  - [DialoguePlugin](#dialogueplugin)
+  - [NarrationPlugin](#narrationplugin)
   - [NotyPlugin](#notyplugin)
   - [StatePlugin](#stateplugin)
   - [TopLeftHUDPlugin](#toplefthudplugin)
+  - [WaitPlugin](#waitplugin)
 - **ConditionsPlugin**
   - [ConditionsPlugin.evaluate(condition, state)](#conditionsplugin-evaluate)
+- **NotyPlugin**
+  - [NotyPlugin.notify(message, options)](#notyplugin-notify)
+  - [NotyPlugin.success(message, title)](#notyplugin-success)
+  - [NotyPlugin.error(message, title)](#notyplugin-error)
+  - [NotyPlugin.warning(message, title)](#notyplugin-warning)
+  - [NotyPlugin.info(message, title)](#notyplugin-info)
 - **StatePlugin**
   - [StatePlugin.get()](#stateplugin-get)
   - [StatePlugin.getValue(name)](#stateplugin-getvalue)
@@ -118,6 +148,14 @@
 - **Project**
   - [Project](#project)
     - [Project.getPlugins()](#project-getplugins)
+    - [Project.getMetadata()](#project-getmetadata)
+    - [Project.getNode(id)](#project-getnode)
+    - [Project.getNextNode(nodeId)](#project-getnextnode)
+    - [Project.getSceneForNode(nodeId)](#project-getscenefornode)
+    - [Project.getScenes()](#project-getscenes)
+    - [Project.getScene(id)](#project-getscene)
+    - [Project.getConfig()](#project-getconfig)
+    - [Project.getAssets()](#project-getassets)
 - [История изменений](#changelog)
 
 ## AST
@@ -134,6 +172,19 @@
 Остальные строки распознают команды, которые регистрируют плагины
 через `api.ast.addCommand`. Строка, которую не узнала ни одна команда,
 становится узлом `text`.
+
+#### Примеры
+
+```js
+const parser = new AST();
+
+parser.addCommand(/^\/\/\s*(.*)$/, 'narration', (match) => ({
+    type: 'narration',
+    text: match[1].trim()
+}));
+
+const project = parser.parse('# Сцена\n// Тихая ночь.');
+```
 
 #### Содержимое
 
@@ -161,7 +212,14 @@
 | --- | --- | --- |
 | `parameters` *(необязательное)* | `Object` | Настройки парсера (пока не используются). |
 
-<sub>Исходник: AST.js:20</sub>
+##### Примеры
+
+```js
+const parser = new AST();
+parser.addCommand(/^!/, 'bang', () => ({ type: 'bang' }));
+```
+
+<sub>Исходник: AST.js:30</sub>
 
 <a id="ast-addcommand"></a>
 
@@ -197,7 +255,7 @@ parser.addCommand(/^\[([^\]]+)\]\s*(.*)$/, 'dialogue', (match, line, index) => (
 }));
 ```
 
-<sub>Исходник: AST.js:30</sub>
+<sub>Исходник: AST.js:44</sub>
 
 <a id="ast-removecommand"></a>
 
@@ -217,7 +275,15 @@ parser.addCommand(/^\[([^\]]+)\]\s*(.*)$/, 'dialogue', (match, line, index) => (
 
 `boolean` — true, если команда была зарегистрирована.
 
-<sub>Исходник: AST.js:72</sub>
+##### Примеры
+
+```js
+const pattern = /^!/;
+parser.addCommand(pattern, 'bang', () => ({ type: 'bang' }));
+parser.removeCommand(pattern); // true
+```
+
+<sub>Исходник: AST.js:86</sub>
 
 <a id="ast-getcommands"></a>
 
@@ -232,7 +298,15 @@ parser.addCommand(/^\[([^\]]+)\]\s*(.*)$/, 'dialogue', (match, line, index) => (
 
 `Object[]` — Массив объектов { pattern, nodeType, handler }.
 
-<sub>Исходник: AST.js:85</sub>
+##### Примеры
+
+```js
+for (const command of parser.getCommands()) {
+    console.log(command.nodeType, command.pattern);
+}
+```
+
+<sub>Исходник: AST.js:104</sub>
 
 <a id="ast-parse"></a>
 
@@ -259,7 +333,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 // result.scenes[0].nodes[0].type === 'dialogue'
 ```
 
-<sub>Исходник: AST.js:98</sub>
+<sub>Исходник: AST.js:122</sub>
 
 ## BlockManager
 
@@ -271,11 +345,31 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 
 Хранит визуальные блоки (диалог, выбор и т.п.) и размещает их в корневом элементе.
 
+#### Примеры
+
+```js
+const blocks = new BlockManager(document.getElementById('game'));
+
+const element = document.createElement('div');
+const block = blocks.create('note', { channel: 'overlay', element });
+
+blocks.hide(block.id);
+blocks.remove(block.id);
+```
+
 #### Содержимое
 
 | Имя | Описание |
 | --- | --- |
 | [`BlockManager.create(type, options)`](#blockmanager-create) | Создаёт блок и добавляет его элемент в корень. |
+| [`BlockManager.get(id)`](#blockmanager-get) | Возвращает блок по id. |
+| [`BlockManager.getAll()`](#blockmanager-getall) | Возвращает все существующие блоки в порядке создания. |
+| [`BlockManager.getByType(type)`](#blockmanager-getbytype) | Возвращает блоки одного типа. |
+| [`BlockManager.getActiveByChannel(channel)`](#blockmanager-getactivebychannel) | Возвращает видимые блоки канала. Скрытые блоки в результат не попадают. |
+| [`BlockManager.getCurrent(channel)`](#blockmanager-getcurrent) | Возвращает последний созданный блок канала. |
+| [`BlockManager.show(id)`](#blockmanager-show) | Показывает скрытый блок. Если блока нет, пишет предупреждение в консоль. |
+| [`BlockManager.hide(id)`](#blockmanager-hide) | Скрывает блок, не удаляя его. Если блока нет, пишет предупреждение в консоль. |
+| [`BlockManager.remove(id)`](#blockmanager-remove) | Удаляет блок вместе с его DOM-элементом. Если блока нет, пишет предупреждение в консоль. |
 
 <sub>Исходник: block-manager.js:5</sub>
 
@@ -302,7 +396,223 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 
 `Object` — Созданный блок.
 
-<sub>Исходник: block-manager.js:26</sub>
+##### Примеры
+
+```js
+const element = document.createElement('div');
+element.textContent = 'Привет';
+
+const block = blocks.create('hello', {
+    channel: 'overlay',
+    element,
+    data: { text: 'Привет' },
+    replace: true
+});
+
+console.log(block.id);
+```
+
+<sub>Исходник: block-manager.js:35</sub>
+
+<a id="blockmanager-get"></a>
+
+#### `BlockManager.get(id)`
+
+*Метод*
+
+Возвращает блок по id.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `id` *(обязательное)* | `string` | Id блока (например, `dialogue-1`). |
+
+##### Возвращает
+
+`Object` — Блок или null, если такого нет.
+
+##### Примеры
+
+```js
+const block = blocks.get('dialogue-1');
+if (block) {
+    console.log(block.state); // visible или hidden
+}
+```
+
+<sub>Исходник: block-manager.js:112</sub>
+
+<a id="blockmanager-getall"></a>
+
+#### `BlockManager.getAll()`
+
+*Метод*
+
+Возвращает все существующие блоки в порядке создания.
+
+##### Возвращает
+
+`Object[]` — Массив блоков.
+
+##### Примеры
+
+```js
+for (const block of blocks.getAll()) {
+    console.log(block.id, block.channel);
+}
+```
+
+<sub>Исходник: block-manager.js:131</sub>
+
+<a id="blockmanager-getbytype"></a>
+
+#### `BlockManager.getByType(type)`
+
+*Метод*
+
+Возвращает блоки одного типа.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Тип блока, например choice. |
+
+##### Возвращает
+
+`Object[]` — Массив блоков.
+
+##### Примеры
+
+```js
+const choices = blocks.getByType('choice');
+console.log(choices.length);
+```
+
+<sub>Исходник: block-manager.js:148</sub>
+
+<a id="blockmanager-getactivebychannel"></a>
+
+#### `BlockManager.getActiveByChannel(channel)`
+
+*Метод*
+
+Возвращает видимые блоки канала. Скрытые блоки в результат не попадают.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `channel` *(обязательное)* | `string` | Имя канала, например overlay. |
+
+##### Возвращает
+
+`Object[]` — Массив блоков.
+
+##### Примеры
+
+```js
+const visible = blocks.getActiveByChannel('overlay');
+```
+
+<sub>Исходник: block-manager.js:167</sub>
+
+<a id="blockmanager-getcurrent"></a>
+
+#### `BlockManager.getCurrent(channel)`
+
+*Метод*
+
+Возвращает последний созданный блок канала.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `channel` *(обязательное)* | `string` | Имя канала. |
+
+##### Возвращает
+
+`Object` — Блок или null, если в канале блоков нет.
+
+##### Примеры
+
+```js
+const current = blocks.getCurrent('dialogue');
+if (current) {
+    blocks.hide(current.id);
+}
+```
+
+<sub>Исходник: block-manager.js:187</sub>
+
+<a id="blockmanager-show"></a>
+
+#### `BlockManager.show(id)`
+
+*Метод*
+
+Показывает скрытый блок. Если блока нет, пишет предупреждение в консоль.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `id` *(обязательное)* | `string` | Id блока. |
+
+##### Примеры
+
+```js
+blocks.show('dialogue-1');
+```
+
+<sub>Исходник: block-manager.js:212</sub>
+
+<a id="blockmanager-hide"></a>
+
+#### `BlockManager.hide(id)`
+
+*Метод*
+
+Скрывает блок, не удаляя его. Если блока нет, пишет предупреждение в консоль.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `id` *(обязательное)* | `string` | Id блока. |
+
+##### Примеры
+
+```js
+blocks.hide('dialogue-1');
+```
+
+<sub>Исходник: block-manager.js:237</sub>
+
+<a id="blockmanager-remove"></a>
+
+#### `BlockManager.remove(id)`
+
+*Метод*
+
+Удаляет блок вместе с его DOM-элементом. Если блока нет, пишет предупреждение в консоль.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `id` *(обязательное)* | `string` | Id блока. |
+
+##### Примеры
+
+```js
+const block = blocks.create('note', { element });
+blocks.remove(block.id);
+```
+
+<sub>Исходник: block-manager.js:262</sub>
 
 ## ProjectValidator
 
@@ -392,6 +702,15 @@ if (!result.valid) {
 | --- | --- | --- |
 | `bus` *(необязательное)* | `EventBus` | Шина событий: валидатор шлёт validator:done. |
 
+##### Примеры
+
+```js
+const validator = new ProjectValidator(bus);
+bus.on('validator:done', (result) => {
+    console.log(result.valid, result.errors.length);
+});
+```
+
 <sub>Исходник: project-validator.js:41</sub>
 
 <a id="projectvalidator-register"></a>
@@ -428,7 +747,7 @@ validator.register({
 });
 ```
 
-<sub>Исходник: project-validator.js:97</sub>
+<sub>Исходник: project-validator.js:103</sub>
 
 <a id="projectvalidator-registernoderule"></a>
 
@@ -451,7 +770,31 @@ validator.register({
 
 `function` — Функция, снимающая правило.
 
-<sub>Исходник: project-validator.js:123</sub>
+##### Исключения
+
+- `TypeError` — Если тип узла не строка или пустой.
+
+##### Примеры
+
+```js
+validator.registerNodeRule('take', {
+    id: 'inventory:item',
+    plugin: 'inventory',
+    run(node) {
+        if (node.item) {
+            return [];
+        }
+
+        // path подставится сам: scenes[0].nodes[2]
+        return [{
+            code: 'take.no-item',
+            message: `У узла "${node.id}" не задан item`
+        }];
+    }
+});
+```
+
+<sub>Исходник: project-validator.js:129</sub>
 
 <a id="projectvalidator-unregister"></a>
 
@@ -471,7 +814,13 @@ validator.register({
 
 `boolean` — true, если проверка была зарегистрирована.
 
-<sub>Исходник: project-validator.js:145</sub>
+##### Примеры
+
+```js
+validator.unregister('inventory:items');
+```
+
+<sub>Исходник: project-validator.js:169</sub>
 
 <a id="projectvalidator-unregisterplugin"></a>
 
@@ -491,7 +840,14 @@ validator.register({
 
 `number` — Сколько проверок снято.
 
-<sub>Исходник: project-validator.js:158</sub>
+##### Примеры
+
+```js
+const removed = validator.unregisterPlugin('inventory');
+console.log(`Снято проверок: ${removed}`);
+```
+
+<sub>Исходник: project-validator.js:185</sub>
 
 <a id="projectvalidator-list"></a>
 
@@ -503,7 +859,15 @@ validator.register({
 
 `Object[]` — Зарегистрированные проверки: `{ id, plugin, kind }`.
 
-<sub>Исходник: project-validator.js:180</sub>
+##### Примеры
+
+```js
+for (const check of validator.list()) {
+    console.log(check.id, check.kind); // core:goto project
+}
+```
+
+<sub>Исходник: project-validator.js:211</sub>
 
 <a id="projectvalidator-validate"></a>
 
@@ -538,7 +902,7 @@ validator.register({
 const result = await validator.validate(project, { plugins: plugins.getManifests() });
 ```
 
-<sub>Исходник: project-validator.js:282</sub>
+<sub>Исходник: project-validator.js:318</sub>
 
 <a id="projectvalidator-validategotos"></a>
 
@@ -566,30 +930,157 @@ const validator = new ProjectValidator(project, bus);
 const result = validator.validateGotos();
 ```
 
-<sub>Исходник: project-validator.js:341</sub>
+<sub>Исходник: project-validator.js:377</sub>
 
 ## VN
 
+<a id="vn"></a>
+
+### `VN`
+
+*Класс*
+
+Ядро игры: проходит по узлам проекта и вызывает обработчики типов узлов,
+которые зарегистрировали плагины. Само ничего не рисует.
+
+Если обработчик узла бросает ошибку, история останавливается
+и приходит событие `story:error`.
+
+#### Примеры
+
+```js
+const game = new VN();
+
+game.registerNodeType('log', (node) => console.log(node.text));
+game.getBus().on('story:end', () => console.log('Конец'));
+game.loadProject(project);
+```
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`VN.getBus()`](#vn-getbus) | Возвращает шину событий игры. Через неё приходят события `story:loaded`, `node:start`, `story:end`, `story:error` и событие клика `click-... |
+| [`VN.registerNodeType(type, handler)`](#vn-registernodetype) | Регистрирует обработчик типа узла. Без `wait()` история сама идёт дальше, с `wait()` останавливается до `resume()` или клика. Плагинам уд... |
+| [`VN.unregisterNodeType(type)`](#vn-unregisternodetype) | Снимает обработчик типа узла. Нужен, чтобы плагин можно было удалить и поставить заново. |
+| [`VN.loadProject(project)`](#vn-loadproject) | Загружает проект, шлёт `story:loaded` и запускает историю с первого узла первой сцены. Плагины и проверку проекта нужно выполнить до этог... |
+| [`VN.next()`](#vn-next) | Выполняет текущий узел. Ничего не делает, пока история ждёт или остановлена ошибкой. Обычно вызывать не нужно: ядро идёт дальше само и по... |
+
+<sub>Исходник: core.js:6</sub>
+
+<a id="vn-getbus"></a>
+
+#### `VN.getBus()`
+
+*Метод*
+
+Возвращает шину событий игры. Через неё приходят события `story:loaded`, `node:start`, `story:end`, `story:error` и событие клика `click-game`.
+
+##### Возвращает
+
+`EventBus` — Шина событий.
+
+##### Примеры
+
+```js
+const bus = game.getBus();
+bus.on('story:end', () => console.log('Конец'));
+```
+
+<sub>Исходник: core.js:45</sub>
+
+<a id="vn-registernodetype"></a>
+
+#### `VN.registerNodeType(type, handler)`
+
+*Метод*
+
+Регистрирует обработчик типа узла. Без `wait()` история сама идёт дальше, с `wait()` останавливается до `resume()` или клика. Плагинам удобнее `api.game.registerNodeType`: он сам снимает тип при удалении плагина.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `type` *(обязательное)* | `string` | Имя типа узла. |
+| `handler` *(обязательное)* | `function` | Функция (node, context); context содержит wait(options), resume() и goto(nodeId). |
+
+##### Примеры
+
+```js
+game.registerNodeType('pause', (node, context) => {
+    context.wait();
+    setTimeout(() => context.resume(), node.ms);
+});
+```
+
+<sub>Исходник: core.js:61</sub>
+
 <a id="vn-unregisternodetype"></a>
 
-### `VN.unregisterNodeType(type)`
+#### `VN.unregisterNodeType(type)`
 
 *Метод*
 
 Снимает обработчик типа узла. Нужен, чтобы плагин можно было
 удалить и поставить заново.
 
-#### Параметры
+##### Параметры
 
 | Поле | Тип | Описание |
 | --- | --- | --- |
 | `type` *(обязательное)* | `string` | Имя типа узла. |
 
-#### Возвращает
+##### Возвращает
 
 `boolean` — true, если тип был зарегистрирован.
 
-<sub>Исходник: core.js:48</sub>
+##### Примеры
+
+```js
+game.registerNodeType('flash', () => {});
+game.unregisterNodeType('flash'); // true
+```
+
+<sub>Исходник: core.js:92</sub>
+
+<a id="vn-loadproject"></a>
+
+#### `VN.loadProject(project)`
+
+*Метод*
+
+Загружает проект, шлёт `story:loaded` и запускает историю с первого узла первой сцены. Плагины и проверку проекта нужно выполнить до этого вызова.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `project` *(обязательное)* | `Project` | Проект игры. |
+
+##### Примеры
+
+```js
+const project = new Project({ scenes });
+game.loadProject(project);
+```
+
+<sub>Исходник: core.js:110</sub>
+
+<a id="vn-next"></a>
+
+#### `VN.next()`
+
+*Метод*
+
+Выполняет текущий узел. Ничего не делает, пока история ждёт или остановлена ошибкой. Обычно вызывать не нужно: ядро идёт дальше само и по клику игрока.
+
+##### Примеры
+
+```js
+game.next();
+```
+
+<sub>Исходник: core.js:156</sub>
 
 ## EventBus
 
@@ -602,6 +1093,16 @@ const result = validator.validateGotos();
 Шина событий. Ошибка в одном подписчике не мешает остальным:
 она попадает в консоль и в событие `handler:error`
 с данными `{ event, error }`.
+
+#### Примеры
+
+```js
+const bus = new EventBus();
+
+const off = bus.on('hello', (name) => console.log('Привет,', name));
+bus.emit('hello', 'мир');
+off();
+```
 
 #### Содержимое
 
@@ -632,7 +1133,17 @@ const result = validator.validateGotos();
 
 `function` — Функция отписки.
 
-<sub>Исходник: events.js:16</sub>
+##### Примеры
+
+```js
+const off = bus.on('node:start', (node) => {
+    console.log('Начался узел', node.id);
+});
+
+off(); // отписка
+```
+
+<sub>Исходник: events.js:23</sub>
 
 <a id="eventbus-off"></a>
 
@@ -649,7 +1160,15 @@ const result = validator.validateGotos();
 | `type` *(обязательное)* | `string` | Имя события. |
 | `handler` *(обязательное)* | `function` | Ранее добавленный обработчик. |
 
-<sub>Исходник: events.js:36</sub>
+##### Примеры
+
+```js
+const handler = (node) => console.log(node.id);
+bus.on('node:start', handler);
+bus.off('node:start', handler);
+```
+
+<sub>Исходник: events.js:50</sub>
 
 <a id="eventbus-emit"></a>
 
@@ -666,7 +1185,13 @@ const result = validator.validateGotos();
 | `type` *(обязательное)* | `string` | Имя события. |
 | `payload` *(необязательное)* | `*` | Данные события. |
 
-<sub>Исходник: events.js:49</sub>
+##### Примеры
+
+```js
+bus.emit('my-plugin:ready', { version: 1 });
+```
+
+<sub>Исходник: events.js:68</sub>
 
 ## PluginRegistry
 
@@ -734,6 +1259,15 @@ const registry = new PluginRegistry({ loader: localPluginLoader });
 }
 ```
 
+#### Примеры
+
+```js
+const registry = new PluginRegistry({ loader: localPluginLoader });
+
+registry.register({ name: 'hello', install() {} });
+const plugin = await registry.resolve('choice');
+```
+
 #### Содержимое
 
 | Имя | Описание |
@@ -767,7 +1301,7 @@ const registry = new PluginRegistry({ loader: localPluginLoader });
 const registry = new PluginRegistry({ loader: localPluginLoader });
 ```
 
-<sub>Исходник: plugin-registry.js:35</sub>
+<sub>Исходник: plugin-registry.js:41</sub>
 
 <a id="pluginregistry-register"></a>
 
@@ -798,7 +1332,7 @@ const registry = new PluginRegistry();
 registry.register(StatePlugin).register(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-registry.js:61</sub>
+<sub>Исходник: plugin-registry.js:67</sub>
 
 <a id="pluginregistry-resolve"></a>
 
@@ -833,7 +1367,7 @@ registry.register(StatePlugin).register(ChoicePlugin);
 const plugin = await registry.resolve('choice');
 ```
 
-<sub>Исходник: plugin-registry.js:104</sub>
+<sub>Исходник: plugin-registry.js:110</sub>
 
 <a id="pluginregistry-has"></a>
 
@@ -852,7 +1386,15 @@ const plugin = await registry.resolve('choice');
 `boolean` — Есть ли плагин среди добавленных или
 уже загруженных
 
-<sub>Исходник: plugin-registry.js:203</sub>
+##### Примеры
+
+```js
+if (!registry.has('noty')) {
+    registry.register(NotyPlugin);
+}
+```
+
+<sub>Исходник: plugin-registry.js:209</sub>
 
 <a id="pluginregistry-list"></a>
 
@@ -864,7 +1406,13 @@ const plugin = await registry.resolve('choice');
 
 `string[]` — Имена добавленных и уже загруженных плагинов
 
-<sub>Исходник: plugin-registry.js:214</sub>
+##### Примеры
+
+```js
+console.log(registry.list()); // ['state', 'noty']
+```
+
+<sub>Исходник: plugin-registry.js:225</sub>
 
 ## Logger
 
@@ -919,6 +1467,13 @@ logger.setLevel('debug');
 | `options` *(необязательное)* | `Object` | Параметры: `level` (по умолчанию info) и `prefix`. |
 | `shared` *(необязательное)* | `Object` | Общее состояние уровня (используется методом child). |
 
+##### Примеры
+
+```js
+const log = new Logger({ level: 'warn', prefix: 'Моё' });
+log.warn('Что-то не так'); // [Моё] Что-то не так
+```
+
 <sub>Исходник: logger.js:33</sub>
 
 <a id="logger-setlevel"></a>
@@ -939,7 +1494,14 @@ logger.setLevel('debug');
 
 - `Error` — Если уровень неизвестен.
 
-<sub>Исходник: logger.js:51</sub>
+##### Примеры
+
+```js
+logger.setLevel('debug'); // показывать всё
+logger.setLevel('silent'); // ничего не показывать
+```
+
+<sub>Исходник: logger.js:55</sub>
 
 <a id="logger-getlevel"></a>
 
@@ -951,7 +1513,15 @@ logger.setLevel('debug');
 
 `string` — Текущий уровень.
 
-<sub>Исходник: logger.js:66</sub>
+##### Примеры
+
+```js
+if (logger.getLevel() === 'debug') {
+    console.log('Включён подробный режим');
+}
+```
+
+<sub>Исходник: logger.js:74</sub>
 
 <a id="logger-child"></a>
 
@@ -971,7 +1541,14 @@ logger.setLevel('debug');
 
 `Logger`
 
-<sub>Исходник: logger.js:75</sub>
+##### Примеры
+
+```js
+const log = logger.child('inventory');
+log.info('Готово'); // [inventory] Готово
+```
+
+<sub>Исходник: logger.js:88</sub>
 
 <a id="logger-debug"></a>
 
@@ -987,7 +1564,13 @@ logger.setLevel('debug');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: logger.js:96</sub>
+##### Примеры
+
+```js
+log.debug('Состояние', { health: 3 });
+```
+
+<sub>Исходник: logger.js:113</sub>
 
 <a id="logger-info"></a>
 
@@ -1003,7 +1586,13 @@ logger.setLevel('debug');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: logger.js:106</sub>
+##### Примеры
+
+```js
+log.info('Проект загружен');
+```
+
+<sub>Исходник: logger.js:126</sub>
 
 <a id="logger-warn"></a>
 
@@ -1019,7 +1608,13 @@ logger.setLevel('debug');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: logger.js:116</sub>
+##### Примеры
+
+```js
+log.warn('Узел не найден:', nodeId);
+```
+
+<sub>Исходник: logger.js:139</sub>
 
 <a id="logger-error"></a>
 
@@ -1035,7 +1630,170 @@ logger.setLevel('debug');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: logger.js:126</sub>
+##### Примеры
+
+```js
+log.error('Не удалось загрузить плагин', error);
+```
+
+<sub>Исходник: logger.js:152</sub>
+
+## Player
+
+<a id="player"></a>
+
+### `Player`
+
+*Класс*
+
+Отображение игры: хранит корневой элемент и именованные слои,
+которые плагины показывают и скрывают.
+
+#### Примеры
+
+```js
+const player = new Player(document.getElementById('game'));
+
+const hud = document.createElement('div');
+player.registerLayer('hud', hud);
+player.hide('hud');
+```
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`Player.getPluginLayer()`](#player-getpluginlayer) | Возвращает общий DOM-слой, в который плагины могут добавлять свои элементы. |
+| [`Player.registerLayer(name, element)`](#player-registerlayer) | Регистрирует именованный слой, которым потом можно управлять через show и hide. |
+| [`Player.show(name)`](#player-show) | Показывает слой. Если слоя нет, пишет предупреждение в консоль. |
+| [`Player.hide(name)`](#player-hide) | Скрывает слой. Если слоя нет, пишет предупреждение в консоль. |
+| [`Player.isVisible(name)`](#player-isvisible) | Проверяет, показан ли слой. |
+
+<sub>Исходник: player.js:5</sub>
+
+<a id="player-getpluginlayer"></a>
+
+#### `Player.getPluginLayer()`
+
+*Метод*
+
+Возвращает общий DOM-слой, в который плагины могут добавлять свои элементы.
+
+##### Возвращает
+
+`HTMLElement` — Слой плагинов.
+
+##### Примеры
+
+```js
+const layer = player.getPluginLayer();
+layer.appendChild(document.createElement('div'));
+```
+
+<sub>Исходник: player.js:44</sub>
+
+<a id="player-registerlayer"></a>
+
+#### `Player.registerLayer(name, element)`
+
+*Метод*
+
+Регистрирует именованный слой, которым потом можно управлять через show и hide.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Уникальное имя слоя. |
+| `element` *(обязательное)* | `HTMLElement` | DOM-элемент слоя. |
+
+##### Возвращает
+
+`function` — Функция, удаляющая слой.
+
+##### Примеры
+
+```js
+const hud = document.createElement('div');
+const remove = player.registerLayer('hud', hud);
+player.show('hud');
+
+remove(); // слой и его элемент удалены
+```
+
+<sub>Исходник: player.js:60</sub>
+
+<a id="player-show"></a>
+
+#### `Player.show(name)`
+
+*Метод*
+
+Показывает слой. Если слоя нет, пишет предупреждение в консоль.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+##### Примеры
+
+```js
+player.show('hud');
+```
+
+<sub>Исходник: player.js:98</sub>
+
+<a id="player-hide"></a>
+
+#### `Player.hide(name)`
+
+*Метод*
+
+Скрывает слой. Если слоя нет, пишет предупреждение в консоль.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+##### Примеры
+
+```js
+player.hide('hud');
+```
+
+<sub>Исходник: player.js:122</sub>
+
+<a id="player-isvisible"></a>
+
+#### `Player.isVisible(name)`
+
+*Метод*
+
+Проверяет, показан ли слой.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя слоя. |
+
+##### Возвращает
+
+`boolean` — true, если слой есть и не скрыт.
+
+##### Примеры
+
+```js
+if (!player.isVisible('hud')) {
+    player.show('hud');
+}
+```
+
+<sub>Исходник: player.js:146</sub>
 
 ## PluginLoader
 
@@ -1175,6 +1933,17 @@ if (report.failed.length === 0) {
 типы узлов, блоки, команды парсера, проверки валидатора), движок снимает сам при удалении
 плагина или при сбое его установки.
 
+#### Примеры
+
+```js
+const plugins = new PluginManager(bus, game, player, blocks, ast, validator);
+
+plugins.use(StatePlugin);
+plugins.has('state');   // true
+plugins.list();         // ['state']
+plugins.remove('state');
+```
+
 #### Содержимое
 
 | Имя | Описание |
@@ -1244,7 +2013,14 @@ api
 | `ast` *(необязательное)* | `AST` | Парсер сценария. Без него `api.ast.addCommand` выбрасывает ошибку. |
 | `validator` *(необязательное)* | `ProjectValidator` | Валидатор проекта. Без него `api.validation` выбрасывает ошибку. |
 
-<sub>Исходник: plugin-manager.js:49</sub>
+##### Примеры
+
+```js
+const plugins = new PluginManager(bus, game, player, blocks, ast, validator);
+plugins.use(StatePlugin);
+```
+
+<sub>Исходник: plugin-manager.js:57</sub>
 
 <a id="pluginmanager-use"></a>
 
@@ -1275,7 +2051,7 @@ plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:527</sub>
+<sub>Исходник: plugin-manager.js:716</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -1307,7 +2083,7 @@ plugins.use(ChoicePlugin);
 plugins.remove('choice');
 ```
 
-<sub>Исходник: plugin-manager.js:647</sub>
+<sub>Исходник: plugin-manager.js:836</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -1325,7 +2101,15 @@ plugins.remove('choice');
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:713</sub>
+##### Примеры
+
+```js
+if (!plugins.has('noty')) {
+    console.warn('Уведомления недоступны');
+}
+```
+
+<sub>Исходник: plugin-manager.js:902</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -1343,7 +2127,14 @@ plugins.remove('choice');
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:723</sub>
+##### Примеры
+
+```js
+const plugin = plugins.get('state');
+console.log(plugin.version);
+```
+
+<sub>Исходник: plugin-manager.js:916</sub>
 
 <a id="pluginmanager-getmanifests"></a>
 
@@ -1365,7 +2156,7 @@ plugins.remove('choice');
 const result = await validator.validate(project, { plugins: plugins.getManifests() });
 ```
 
-<sub>Исходник: plugin-manager.js:733</sub>
+<sub>Исходник: plugin-manager.js:929</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -1377,7 +2168,13 @@ const result = await validator.validate(project, { plugins: plugins.getManifests
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:757</sub>
+##### Примеры
+
+```js
+console.log(plugins.list()); // ['state', 'conditions', 'choice']
+```
+
+<sub>Исходник: plugin-manager.js:953</sub>
 
 ## PluginAPI
 
@@ -1395,7 +2192,13 @@ const result = await validator.validate(project, { plugins: plugins.getManifests
 | --- | --- | --- |
 | `name` | `string` | Имя плагина из манифеста. |
 
-<sub>Исходник: plugin-manager.js:198</sub>
+#### Примеры
+
+```js
+api.log.info('Я плагин', api.plugin.name);
+```
+
+<sub>Исходник: plugin-manager.js:210</sub>
 
 <a id="api-log"></a>
 
@@ -1421,7 +2224,7 @@ api.log.info('Плагин установлен');
 | [`api.log.warn(args)`](#api-log-warn) |  |
 | [`api.log.error(args)`](#api-log-error) |  |
 
-<sub>Исходник: plugin-manager.js:206</sub>
+<sub>Исходник: plugin-manager.js:220</sub>
 
 <a id="api-log-debug"></a>
 
@@ -1437,7 +2240,13 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:215</sub>
+##### Примеры
+
+```js
+api.log.debug('Подробности', { step: 1 });
+```
+
+<sub>Исходник: plugin-manager.js:229</sub>
 
 <a id="api-log-info"></a>
 
@@ -1451,7 +2260,13 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:223</sub>
+##### Примеры
+
+```js
+api.log.info('Плагин готов');
+```
+
+<sub>Исходник: plugin-manager.js:240</sub>
 
 <a id="api-log-warn"></a>
 
@@ -1465,7 +2280,13 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:230</sub>
+##### Примеры
+
+```js
+api.log.warn('Файл не найден, беру значение по умолчанию');
+```
+
+<sub>Исходник: plugin-manager.js:250</sub>
 
 <a id="api-log-error"></a>
 
@@ -1479,7 +2300,13 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:237</sub>
+##### Примеры
+
+```js
+api.log.error('Не удалось прочитать данные', error);
+```
+
+<sub>Исходник: plugin-manager.js:260</sub>
 
 <a id="api-events"></a>
 
@@ -1490,6 +2317,16 @@ api.log.info('Плагин установлен');
 Обёртка над EventBus. Подписки плагина снимаются автоматически
 при его удалении.
 
+#### Примеры
+
+```js
+const off = api.events.on('story:end', () => {
+    api.log.info('История закончилась');
+});
+
+api.events.emit('my-plugin:ready');
+```
+
 #### Содержимое
 
 | Имя | Описание |
@@ -1497,7 +2334,7 @@ api.log.info('Плагин установлен');
 | [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
 | [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
 
-<sub>Исходник: plugin-manager.js:245</sub>
+<sub>Исходник: plugin-manager.js:271</sub>
 
 <a id="api-events-on"></a>
 
@@ -1526,7 +2363,7 @@ api.events.on('story:loaded', (data) => {
 });
 ```
 
-<sub>Исходник: plugin-manager.js:252</sub>
+<sub>Исходник: plugin-manager.js:285</sub>
 
 <a id="api-events-emit"></a>
 
@@ -1543,7 +2380,13 @@ api.events.on('story:loaded', (data) => {
 | `event` *(обязательное)* | `string` | Имя события. |
 | `payload` *(необязательное)* | `*` | Данные события. |
 
-<sub>Исходник: plugin-manager.js:272</sub>
+##### Примеры
+
+```js
+api.events.emit('inventory:changed', { item: 'key', count: 1 });
+```
+
+<sub>Исходник: plugin-manager.js:305</sub>
 
 <a id="api-game"></a>
 
@@ -1553,6 +2396,13 @@ api.events.on('story:loaded', (data) => {
 
 Фасад к VN и Player: регистрация типов узлов и работа со слоями.
 Типы узлов и слои плагина снимаются автоматически.
+
+#### Примеры
+
+```js
+api.game.registerNodeType('flash', () => {});
+api.game.show('hud');
+```
 
 #### Содержимое
 
@@ -1565,7 +2415,7 @@ api.events.on('story:loaded', (data) => {
 | [`api.game.hide(name)`](#api-game-hide) |  |
 | [`api.game.isVisible(name)`](#api-game-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:282</sub>
+<sub>Исходник: plugin-manager.js:318</sub>
 
 <a id="api-game-getpluginlayer"></a>
 
@@ -1577,7 +2427,14 @@ api.events.on('story:loaded', (data) => {
 
 `HTMLElement` — DOM-слой плагинов.
 
-<sub>Исходник: plugin-manager.js:289</sub>
+##### Примеры
+
+```js
+const layer = api.game.getPluginLayer();
+layer.appendChild(document.createElement('div'));
+```
+
+<sub>Исходник: plugin-manager.js:329</sub>
 
 <a id="api-game-registerlayer"></a>
 
@@ -1596,7 +2453,15 @@ api.events.on('story:loaded', (data) => {
 
 `function` — Функция, удаляющая слой.
 
-<sub>Исходник: plugin-manager.js:296</sub>
+##### Примеры
+
+```js
+const hud = document.createElement('div');
+api.game.registerLayer('hud', hud);
+api.game.show('hud');
+```
+
+<sub>Исходник: plugin-manager.js:340</sub>
 
 <a id="api-game-registernodetype"></a>
 
@@ -1615,7 +2480,21 @@ context: { wait(options), resume(), goto(nodeId) }.
 | `type` *(обязательное)* | `string` | Имя типа узла. |
 | `handler` *(обязательное)* | `function` | (node, context) => void |
 
-<sub>Исходник: plugin-manager.js:305</sub>
+##### Примеры
+
+```js
+api.game.registerNodeType('flash', (node, context) => {
+    api.log.info('Вспышка', node.color);
+    // без wait() история сама перейдёт к следующему узлу
+});
+
+api.game.registerNodeType('pause', (node, context) => {
+    context.wait();                 // ждём клика игрока
+    setTimeout(() => context.resume(), node.ms);
+});
+```
+
+<sub>Исходник: plugin-manager.js:353</sub>
 
 <a id="api-game-show"></a>
 
@@ -1629,7 +2508,13 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:322</sub>
+##### Примеры
+
+```js
+api.game.show('hud');
+```
+
+<sub>Исходник: plugin-manager.js:380</sub>
 
 <a id="api-game-hide"></a>
 
@@ -1643,7 +2528,13 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:329</sub>
+##### Примеры
+
+```js
+api.game.hide('hud');
+```
+
+<sub>Исходник: plugin-manager.js:389</sub>
 
 <a id="api-game-isvisible"></a>
 
@@ -1661,7 +2552,15 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:336</sub>
+##### Примеры
+
+```js
+if (!api.game.isVisible('hud')) {
+    api.game.show('hud');
+}
+```
+
+<sub>Исходник: plugin-manager.js:398</sub>
 
 <a id="api-player"></a>
 
@@ -1670,6 +2569,13 @@ context: { wait(options), resume(), goto(nodeId) }.
 *Группа*
 
 Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.
+
+#### Примеры
+
+```js
+api.player.registerLayer('hud', document.createElement('div'));
+api.player.show('hud');
+```
 
 #### Содержимое
 
@@ -1681,7 +2587,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | [`api.player.hide(name)`](#api-player-hide) |  |
 | [`api.player.isVisible(name)`](#api-player-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:345</sub>
+<sub>Исходник: plugin-manager.js:411</sub>
 
 <a id="api-player-getpluginlayer"></a>
 
@@ -1693,7 +2599,13 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `HTMLElement`
 
-<sub>Исходник: plugin-manager.js:351</sub>
+##### Примеры
+
+```js
+const layer = api.player.getPluginLayer();
+```
+
+<sub>Исходник: plugin-manager.js:421</sub>
 
 <a id="api-player-registerlayer"></a>
 
@@ -1712,7 +2624,15 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `function` — Функция, удаляющая слой.
 
-<sub>Исходник: plugin-manager.js:358</sub>
+##### Примеры
+
+```js
+const box = document.createElement('div');
+const removeLayer = api.player.registerLayer('my-layer', box);
+// removeLayer() уберёт слой раньше, чем плагин будет удалён
+```
+
+<sub>Исходник: plugin-manager.js:431</sub>
 
 <a id="api-player-show"></a>
 
@@ -1726,7 +2646,13 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:367</sub>
+##### Примеры
+
+```js
+api.player.show('hud');
+```
+
+<sub>Исходник: plugin-manager.js:444</sub>
 
 <a id="api-player-hide"></a>
 
@@ -1740,7 +2666,13 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:374</sub>
+##### Примеры
+
+```js
+api.player.hide('hud');
+```
+
+<sub>Исходник: plugin-manager.js:454</sub>
 
 <a id="api-player-isvisible"></a>
 
@@ -1758,7 +2690,13 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:381</sub>
+##### Примеры
+
+```js
+const visible = api.player.isVisible('hud');
+```
+
+<sub>Исходник: plugin-manager.js:464</sub>
 
 <a id="api-blocks"></a>
 
@@ -1771,7 +2709,22 @@ getActiveByChannel, getCurrent, show, hide, remove.
 Блоки, созданные плагином, удаляются вместе с ним.
 `create(type, { replace: true })` сначала убирает блоки того же канала.
 
-<sub>Исходник: plugin-manager.js:390</sub>
+#### Примеры
+
+```js
+const element = document.createElement('div');
+element.textContent = 'Привет';
+
+const block = api.blocks.create('hello', {
+    channel: 'overlay',
+    element,
+    replace: true
+});
+
+api.blocks.remove(block.id);
+```
+
+<sub>Исходник: plugin-manager.js:476</sub>
 
 <a id="api-ast"></a>
 
@@ -1782,13 +2735,22 @@ getActiveByChannel, getCurrent, show, hide, remove.
 Доступ к парсеру сценария: плагин учит его распознавать
 свои строки текста. Команды плагина снимаются при его удалении.
 
+#### Примеры
+
+```js
+api.ast.addCommand(/^!(.*)$/, 'shout', (match) => ({
+    type: 'shout',
+    text: match[1].trim()
+}));
+```
+
 #### Содержимое
 
 | Имя | Описание |
 | --- | --- |
 | [`api.ast.addCommand(pattern, nodeType, handler)`](#api-ast-addcommand) | Регистрирует текстовую команду парсера. |
 
-<sub>Исходник: plugin-manager.js:401</sub>
+<sub>Исходник: plugin-manager.js:498</sub>
 
 <a id="api-ast-addcommand"></a>
 
@@ -1819,7 +2781,7 @@ api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
 }));
 ```
 
-<sub>Исходник: plugin-manager.js:408</sub>
+<sub>Исходник: plugin-manager.js:511</sub>
 
 <a id="api-validation"></a>
 
@@ -1831,6 +2793,40 @@ api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
 Проверки плагина снимаются при его удалении, а их id получают
 префикс `имя-плагина:`.
 
+Есть два вида проверок: `register` смотрит на проект целиком,
+`registerNodeRule` вызывается для каждого узла своего типа.
+Запись `{ code, message, path }` описывает одну проблему.
+Ошибка (`error`) не даёт запустить историю, предупреждение
+(`warning`) только показывается игроку и разработчику.
+
+#### Примеры
+
+```js
+install(api) {
+    // Проверка узлов типа take
+    api.validation.registerNodeRule('take', {
+        id: 'item',
+        run(node) {
+            return node.item
+                ? []
+                : [{ code: 'take.no-item', message: 'У узла take нет item' }];
+        }
+    });
+
+    // Проверка проекта целиком, только предупреждение
+    api.validation.register({
+        id: 'items-config',
+        severity: 'warning',
+        run(project) {
+            const items = project.getConfig().items;
+            return items
+                ? []
+                : [{ code: 'inventory.no-items', message: 'В config нет items' }];
+        }
+    });
+}
+```
+
 #### Содержимое
 
 | Имя | Описание |
@@ -1838,7 +2834,7 @@ api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
 | [`api.validation.register(check)`](#api-validation-register) | Регистрирует проверку всего проекта. |
 | [`api.validation.registerNodeRule(nodeType, rule)`](#api-validation-registernoderule) | Регистрирует правило для узлов одного типа: валидатор сам обходит проект и вызывает `run(node, context)`. |
 
-<sub>Исходник: plugin-manager.js:437</sub>
+<sub>Исходник: plugin-manager.js:540</sub>
 
 <a id="api-validation-register"></a>
 
@@ -1848,11 +2844,21 @@ api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
 
 Регистрирует проверку всего проекта.
 
+Функция `run(project, context)` возвращает массив записей
+(пустой массив значит «всё хорошо»). В записи можно указать
+`code`, `message`, `path` и `severity`; имя плагина валидатор
+подставит сам. `context.plugins` содержит манифесты
+установленных плагинов.
+
+Проверка выполняется до запуска истории, поэтому читать нужно
+данные проекта (`project.getConfig()`, `project.getScenes()`),
+а не runtime-состояние плагинов: оно ещё пустое.
+
 ##### Параметры
 
 | Поле | Тип | Описание |
 | --- | --- | --- |
-| `check` *(обязательное)* | `Object` | Проверка: `id`, `run(project, context)`, необязательные `severity` (error или warning) и `timeout`. Функция run возвращает массив записей `{ code, message, path }`. |
+| `check` *(обязательное)* | `Object` | Проверка: `id`, `run(project, context)`, необязательные `severity` (error или warning, по умолчанию error) и `timeout` в миллисекундах (по умолчанию 3000). |
 
 ##### Возвращает
 
@@ -1866,14 +2872,30 @@ api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
 
 ```js
 api.validation.register({
-    id: 'items',
+    id: 'unknown-variables',
+    severity: 'warning',
     run(project) {
-        return [];
+        const known = project.getConfig().state ?? {};
+        const found = [];
+
+        for (const scene of project.getScenes()) {
+            for (const node of scene.nodes ?? []) {
+                if (node.variable && !(node.variable in known)) {
+                    found.push({
+                        code: 'my.unknown-variable',
+                        message: `Переменной "${node.variable}" нет в config.state`,
+                        path: `узел "${node.id}"`
+                    });
+                }
+            }
+        }
+
+        return found;
     }
 });
 ```
 
-<sub>Исходник: plugin-manager.js:445</sub>
+<sub>Исходник: plugin-manager.js:578</sub>
 
 <a id="api-validation-registernoderule"></a>
 
@@ -1883,6 +2905,10 @@ api.validation.register({
 
 Регистрирует правило для узлов одного типа: валидатор сам
 обходит проект и вызывает `run(node, context)`.
+
+Путь к узлу (`scenes[0].nodes[2]`) подставляется в запись сам,
+если плагин не указал свой `path`. Возвращать нужно массив
+записей; пустой массив значит «узел в порядке».
 
 ##### Параметры
 
@@ -1899,7 +2925,35 @@ api.validation.register({
 
 - `Error` — Если PluginManager создан без валидатора.
 
-<sub>Исходник: plugin-manager.js:474</sub>
+##### Примеры
+
+```js
+api.validation.registerNodeRule('take', {
+    id: 'item',
+    run(node, context) {
+        const found = [];
+
+        if (!node.item) {
+            found.push({
+                code: 'take.no-item',
+                message: `У узла "${node.id}" не задан item`
+            });
+        }
+
+        if (node.count !== undefined && node.count < 1) {
+            found.push({
+                code: 'take.bad-count',
+                message: 'count должен быть больше нуля',
+                severity: 'warning'
+            });
+        }
+
+        return found;
+    }
+});
+```
+
+<sub>Исходник: plugin-manager.js:634</sub>
 
 <a id="api-plugins"></a>
 
@@ -1918,9 +2972,31 @@ const state = api.plugins.state.api.get();
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugin-manager.js:498</sub>
+<sub>Исходник: plugin-manager.js:687</sub>
 
 ## Plugins
+
+<a id="backgroundplugin"></a>
+
+### `BackgroundPlugin`
+
+*Класс*
+
+Узел `background`: ставит картинку фоном страницы.
+Допустимы относительные пути, http(s) и data:image. Небезопасный
+адрес останавливает историю с ошибкой.
+
+#### Примеры
+
+```js
+{
+    id: 'bg1',
+    type: 'background',
+    image: 'assets/forest.jpg'
+}
+```
+
+<sub>Исходник: plugins/background-plugin.js:15</sub>
 
 <a id="choiceplugin"></a>
 
@@ -1941,6 +3017,38 @@ api.plugins.state.api.set('health', 10);
 
 Пока выбор не сделан, клик по экрану историю не продолжает.
 
+Проверки проекта (через `api.validation`):
+
+- `choice.no-options` (ошибка): у узла нет `options`;
+- `choice.no-variants` (ошибка): у варианта нет `variants`;
+- `choice.unknown-variable` (предупреждение): условие ссылается
+  на переменную, которой нет в `config.state`.
+
+#### Примеры
+
+```js
+// Узел в проекте
+{
+    id: 'ask',
+    type: 'choice',
+    text: 'Куда пойдём?',
+    options: [
+        { id: 'o1', variants: [{ text: 'В подвал', goto: 'basement' }] },
+        {
+            id: 'o2',
+            variants: [{
+                text: 'Открыть дверь',
+                goto: 'door',
+                condition: { variable: 'health', operator: '>', value: 1 }
+            }]
+        }
+    ]
+}
+
+// Строка в текстовом сценарии
+CHOICE: Куда пойдём? | В подвал → basement | На улицу -> street
+```
+
 <sub>Исходник: plugins/choice-plugin.js:1</sub>
 
 <a id="conditionsplugin"></a>
@@ -1957,7 +3065,60 @@ api.plugins.state.api.set('health', 10);
 Поддерживаемые операторы:
 ==, !=, >, >=, <, <=
 
+#### Примеры
+
+```js
+const { evaluate } = api.plugins.conditions.api;
+
+evaluate({ variable: 'health', operator: '>=', value: 3 }, { health: 3 }); // true
+```
+
 <sub>Исходник: plugins/conditions-plugin.js:1</sub>
+
+<a id="dialogueplugin"></a>
+
+### `DialoguePlugin`
+
+*Класс*
+
+Узел `dialogue`: реплика персонажа. История ждёт клика игрока.
+
+Для текстового сценария добавляет команду парсера `[Имя] Текст`.
+
+#### Примеры
+
+```js
+// Узел в проекте
+{ id: 'd1', type: 'dialogue', character: 'Анна', text: 'Привет!' }
+
+// Строка в текстовом сценарии
+[Анна] Привет!
+```
+
+<sub>Исходник: plugins/dialogue-plugin.js:1</sub>
+
+<a id="narrationplugin"></a>
+
+### `NarrationPlugin`
+
+*Класс*
+
+Узел `narration`: текст от автора без имени персонажа.
+История ждёт клика игрока.
+
+Для текстового сценария добавляет команду парсера `// Текст`.
+
+#### Примеры
+
+```js
+// Узел в проекте
+{ id: 'n1', type: 'narration', text: 'Тихая ночь.' }
+
+// Строка в текстовом сценарии
+// Тихая ночь.
+```
+
+<sub>Исходник: plugins/narration-plugin.js:1</sub>
 
 <a id="notyplugin"></a>
 
@@ -1974,6 +3135,13 @@ api.plugins.state.api.set('health', 10);
 
 Публичный API: `api.plugins.noty.api`
 (`notify`, `success`, `error`, `warning`, `info`).
+
+#### Примеры
+
+```js
+api.plugins.noty.api.success('Сохранено');
+api.plugins.noty.api.notify('Привет', { type: 'info', duration: 2000 });
+```
 
 <sub>Исходник: plugins/noty-plugin.js:1</sub>
 
@@ -1994,6 +3162,16 @@ Runtime-состояние изменяется через публичный AP
 
 `api.plugins.state.api`
 
+#### Примеры
+
+```js
+const state = api.plugins.state.api;
+
+state.set('health', 3);
+state.update({ gold: 10 });
+state.get(); // { health: 3, gold: 10 }
+```
+
 <sub>Исходник: plugins/state-plugin.js:1</sub>
 
 <a id="toplefthudplugin"></a>
@@ -2013,7 +3191,34 @@ Runtime-состояние изменяется через публичный AP
 Плагин зависит от `state`: он должен быть установлен раньше,
 чтобы состояние уже было готово к моменту события `story:loaded`.
 
+#### Примеры
+
+```js
+const hud = api.plugins['top-left-hud'].api;
+
+hud.setTitle('Герой');
+hud.update({ health: 3, gold: 10 });
+```
+
 <sub>Исходник: plugins/top-left-hud-plugin.js:1</sub>
+
+<a id="waitplugin"></a>
+
+### `WaitPlugin`
+
+*Класс*
+
+Узел `wait`: пауза в миллисекундах с полосой прогресса.
+Игрок может пропустить паузу кликом. Работает после узла,
+который создаёт блок в канале `content` (dialogue или narration).
+
+#### Примеры
+
+```js
+{ id: 'w1', type: 'wait', duration: 2000 }
+```
+
+<sub>Исходник: plugins/wait-plugin.js:1</sub>
 
 ## ConditionsPlugin
 
@@ -2056,7 +3261,128 @@ const result =
     );
 ```
 
-<sub>Исходник: plugins/conditions-plugin.js:20</sub>
+<sub>Исходник: plugins/conditions-plugin.js:25</sub>
+
+## NotyPlugin
+
+<a id="notyplugin-notify"></a>
+
+### `NotyPlugin.notify(message, options)`
+
+*Метод*
+
+Показывает уведомление.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `message` *(обязательное)* | `string` | Текст уведомления. |
+| `options` *(необязательное)* | `Object` | Параметры: `type` (success, error, warning или info), `title` и `duration` в миллисекундах (0 — не закрывать само). |
+
+#### Примеры
+
+```js
+api.plugins.noty.api.notify('Игра сохранена', {
+    type: 'success',
+    title: 'Сохранение',
+    duration: 2000
+});
+```
+
+<sub>Исходник: plugins/noty-plugin.js:213</sub>
+
+<a id="notyplugin-success"></a>
+
+### `NotyPlugin.success(message, title)`
+
+*Метод*
+
+Уведомление об успехе.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `message` *(обязательное)* | `string` | Текст уведомления. |
+| `title` *(необязательное)* | `string` | Заголовок (по умолчанию «Успешно»). |
+
+#### Примеры
+
+```js
+api.plugins.noty.api.success('Предмет получен');
+```
+
+<sub>Исходник: plugins/noty-plugin.js:232</sub>
+
+<a id="notyplugin-error"></a>
+
+### `NotyPlugin.error(message, title)`
+
+*Метод*
+
+Уведомление об ошибке (закрывается через 5 секунд).
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `message` *(обязательное)* | `string` | Текст уведомления. |
+| `title` *(необязательное)* | `string` | Заголовок (по умолчанию «Ошибка»). |
+
+#### Примеры
+
+```js
+api.plugins.noty.api.error('Не удалось загрузить файл');
+```
+
+<sub>Исходник: plugins/noty-plugin.js:247</sub>
+
+<a id="notyplugin-warning"></a>
+
+### `NotyPlugin.warning(message, title)`
+
+*Метод*
+
+Предупреждающее уведомление.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `message` *(обязательное)* | `string` | Текст уведомления. |
+| `title` *(необязательное)* | `string` | Заголовок (по умолчанию «Внимание»). |
+
+#### Примеры
+
+```js
+api.plugins.noty.api.warning('Здоровье почти на нуле');
+```
+
+<sub>Исходник: plugins/noty-plugin.js:262</sub>
+
+<a id="notyplugin-info"></a>
+
+### `NotyPlugin.info(message, title)`
+
+*Метод*
+
+Информационное уведомление.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `message` *(обязательное)* | `string` | Текст уведомления. |
+| `title` *(необязательное)* | `string` | Заголовок (по умолчанию «Информация»). |
+
+#### Примеры
+
+```js
+api.plugins.noty.api.info('Новая глава');
+```
+
+<sub>Исходник: plugins/noty-plugin.js:277</sub>
 
 ## StatePlugin
 
@@ -2079,7 +3405,7 @@ const state = api.plugins.state.api.get();
 console.log(state.health);
 ```
 
-<sub>Исходник: plugins/state-plugin.js:24</sub>
+<sub>Исходник: plugins/state-plugin.js:31</sub>
 
 <a id="stateplugin-getvalue"></a>
 
@@ -2106,7 +3432,7 @@ const health =
     api.plugins.state.api.getValue('health');
 ```
 
-<sub>Исходник: plugins/state-plugin.js:40</sub>
+<sub>Исходник: plugins/state-plugin.js:47</sub>
 
 <a id="stateplugin-set"></a>
 
@@ -2129,7 +3455,7 @@ const health =
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugins/state-plugin.js:57</sub>
+<sub>Исходник: plugins/state-plugin.js:64</sub>
 
 <a id="stateplugin-update"></a>
 
@@ -2154,7 +3480,7 @@ api.plugins.state.api.update({
 });
 ```
 
-<sub>Исходник: plugins/state-plugin.js:73</sub>
+<sub>Исходник: plugins/state-plugin.js:80</sub>
 
 <a id="stateplugin-storyloaded"></a>
 
@@ -2165,7 +3491,15 @@ api.plugins.state.api.update({
 Инициализирует runtime-состояние из конфигурации проекта
 после загрузки истории.
 
-<sub>Исходник: plugins/state-plugin.js:91</sub>
+#### Примеры
+
+```js
+// Срабатывает само. После загрузки проекта:
+// config: { state: { health: 3 } }
+api.plugins.state.api.getValue('health'); // 3
+```
+
+<sub>Исходник: plugins/state-plugin.js:98</sub>
 
 ## TopLeftHUDPlugin
 
@@ -2190,7 +3524,7 @@ api.plugins.state.api.update({
 api.plugins['top-left-hud'].api.set('gold', 50);
 ```
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:123</sub>
+<sub>Исходник: plugins/top-left-hud-plugin.js:129</sub>
 
 <a id="toplefthudplugin-settitle"></a>
 
@@ -2206,7 +3540,13 @@ api.plugins['top-left-hud'].api.set('gold', 50);
 | --- | --- | --- |
 | `title` *(обязательное)* | `string` | Новый заголовок. |
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:140</sub>
+#### Примеры
+
+```js
+api.plugins['top-left-hud'].api.setTitle('Статус героя');
+```
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:146</sub>
 
 <a id="toplefthudplugin-update"></a>
 
@@ -2228,7 +3568,7 @@ api.plugins['top-left-hud'].api.set('gold', 50);
 api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
 ```
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:153</sub>
+<sub>Исходник: plugins/top-left-hud-plugin.js:162</sub>
 
 <a id="toplefthudplugin-show"></a>
 
@@ -2238,7 +3578,13 @@ api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
 
 Показывает панель.
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:169</sub>
+#### Примеры
+
+```js
+api.plugins['top-left-hud'].api.show();
+```
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:178</sub>
 
 <a id="toplefthudplugin-hide"></a>
 
@@ -2248,7 +3594,13 @@ api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
 
 Скрывает панель.
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:179</sub>
+#### Примеры
+
+```js
+api.plugins['top-left-hud'].api.hide();
+```
+
+<sub>Исходник: plugins/top-left-hud-plugin.js:191</sub>
 
 ## Project
 
@@ -2261,11 +3613,34 @@ api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
 Единый источник данных игры: сцены, узлы, конфигурация,
 ресурсы и список плагинов, которые нужны проекту.
 
+#### Примеры
+
+```js
+const project = new Project({
+    plugins: ['state', 'dialogue'],
+    config: { state: { health: 3 } },
+    scenes: [{
+        id: 'scene-1',
+        nodes: [{ id: 'a', type: 'dialogue', character: 'Анна', text: 'Привет!' }]
+    }]
+});
+
+project.getNode('a');
+```
+
 #### Содержимое
 
 | Имя | Описание |
 | --- | --- |
 | [`Project.getPlugins()`](#project-getplugins) | Возвращает плагины, которые объявлены в проекте. Элемент списка — имя плагина или объект `{ name, version }`. Сами плагины устанавливает ... |
+| [`Project.getMetadata()`](#project-getmetadata) | Возвращает описание проекта (название, автор и т.п.). |
+| [`Project.getNode(id)`](#project-getnode) | Ищет узел по id во всех сценах. |
+| [`Project.getNextNode(nodeId)`](#project-getnextnode) | Возвращает узел, который идёт следом за указанным в той же сцене. |
+| [`Project.getSceneForNode(nodeId)`](#project-getscenefornode) | Находит сцену, в которой лежит узел. |
+| [`Project.getScenes()`](#project-getscenes) | Возвращает все сцены проекта. |
+| [`Project.getScene(id)`](#project-getscene) | Возвращает сцену по id. |
+| [`Project.getConfig()`](#project-getconfig) | Возвращает настройки проекта. Здесь лежит, например, начальное состояние игры в `config.state`. |
+| [`Project.getAssets()`](#project-getassets) | Возвращает ресурсы проекта (картинки, звуки и т.п.). |
 
 <sub>Исходник: project.js:1</sub>
 
@@ -2293,7 +3668,199 @@ const project = new Project({
 project.getPlugins();
 ```
 
-<sub>Исходник: project.js:23</sub>
+<sub>Исходник: project.js:35</sub>
+
+<a id="project-getmetadata"></a>
+
+#### `Project.getMetadata()`
+
+*Метод*
+
+Возвращает описание проекта (название, автор и т.п.).
+
+##### Возвращает
+
+`Object` — Метаданные; пустой объект, если не заданы.
+
+##### Примеры
+
+```js
+const project = new Project({ metadata: { title: 'Демо' } });
+project.getMetadata().title; // 'Демо'
+```
+
+<sub>Исходник: project.js:56</sub>
+
+<a id="project-getnode"></a>
+
+#### `Project.getNode(id)`
+
+*Метод*
+
+Ищет узел по id во всех сценах.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `id` *(обязательное)* | `string` | Id узла. |
+
+##### Возвращает
+
+`Object` — Узел или null.
+
+##### Примеры
+
+```js
+const node = project.getNode('intro');
+if (!node) {
+    console.warn('Узла нет');
+}
+```
+
+<sub>Исходник: project.js:71</sub>
+
+<a id="project-getnextnode"></a>
+
+#### `Project.getNextNode(nodeId)`
+
+*Метод*
+
+Возвращает узел, который идёт следом за указанным в той же сцене.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `nodeId` *(обязательное)* | `string` | Id текущего узла. |
+
+##### Возвращает
+
+`Object` — Следующий узел или null, если узел последний.
+
+##### Примеры
+
+```js
+const next = project.getNextNode('intro');
+```
+
+<sub>Исходник: project.js:99</sub>
+
+<a id="project-getscenefornode"></a>
+
+#### `Project.getSceneForNode(nodeId)`
+
+*Метод*
+
+Находит сцену, в которой лежит узел.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `nodeId` *(обязательное)* | `string` | Id узла. |
+
+##### Возвращает
+
+`Object` — Сцена или null.
+
+##### Примеры
+
+```js
+const scene = project.getSceneForNode('intro');
+console.log(scene?.id);
+```
+
+<sub>Исходник: project.js:128</sub>
+
+<a id="project-getscenes"></a>
+
+#### `Project.getScenes()`
+
+*Метод*
+
+Возвращает все сцены проекта.
+
+##### Возвращает
+
+`Object[]` — Массив сцен `{ id, nodes }`.
+
+##### Примеры
+
+```js
+for (const scene of project.getScenes()) {
+    console.log(scene.id, scene.nodes.length);
+}
+```
+
+<sub>Исходник: project.js:148</sub>
+
+<a id="project-getscene"></a>
+
+#### `Project.getScene(id)`
+
+*Метод*
+
+Возвращает сцену по id.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `id` *(обязательное)* | `string` | Id сцены. |
+
+##### Возвращает
+
+`Object` — Сцена или null.
+
+##### Примеры
+
+```js
+const scene = project.getScene('scene-1');
+```
+
+<sub>Исходник: project.js:165</sub>
+
+<a id="project-getconfig"></a>
+
+#### `Project.getConfig()`
+
+*Метод*
+
+Возвращает настройки проекта. Здесь лежит, например, начальное состояние игры в `config.state`.
+
+##### Возвращает
+
+`Object` — Конфигурация; пустой объект, если не задана.
+
+##### Примеры
+
+```js
+const project = new Project({ config: { state: { health: 3 } } });
+project.getConfig().state.health; // 3
+```
+
+<sub>Исходник: project.js:183</sub>
+
+<a id="project-getassets"></a>
+
+#### `Project.getAssets()`
+
+*Метод*
+
+Возвращает ресурсы проекта (картинки, звуки и т.п.).
+
+##### Возвращает
+
+`Object` — Ресурсы; пустой объект, если не заданы.
+
+##### Примеры
+
+```js
+const assets = project.getAssets();
+```
+
+<sub>Исходник: project.js:199</sub>
 
 <a id="changelog"></a>
 
@@ -2301,28 +3868,120 @@ project.getPlugins();
 
 ### 0.1.5 (2026-10-15)
 
-**Добавлено (11)**
+**Добавлено (47)**
 
+- `BlockManager.get`
+- `BlockManager.getAll`
+- `BlockManager.getByType`
+- `BlockManager.getActiveByChannel`
+- `BlockManager.getCurrent`
+- `BlockManager.show`
+- `BlockManager.hide`
+- `BlockManager.remove`
 - `validateProjectScenes`
+- `VN`
+- `VN.getBus`
+- `VN.registerNodeType`
+- `VN.loadProject`
+- `VN.next`
+- `Player`
+- `Player.getPluginLayer`
+- `Player.registerLayer`
+- `Player.show`
+- `Player.hide`
+- `Player.isVisible`
 - `api.validation`
 - `api.validation.register`
 - `api.validation.registerNodeRule`
 - `PluginManager.getManifests`
+- `BackgroundPlugin`
+- `DialoguePlugin`
+- `NarrationPlugin`
+- `NotyPlugin.notify`
+- `NotyPlugin.success`
+- `NotyPlugin.error`
+- `NotyPlugin.warning`
+- `NotyPlugin.info`
+- `WaitPlugin`
 - `ProjectValidator.register`
 - `ProjectValidator.registerNodeRule`
 - `ProjectValidator.unregister`
 - `ProjectValidator.unregisterPlugin`
 - `ProjectValidator.list`
 - `ProjectValidator.validate`
+- `Project.getMetadata`
+- `Project.getNode`
+- `Project.getNextNode`
+- `Project.getSceneForNode`
+- `Project.getScenes`
+- `Project.getScene`
+- `Project.getConfig`
+- `Project.getAssets`
 
-**Изменено (6)**
+**Изменено (62)**
 
+- `AST`
+- `AST.constructor`
+- `AST.removeCommand`
+- `AST.getCommands`
+- `BlockManager`
+- `BlockManager.create`
+- `VN.unregisterNodeType`
+- `EventBus`
+- `EventBus.on`
+- `EventBus.off`
+- `EventBus.emit`
+- `Logger.constructor`
+- `Logger.setLevel`
+- `Logger.getLevel`
+- `Logger.child`
+- `Logger.debug`
+- `Logger.info`
+- `Logger.warn`
+- `Logger.error`
 - `PluginManager`
 - `PluginManager.constructor`
+- `api.plugin`
+- `api.log.debug`
+- `api.log.info`
+- `api.log.warn`
+- `api.log.error`
+- `api.events`
+- `api.events.emit`
+- `api.game`
+- `api.game.getPluginLayer`
+- `api.game.registerLayer`
+- `api.game.registerNodeType`
+- `api.game.show`
+- `api.game.hide`
+- `api.game.isVisible`
+- `api.player`
+- `api.player.getPluginLayer`
+- `api.player.registerLayer`
+- `api.player.show`
+- `api.player.hide`
+- `api.player.isVisible`
+- `api.blocks`
+- `api.ast`
+- `PluginManager.has`
+- `PluginManager.get`
+- `PluginManager.list`
+- `PluginRegistry`
+- `PluginRegistry.has`
+- `PluginRegistry.list`
+- `ChoicePlugin`
+- `ConditionsPlugin`
 - `NotyPlugin`
+- `StatePlugin`
+- `StatePlugin.storyLoaded`
+- `TopLeftHUDPlugin`
+- `TopLeftHUDPlugin.setTitle`
+- `TopLeftHUDPlugin.show`
+- `TopLeftHUDPlugin.hide`
 - `ProjectValidator`
 - `ProjectValidator.constructor`
 - `ProjectValidator.validateGotos`
+- `Project`
 
 ### 0.1.4 (2026-10-14)
 

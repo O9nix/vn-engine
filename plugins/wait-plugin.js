@@ -1,3 +1,14 @@
+/**
+ * @class WaitPlugin
+ * @apiGroup Plugins
+ *
+ * Узел `wait`: пауза в миллисекундах с полосой прогресса.
+ * Игрок может пропустить паузу кликом. Работает после узла,
+ * который создаёт блок в канале `content` (dialogue или narration).
+ *
+ * @example
+ * { id: 'w1', type: 'wait', duration: 2000 }
+ */
 export const WaitPlugin = {
     name: 'wait',
     version: '0.1.0',

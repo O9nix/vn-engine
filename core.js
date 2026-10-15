@@ -3,6 +3,23 @@ import { logger } from './logger.js';
 
 const log = logger.child('VN');
 
+/**
+ * @class VN
+ * @apiGroup VN
+ *
+ * Ядро игры: проходит по узлам проекта и вызывает обработчики типов узлов,
+ * которые зарегистрировали плагины. Само ничего не рисует.
+ *
+ * Если обработчик узла бросает ошибку, история останавливается
+ * и приходит событие `story:error`.
+ *
+ * @example
+ * const game = new VN();
+ *
+ * game.registerNodeType('log', (node) => console.log(node.text));
+ * game.getBus().on('story:end', () => console.log('Конец'));
+ * game.loadProject(project);
+ */
 export class VN {
     #bus = new EventBus();
 
@@ -25,10 +42,37 @@ export class VN {
         });
     }
 
+    /**
+     * @apiName VN.getBus
+     * @apiGroup VN
+     *
+     * Возвращает шину событий игры. Через неё приходят события `story:loaded`, `node:start`, `story:end`, `story:error` и событие клика `click-game`.
+     *
+     * @returns {EventBus} Шина событий.
+     *
+     * @example
+     * const bus = game.getBus();
+     * bus.on('story:end', () => console.log('Конец'));
+     */
     getBus() {
         return this.#bus;
     }
 
+    /**
+     * @apiName VN.registerNodeType
+     * @apiGroup VN
+     *
+     * Регистрирует обработчик типа узла. Без `wait()` история сама идёт дальше, с `wait()` останавливается до `resume()` или клика. Плагинам удобнее `api.game.registerNodeType`: он сам снимает тип при удалении плагина.
+     *
+     * @param {string} type Имя типа узла.
+     * @param {function} handler Функция (node, context); context содержит wait(options), resume() и goto(nodeId).
+     *
+     * @example
+     * game.registerNodeType('pause', (node, context) => {
+     *     context.wait();
+     *     setTimeout(() => context.resume(), node.ms);
+     * });
+     */
     registerNodeType(type, handler) {
         if (this.#nodeTypes.has(type)) {
             throw new Error(
@@ -54,11 +98,27 @@ export class VN {
      *
      * @param {string} type Имя типа узла.
      * @returns {boolean} true, если тип был зарегистрирован.
+     *
+     * @example
+     * game.registerNodeType('flash', () => {});
+     * game.unregisterNodeType('flash'); // true
      */
     unregisterNodeType(type) {
         return this.#nodeTypes.delete(type);
     }
 
+    /**
+     * @apiName VN.loadProject
+     * @apiGroup VN
+     *
+     * Загружает проект, шлёт `story:loaded` и запускает историю с первого узла первой сцены. Плагины и проверку проекта нужно выполнить до этого вызова.
+     *
+     * @param {Project} project Проект игры.
+     *
+     * @example
+     * const project = new Project({ scenes });
+     * game.loadProject(project);
+     */
     loadProject(project) {
         this.#project = project;
         this.#currentNodeId = null;
@@ -93,6 +153,16 @@ export class VN {
         this.next();
     }
 
+    /**
+     * @apiName VN.next
+     * @apiGroup VN
+     *
+     * Выполняет текущий узел. Ничего не делает, пока история ждёт или остановлена ошибкой. Обычно вызывать не нужно: ядро идёт дальше само и по клику игрока.
+     *
+     *
+     * @example
+     * game.next();
+     */
     next() {
         if (this.#isWaiting || this.#failed) {
             return;

@@ -1,3 +1,19 @@
+/**
+ * @class NarrationPlugin
+ * @apiGroup Plugins
+ *
+ * Узел `narration`: текст от автора без имени персонажа.
+ * История ждёт клика игрока.
+ *
+ * Для текстового сценария добавляет команду парсера `// Текст`.
+ *
+ * @example
+ * // Узел в проекте
+ * { id: 'n1', type: 'narration', text: 'Тихая ночь.' }
+ *
+ * // Строка в текстовом сценарии
+ * // Тихая ночь.
+ */
 export const NarrationPlugin = {
     name: 'narration',
     version: '0.1.0',

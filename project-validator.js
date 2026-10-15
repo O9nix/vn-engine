@@ -47,6 +47,12 @@ export class ProjectValidator {
      * вместе с методом validateGotos().
      *
      * @param {EventBus} [bus] Шина событий: валидатор шлёт validator:done.
+     *
+     * @example
+     * const validator = new ProjectValidator(bus);
+     * bus.on('validator:done', (result) => {
+     *     console.log(result.valid, result.errors.length);
+     * });
      */
     constructor(first, second) {
         if (typeof first?.getScenes === 'function') {
@@ -131,6 +137,24 @@ export class ProjectValidator {
      * @param {string} nodeType Тип узла, например choice.
      * @param {Object} rule Правило: те же поля, что у register().
      * @returns {function} Функция, снимающая правило.
+     * @throws {TypeError} Если тип узла не строка или пустой.
+     *
+     * @example
+     * validator.registerNodeRule('take', {
+     *     id: 'inventory:item',
+     *     plugin: 'inventory',
+     *     run(node) {
+     *         if (node.item) {
+     *             return [];
+     *         }
+     *
+     *         // path подставится сам: scenes[0].nodes[2]
+     *         return [{
+     *             code: 'take.no-item',
+     *             message: `У узла "${node.id}" не задан item`
+     *         }];
+     *     }
+     * });
      */
     registerNodeRule(nodeType, rule) {
         if (typeof nodeType !== 'string' || !nodeType) {
@@ -150,6 +174,9 @@ export class ProjectValidator {
      *
      * @param {string} id Id проверки.
      * @returns {boolean} true, если проверка была зарегистрирована.
+     *
+     * @example
+     * validator.unregister('inventory:items');
      */
     unregister(id) {
         return this.#checks.delete(id);
@@ -163,6 +190,10 @@ export class ProjectValidator {
      *
      * @param {string} plugin Имя плагина.
      * @returns {number} Сколько проверок снято.
+     *
+     * @example
+     * const removed = validator.unregisterPlugin('inventory');
+     * console.log(`Снято проверок: ${removed}`);
      */
     unregisterPlugin(plugin) {
         let removed = 0;
@@ -182,6 +213,11 @@ export class ProjectValidator {
      * @apiGroup ProjectValidator
      *
      * @returns {Object[]} Зарегистрированные проверки: `{ id, plugin, kind }`.
+     *
+     * @example
+     * for (const check of validator.list()) {
+     *     console.log(check.id, check.kind); // core:goto project
+     * }
      */
     list() {
         return [...this.#checks.values()].map(

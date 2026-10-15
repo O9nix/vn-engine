@@ -1,3 +1,18 @@
+/**
+ * @class DialoguePlugin
+ * @apiGroup Plugins
+ *
+ * Узел `dialogue`: реплика персонажа. История ждёт клика игрока.
+ *
+ * Для текстового сценария добавляет команду парсера `[Имя] Текст`.
+ *
+ * @example
+ * // Узел в проекте
+ * { id: 'd1', type: 'dialogue', character: 'Анна', text: 'Привет!' }
+ *
+ * // Строка в текстовом сценарии
+ * [Анна] Привет!
+ */
 export const DialoguePlugin = {
     name: 'dialogue',
     version: '0.1.0',

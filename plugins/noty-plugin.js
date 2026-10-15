@@ -11,6 +11,10 @@
  *
  * Публичный API: `api.plugins.noty.api`
  * (`notify`, `success`, `error`, `warning`, `info`).
+ *
+ * @example
+ * api.plugins.noty.api.success('Сохранено');
+ * api.plugins.noty.api.notify('Привет', { type: 'info', duration: 2000 });
  */
 export const NotyPlugin = {
     name: 'noty',
@@ -206,13 +210,82 @@ export const NotyPlugin = {
 
         return {
             api: {
+                /**
+                 * @apiName NotyPlugin.notify
+                 * @apiGroup NotyPlugin
+                 *
+                 * Показывает уведомление.
+                 *
+                 * @param {string} message Текст уведомления.
+                 * @param {Object} [options] Параметры: `type` (success, error, warning
+                 * или info), `title` и `duration` в миллисекундах (0 — не закрывать само).
+                 *
+                 * @example
+                 * api.plugins.noty.api.notify('Игра сохранена', {
+                 *     type: 'success',
+                 *     title: 'Сохранение',
+                 *     duration: 2000
+                 * });
+                 */
                 notify: (message, options = {}) => createNotification(message, options),
+
+                /**
+                 * @apiName NotyPlugin.success
+                 * @apiGroup NotyPlugin
+                 *
+                 * Уведомление об успехе.
+                 *
+                 * @param {string} message Текст уведомления.
+                 * @param {string} [title] Заголовок (по умолчанию «Успешно»).
+                 *
+                 * @example
+                 * api.plugins.noty.api.success('Предмет получен');
+                 */
                 success: (message, title = 'Успешно') =>
                     createNotification(message, { type: 'success', title }),
+
+                /**
+                 * @apiName NotyPlugin.error
+                 * @apiGroup NotyPlugin
+                 *
+                 * Уведомление об ошибке (закрывается через 5 секунд).
+                 *
+                 * @param {string} message Текст уведомления.
+                 * @param {string} [title] Заголовок (по умолчанию «Ошибка»).
+                 *
+                 * @example
+                 * api.plugins.noty.api.error('Не удалось загрузить файл');
+                 */
                 error: (message, title = 'Ошибка') =>
                     createNotification(message, { type: 'error', title, duration: 5000 }),
+
+                /**
+                 * @apiName NotyPlugin.warning
+                 * @apiGroup NotyPlugin
+                 *
+                 * Предупреждающее уведомление.
+                 *
+                 * @param {string} message Текст уведомления.
+                 * @param {string} [title] Заголовок (по умолчанию «Внимание»).
+                 *
+                 * @example
+                 * api.plugins.noty.api.warning('Здоровье почти на нуле');
+                 */
                 warning: (message, title = 'Внимание') =>
                     createNotification(message, { type: 'warning', title }),
+
+                /**
+                 * @apiName NotyPlugin.info
+                 * @apiGroup NotyPlugin
+                 *
+                 * Информационное уведомление.
+                 *
+                 * @param {string} message Текст уведомления.
+                 * @param {string} [title] Заголовок (по умолчанию «Информация»).
+                 *
+                 * @example
+                 * api.plugins.noty.api.info('Новая глава');
+                 */
                 info: (message, title = 'Информация') =>
                     createNotification(message, { type: 'info', title })
             },

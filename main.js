@@ -89,7 +89,7 @@ const project = new Project({
                                    
                                     text: 'Пойдём домой',
 
-                                    goto: 'home'
+                                    goto: 'home1'
                                 }
                             ]
                         }

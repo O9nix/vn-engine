@@ -9,6 +9,13 @@ const log = logger.child('EventBus');
  * Шина событий. Ошибка в одном подписчике не мешает остальным:
  * она попадает в консоль и в событие `handler:error`
  * с данными `{ event, error }`.
+ *
+ * @example
+ * const bus = new EventBus();
+ *
+ * const off = bus.on('hello', (name) => console.log('Привет,', name));
+ * bus.emit('hello', 'мир');
+ * off();
  */
 export class EventBus {
     #listeners = new Map();
@@ -22,6 +29,13 @@ export class EventBus {
      * @param {string} type Имя события.
      * @param {function} handler Обработчик.
      * @returns {function} Функция отписки.
+     *
+     * @example
+     * const off = bus.on('node:start', (node) => {
+     *     console.log('Начался узел', node.id);
+     * });
+     *
+     * off(); // отписка
      */
     on(type, handler) {
         if (!this.#listeners.has(type)) {
@@ -41,6 +55,11 @@ export class EventBus {
      *
      * @param {string} type Имя события.
      * @param {function} handler Ранее добавленный обработчик.
+     *
+     * @example
+     * const handler = (node) => console.log(node.id);
+     * bus.on('node:start', handler);
+     * bus.off('node:start', handler);
      */
     off(type, handler) {
         this.#listeners.get(type)?.delete(handler);
@@ -54,6 +73,9 @@ export class EventBus {
      *
      * @param {string} type Имя события.
      * @param {*} [payload] Данные события.
+     *
+     * @example
+     * bus.emit('my-plugin:ready', { version: 1 });
      */
     emit(type, payload) {
         // Копия: подписчики могут отписываться во время вызова.

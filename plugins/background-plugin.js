@@ -12,6 +12,21 @@ function isSafeImageUrl(value) {
     return !/^[a-z][a-z0-9+.-]*:/i.test(value);
 }
 
+/**
+ * @class BackgroundPlugin
+ * @apiGroup Plugins
+ *
+ * Узел `background`: ставит картинку фоном страницы.
+ * Допустимы относительные пути, http(s) и data:image. Небезопасный
+ * адрес останавливает историю с ошибкой.
+ *
+ * @example
+ * {
+ *     id: 'bg1',
+ *     type: 'background',
+ *     image: 'assets/forest.jpg'
+ * }
+ */
 export const BackgroundPlugin = {
     name: 'background',
     version: '0.1.0',

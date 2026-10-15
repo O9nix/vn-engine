@@ -12,6 +12,12 @@
  *
  * Плагин зависит от `state`: он должен быть установлен раньше,
  * чтобы состояние уже было готово к моменту события `story:loaded`.
+ *
+ * @example
+ * const hud = api.plugins['top-left-hud'].api;
+ *
+ * hud.setTitle('Герой');
+ * hud.update({ health: 3, gold: 10 });
  */
 export const TopLeftHUDPlugin = {
     name: 'top-left-hud',
@@ -144,6 +150,9 @@ export const TopLeftHUDPlugin = {
                  * Меняет заголовок панели.
                  *
                  * @param {string} title Новый заголовок.
+                 *
+                 * @example
+                 * api.plugins['top-left-hud'].api.setTitle('Статус героя');
                  */
                 setTitle(title) {
                     data.title = title;
@@ -171,6 +180,9 @@ export const TopLeftHUDPlugin = {
                  * @apiGroup TopLeftHUDPlugin
                  *
                  * Показывает панель.
+                 *
+                 * @example
+                 * api.plugins['top-left-hud'].api.show();
                  */
                 show() {
                     api.player.show(LAYER_NAME);
@@ -181,6 +193,9 @@ export const TopLeftHUDPlugin = {
                  * @apiGroup TopLeftHUDPlugin
                  *
                  * Скрывает панель.
+                 *
+                 * @example
+                 * api.plugins['top-left-hud'].api.hide();
                  */
                 hide() {
                     api.player.hide(LAYER_NAME);

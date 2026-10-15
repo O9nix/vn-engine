@@ -9,6 +9,11 @@
  *
  * Поддерживаемые операторы:
  * ==, !=, >, >=, <, <=
+ *
+ * @example
+ * const { evaluate } = api.plugins.conditions.api;
+ *
+ * evaluate({ variable: 'health', operator: '>=', value: 3 }, { health: 3 }); // true
  */
 export const ConditionsPlugin = {
     name: 'conditions',

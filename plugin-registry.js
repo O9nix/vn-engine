@@ -26,6 +26,12 @@ const PLUGIN_NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
  *     install(api) { ... }                   // обязательно
  * }
  * ```
+ *
+ * @example
+ * const registry = new PluginRegistry({ loader: localPluginLoader });
+ *
+ * registry.register({ name: 'hello', install() {} });
+ * const plugin = await registry.resolve('choice');
  */
 export class PluginRegistry {
     #plugins = new Map();
@@ -206,6 +212,11 @@ export class PluginRegistry {
      * @param {string} name Имя плагина
      * @returns {boolean} Есть ли плагин среди добавленных или
      * уже загруженных
+     *
+     * @example
+     * if (!registry.has('noty')) {
+     *     registry.register(NotyPlugin);
+     * }
      */
     has(name) {
         return this.#plugins.has(name);
@@ -215,6 +226,9 @@ export class PluginRegistry {
      * @apiName PluginRegistry.list
      * @apiGroup PluginRegistry
      * @returns {string[]} Имена добавленных и уже загруженных плагинов
+     *
+     * @example
+     * console.log(registry.list()); // ['state', 'noty']
      */
     list() {
         return [...this.#plugins.keys()];

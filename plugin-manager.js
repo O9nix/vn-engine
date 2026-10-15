@@ -35,6 +35,14 @@ function scopedCheck(pluginName, check) {
  * Всё, что плагин занял через свой `api` (подписки на события, слои,
  * типы узлов, блоки, команды парсера, проверки валидатора), движок снимает сам при удалении
  * плагина или при сбое его установки.
+ *
+ * @example
+ * const plugins = new PluginManager(bus, game, player, blocks, ast, validator);
+ *
+ * plugins.use(StatePlugin);
+ * plugins.has('state');   // true
+ * plugins.list();         // ['state']
+ * plugins.remove('state');
  */
 export class PluginManager {
     #plugins = new Map();
@@ -93,6 +101,10 @@ export class PluginManager {
      * @param {BlockManager} blocks Менеджер визуальных блоков.
      * @param {AST} [ast] Парсер сценария. Без него `api.ast.addCommand` выбрасывает ошибку.
      * @param {ProjectValidator} [validator] Валидатор проекта. Без него `api.validation` выбрасывает ошибку.
+     *
+     * @example
+     * const plugins = new PluginManager(bus, game, player, blocks, ast, validator);
+     * plugins.use(StatePlugin);
      */
     constructor(
         bus,
@@ -200,6 +212,8 @@ export class PluginManager {
              * @apiGroup PluginAPI
              * Сведения о самом плагине.
              * @property {string} name Имя плагина из манифеста.
+             * @example
+             * api.log.info('Я плагин', api.plugin.name);
              */
             plugin: { name: pluginName },
 
@@ -217,6 +231,9 @@ export class PluginManager {
                  * @apiGroup PluginAPI
                  * Подробное сообщение для отладки (по умолчанию скрыто).
                  * @param {*} args Что вывести.
+                 *
+                 * @example
+                 * api.log.debug('Подробности', { step: 1 });
                  */
                 debug: (...args) => pluginLog.debug(...args),
 
@@ -224,6 +241,9 @@ export class PluginManager {
                  * @apiName api.log.info
                  * @apiGroup PluginAPI
                  * @param {*} args Что вывести.
+                 *
+                 * @example
+                 * api.log.info('Плагин готов');
                  */
                 info: (...args) => pluginLog.info(...args),
 
@@ -231,6 +251,9 @@ export class PluginManager {
                  * @apiName api.log.warn
                  * @apiGroup PluginAPI
                  * @param {*} args Что вывести.
+                 *
+                 * @example
+                 * api.log.warn('Файл не найден, беру значение по умолчанию');
                  */
                 warn: (...args) => pluginLog.warn(...args),
 
@@ -238,6 +261,9 @@ export class PluginManager {
                  * @apiName api.log.error
                  * @apiGroup PluginAPI
                  * @param {*} args Что вывести.
+                 *
+                 * @example
+                 * api.log.error('Не удалось прочитать данные', error);
                  */
                 error: (...args) => pluginLog.error(...args)
             },
@@ -247,6 +273,13 @@ export class PluginManager {
              * @apiGroup PluginAPI
              * Обёртка над EventBus. Подписки плагина снимаются автоматически
              * при его удалении.
+             *
+             * @example
+             * const off = api.events.on('story:end', () => {
+             *     api.log.info('История закончилась');
+             * });
+             *
+             * api.events.emit('my-plugin:ready');
              */
             events: {
                 /**
@@ -275,6 +308,9 @@ export class PluginManager {
                  * Эмит события.
                  * @param {string} event Имя события.
                  * @param {*} [payload] Данные события.
+                 *
+                 * @example
+                 * api.events.emit('inventory:changed', { item: 'key', count: 1 });
                  */
                 emit: (event, payload) => bus.emit(event, payload)
             },
@@ -284,12 +320,20 @@ export class PluginManager {
              * @apiGroup PluginAPI
              * Фасад к VN и Player: регистрация типов узлов и работа со слоями.
              * Типы узлов и слои плагина снимаются автоматически.
+             *
+             * @example
+             * api.game.registerNodeType('flash', () => {});
+             * api.game.show('hud');
              */
             game: {
                 /**
                  * @apiName api.game.getPluginLayer
                  * @apiGroup PluginAPI
                  * @returns {HTMLElement} DOM-слой плагинов.
+                 *
+                 * @example
+                 * const layer = api.game.getPluginLayer();
+                 * layer.appendChild(document.createElement('div'));
                  */
                 getPluginLayer: () => player.getPluginLayer(),
 
@@ -299,6 +343,10 @@ export class PluginManager {
                  * @param {string} name Имя слоя.
                  * @param {HTMLElement} element DOM-элемент.
                  * @returns {function} Функция, удаляющая слой.
+                 * @example
+                 * const hud = document.createElement('div');
+                 * api.game.registerLayer('hud', hud);
+                 * api.game.show('hud');
                  */
                 registerLayer,
 
@@ -310,6 +358,16 @@ export class PluginManager {
                  * `wait({ lock: true })` — ожидание, которое клик не пропускает.
                  * @param {string} type Имя типа узла.
                  * @param {function} handler (node, context) => void
+                 * @example
+                 * api.game.registerNodeType('flash', (node, context) => {
+                 *     api.log.info('Вспышка', node.color);
+                 *     // без wait() история сама перейдёт к следующему узлу
+                 * });
+                 *
+                 * api.game.registerNodeType('pause', (node, context) => {
+                 *     context.wait();                 // ждём клика игрока
+                 *     setTimeout(() => context.resume(), node.ms);
+                 * });
                  */
                 registerNodeType: (type, handler) => {
                     game.registerNodeType(type, handler);
@@ -323,6 +381,8 @@ export class PluginManager {
                  * @apiName api.game.show
                  * @apiGroup PluginAPI
                  * @param {string} name Имя слоя.
+                 * @example
+                 * api.game.show('hud');
                  */
                 show: (name) => player.show(name),
 
@@ -330,6 +390,8 @@ export class PluginManager {
                  * @apiName api.game.hide
                  * @apiGroup PluginAPI
                  * @param {string} name Имя слоя.
+                 * @example
+                 * api.game.hide('hud');
                  */
                 hide: (name) => player.hide(name),
 
@@ -338,6 +400,10 @@ export class PluginManager {
                  * @apiGroup PluginAPI
                  * @param {string} name Имя слоя.
                  * @returns {boolean}
+                 * @example
+                 * if (!api.game.isVisible('hud')) {
+                 *     api.game.show('hud');
+                 * }
                  */
                 isVisible: (name) => player.isVisible(name)
             },
@@ -346,12 +412,19 @@ export class PluginManager {
              * @apiName api.player
              * @apiGroup PluginAPI
              * Прямой доступ к Player (слои). Те же методы, что api.game.* для слоёв.
+             *
+             * @example
+             * api.player.registerLayer('hud', document.createElement('div'));
+             * api.player.show('hud');
              */
             player: {
                 /**
                  * @apiName api.player.getPluginLayer
                  * @apiGroup PluginAPI
                  * @returns {HTMLElement}
+                 *
+                 * @example
+                 * const layer = api.player.getPluginLayer();
                  */
                 getPluginLayer: () => player.getPluginLayer(),
 
@@ -361,6 +434,10 @@ export class PluginManager {
                  * @param {string} name Имя слоя.
                  * @param {HTMLElement} element DOM-элемент.
                  * @returns {function} Функция, удаляющая слой.
+                 * @example
+                 * const box = document.createElement('div');
+                 * const removeLayer = api.player.registerLayer('my-layer', box);
+                 * // removeLayer() уберёт слой раньше, чем плагин будет удалён
                  */
                 registerLayer,
 
@@ -368,6 +445,9 @@ export class PluginManager {
                  * @apiName api.player.show
                  * @apiGroup PluginAPI
                  * @param {string} name Имя слоя.
+                 *
+                 * @example
+                 * api.player.show('hud');
                  */
                 show: (name) => player.show(name),
 
@@ -375,6 +455,9 @@ export class PluginManager {
                  * @apiName api.player.hide
                  * @apiGroup PluginAPI
                  * @param {string} name Имя слоя.
+                 *
+                 * @example
+                 * api.player.hide('hud');
                  */
                 hide: (name) => player.hide(name),
 
@@ -383,6 +466,9 @@ export class PluginManager {
                  * @apiGroup PluginAPI
                  * @param {string} name Имя слоя.
                  * @returns {boolean}
+                 *
+                 * @example
+                 * const visible = api.player.isVisible('hud');
                  */
                 isVisible: (name) => player.isVisible(name)
             },
@@ -395,6 +481,17 @@ export class PluginManager {
              * Блоки, созданные плагином, удаляются вместе с ним.
              * `create(type, { replace: true })` сначала убирает блоки того же канала.
              * @type {BlockManager}
+             * @example
+             * const element = document.createElement('div');
+             * element.textContent = 'Привет';
+             *
+             * const block = api.blocks.create('hello', {
+             *     channel: 'overlay',
+             *     element,
+             *     replace: true
+             * });
+             *
+             * api.blocks.remove(block.id);
              */
             blocks: scopedBlocks,
 
@@ -403,6 +500,12 @@ export class PluginManager {
              * @apiGroup PluginAPI
              * Доступ к парсеру сценария: плагин учит его распознавать
              * свои строки текста. Команды плагина снимаются при его удалении.
+             *
+             * @example
+             * api.ast.addCommand(/^!(.*)$/, 'shout', (match) => ({
+             *     type: 'shout',
+             *     text: match[1].trim()
+             * }));
              */
             ast: {
                 /**
@@ -440,22 +543,79 @@ export class PluginManager {
              * Доступ к валидатору проекта: плагин добавляет собственные проверки.
              * Проверки плагина снимаются при его удалении, а их id получают
              * префикс `имя-плагина:`.
+             *
+             * Есть два вида проверок: `register` смотрит на проект целиком,
+             * `registerNodeRule` вызывается для каждого узла своего типа.
+             * Запись `{ code, message, path }` описывает одну проблему.
+             * Ошибка (`error`) не даёт запустить историю, предупреждение
+             * (`warning`) только показывается игроку и разработчику.
+             * @example
+             * install(api) {
+             *     // Проверка узлов типа take
+             *     api.validation.registerNodeRule('take', {
+             *         id: 'item',
+             *         run(node) {
+             *             return node.item
+             *                 ? []
+             *                 : [{ code: 'take.no-item', message: 'У узла take нет item' }];
+             *         }
+             *     });
+             *
+             *     // Проверка проекта целиком, только предупреждение
+             *     api.validation.register({
+             *         id: 'items-config',
+             *         severity: 'warning',
+             *         run(project) {
+             *             const items = project.getConfig().items;
+             *             return items
+             *                 ? []
+             *                 : [{ code: 'inventory.no-items', message: 'В config нет items' }];
+             *         }
+             *     });
+             * }
              */
             validation: {
                 /**
                  * @apiName api.validation.register
                  * @apiGroup PluginAPI
                  * Регистрирует проверку всего проекта.
+                 *
+                 * Функция `run(project, context)` возвращает массив записей
+                 * (пустой массив значит «всё хорошо»). В записи можно указать
+                 * `code`, `message`, `path` и `severity`; имя плагина валидатор
+                 * подставит сам. `context.plugins` содержит манифесты
+                 * установленных плагинов.
+                 *
+                 * Проверка выполняется до запуска истории, поэтому читать нужно
+                 * данные проекта (`project.getConfig()`, `project.getScenes()`),
+                 * а не runtime-состояние плагинов: оно ещё пустое.
+                 *
                  * @param {Object} check Проверка: `id`, `run(project, context)`,
-                 * необязательные `severity` (error или warning) и `timeout`.
-                 * Функция run возвращает массив записей `{ code, message, path }`.
+                 * необязательные `severity` (error или warning, по умолчанию error)
+                 * и `timeout` в миллисекундах (по умолчанию 3000).
                  * @returns {function} Функция, снимающая проверку.
                  * @throws {Error} Если PluginManager создан без валидатора.
                  * @example
                  * api.validation.register({
-                 *     id: 'items',
+                 *     id: 'unknown-variables',
+                 *     severity: 'warning',
                  *     run(project) {
-                 *         return [];
+                 *         const known = project.getConfig().state ?? {};
+                 *         const found = [];
+                 *
+                 *         for (const scene of project.getScenes()) {
+                 *             for (const node of scene.nodes ?? []) {
+                 *                 if (node.variable && !(node.variable in known)) {
+                 *                     found.push({
+                 *                         code: 'my.unknown-variable',
+                 *                         message: `Переменной "${node.variable}" нет в config.state`,
+                 *                         path: `узел "${node.id}"`
+                 *                     });
+                 *                 }
+                 *             }
+                 *         }
+                 *
+                 *         return found;
                  *     }
                  * });
                  */
@@ -476,10 +636,39 @@ export class PluginManager {
                  * @apiGroup PluginAPI
                  * Регистрирует правило для узлов одного типа: валидатор сам
                  * обходит проект и вызывает `run(node, context)`.
+                 *
+                 * Путь к узлу (`scenes[0].nodes[2]`) подставляется в запись сам,
+                 * если плагин не указал свой `path`. Возвращать нужно массив
+                 * записей; пустой массив значит «узел в порядке».
+                 *
                  * @param {string} nodeType Тип узла.
                  * @param {Object} rule Правило: те же поля, что у register().
                  * @returns {function} Функция, снимающая правило.
                  * @throws {Error} Если PluginManager создан без валидатора.
+                 * @example
+                 * api.validation.registerNodeRule('take', {
+                 *     id: 'item',
+                 *     run(node, context) {
+                 *         const found = [];
+                 *
+                 *         if (!node.item) {
+                 *             found.push({
+                 *                 code: 'take.no-item',
+                 *                 message: `У узла "${node.id}" не задан item`
+                 *             });
+                 *         }
+                 *
+                 *         if (node.count !== undefined && node.count < 1) {
+                 *             found.push({
+                 *                 code: 'take.bad-count',
+                 *                 message: 'count должен быть больше нуля',
+                 *                 severity: 'warning'
+                 *             });
+                 *         }
+                 *
+                 *         return found;
+                 *     }
+                 * });
                  */
                 registerNodeRule: (nodeType, rule) => {
                     requireValidator(pluginName, validator);
@@ -715,6 +904,10 @@ remove(name) {
      * @apiGroup PluginManager
      * @param {string} name Имя плагина
      * @returns {boolean}
+     * @example
+     * if (!plugins.has('noty')) {
+     *     console.warn('Уведомления недоступны');
+     * }
      */
     has(name) {
         return this.#plugins.has(name);
@@ -725,6 +918,9 @@ remove(name) {
      * @apiGroup PluginManager
      * @param {string} name Имя плагина
      * @returns {Object|undefined} Исходный объект плагина
+     * @example
+     * const plugin = plugins.get('state');
+     * console.log(plugin.version);
      */
     get(name) {
         return this.#plugins.get(name)?.plugin;
@@ -758,6 +954,8 @@ remove(name) {
      * @apiName list
      * @apiGroup PluginManager
      * @returns {string[]} Имена установленных плагинов
+     * @example
+     * console.log(plugins.list()); // ['state', 'conditions', 'choice']
      */
     list() {
         return [

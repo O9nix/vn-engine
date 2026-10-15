@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { AST } from '../AST.js';
+import { ProjectValidator } from '../project-validator.js';
 import { PluginManager } from '../plugin-manager.js';
 import { EventBus } from '../events.js';
 
@@ -76,7 +77,7 @@ function manager(ast) {
     const game = { registerNodeType() {}, unregisterNodeType() {} };
     const player = { getPluginLayer: () => ({}), registerLayer: () => () => {} };
 
-    return new PluginManager(new EventBus(), game, player, {}, ast);
+    return new PluginManager(new EventBus(), game, player, {}, ast, new ProjectValidator());
 }
 
 test('PluginManager: api.ast.addCommand регистрирует команду, remove её снимает', (t) => {

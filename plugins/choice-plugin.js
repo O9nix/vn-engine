@@ -14,6 +14,35 @@
  * Условия в текстовой записи пока не поддерживаются.
  *
  * Пока выбор не сделан, клик по экрану историю не продолжает.
+ *
+ * Проверки проекта (через `api.validation`):
+ *
+ * - `choice.no-options` (ошибка): у узла нет `options`;
+ * - `choice.no-variants` (ошибка): у варианта нет `variants`;
+ * - `choice.unknown-variable` (предупреждение): условие ссылается
+ *   на переменную, которой нет в `config.state`.
+ *
+ * @example
+ * // Узел в проекте
+ * {
+ *     id: 'ask',
+ *     type: 'choice',
+ *     text: 'Куда пойдём?',
+ *     options: [
+ *         { id: 'o1', variants: [{ text: 'В подвал', goto: 'basement' }] },
+ *         {
+ *             id: 'o2',
+ *             variants: [{
+ *                 text: 'Открыть дверь',
+ *                 goto: 'door',
+ *                 condition: { variable: 'health', operator: '>', value: 1 }
+ *             }]
+ *         }
+ *     ]
+ * }
+ *
+ * // Строка в текстовом сценарии
+ * CHOICE: Куда пойдём? | В подвал → basement | На улицу -> street
  */
 export const ChoicePlugin = {
     name: 'choice',
@@ -63,6 +92,66 @@ export const ChoicePlugin = {
                 };
             }
         );
+
+        // Проверка структуры каждого узла choice до запуска истории.
+        api.validation.registerNodeRule('choice', {
+            id: 'options',
+            run(node) {
+                const found = [];
+
+                if (!Array.isArray(node.options) || node.options.length === 0) {
+                    found.push({
+                        code: 'choice.no-options',
+                        message: `У выбора "${node.id}" нет вариантов (options)`
+                    });
+
+                    return found;
+                }
+
+                for (const option of node.options) {
+                    if (!option.variants?.length) {
+                        found.push({
+                            code: 'choice.no-variants',
+                            message: `У варианта "${option.id}" выбора "${node.id}" нет variants`
+                        });
+                    }
+                }
+
+                return found;
+            }
+        });
+
+        // Предупреждение: условие ссылается на переменную, которой нет
+        // в config.state проекта. Читаем конфиг, а не runtime-состояние:
+        // при проверке история ещё не загружена, и state пуст.
+        api.validation.register({
+            id: 'unknown-variables',
+            severity: 'warning',
+            run(project) {
+                const known = project.getConfig()?.state ?? {};
+                const found = [];
+
+                for (const scene of project.getScenes()) {
+                    for (const node of scene.nodes ?? []) {
+                        for (const option of node.options ?? []) {
+                            for (const variant of option.variants ?? []) {
+                                const name = variant.condition?.variable;
+
+                                if (name && !(name in known)) {
+                                    found.push({
+                                        code: 'choice.unknown-variable',
+                                        message: `Переменной "${name}" нет в config.state`,
+                                        path: `узел "${node.id}"`
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return found;
+            }
+        });
 
 function resolveVariant(option, state) {
     for (const variant of option.variants ?? []) {

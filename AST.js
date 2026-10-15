@@ -8,6 +8,16 @@
  * Остальные строки распознают команды, которые регистрируют плагины
  * через `api.ast.addCommand`. Строка, которую не узнала ни одна команда,
  * становится узлом `text`.
+ *
+ * @example
+ * const parser = new AST();
+ *
+ * parser.addCommand(/^\/\/\s*(.*)$/, 'narration', (match) => ({
+ *     type: 'narration',
+ *     text: match[1].trim()
+ * }));
+ *
+ * const project = parser.parse('# Сцена\n// Тихая ночь.');
  */
 export class AST {
     // Команды хранятся по ключу-источнику регулярки: key -> { pattern, nodeType, handler }
@@ -22,6 +32,10 @@ export class AST {
      * @apiGroup AST
      * Создаёт парсер без команд.
      * @param {Object} [parameters] Настройки парсера (пока не используются).
+     *
+     * @example
+     * const parser = new AST();
+     * parser.addCommand(/^!/, 'bang', () => ({ type: 'bang' }));
      */
     constructor(parameters = {}) {
         // parameters можно использовать для настроек парсера, если нужно
@@ -77,6 +91,11 @@ export class AST {
      *
      * @param {RegExp} pattern Регулярное выражение, с которым команда была добавлена.
      * @returns {boolean} true, если команда была зарегистрирована.
+     *
+     * @example
+     * const pattern = /^!/;
+     * parser.addCommand(pattern, 'bang', () => ({ type: 'bang' }));
+     * parser.removeCommand(pattern); // true
      */
     removeCommand(pattern) {
         return this.#commands.delete(AST.#keyOf(pattern));
@@ -90,6 +109,11 @@ export class AST {
      * Парсер перебирает их в цикле.
      *
      * @returns {Object[]} Массив объектов { pattern, nodeType, handler }.
+     *
+     * @example
+     * for (const command of parser.getCommands()) {
+     *     console.log(command.nodeType, command.pattern);
+     * }
      */
     getCommands() {
         return Array.from(this.#commands.values());

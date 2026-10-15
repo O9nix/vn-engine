@@ -410,3 +410,62 @@ test('реальные плагины: валидатор видит типы у
     assert.ok(r.errors.every(e => e.severity === 'error'));
     assert.ok(r.errors.some(e => e.code === 'node.unknown-type' && /teleport/.test(e.message)));
 });
+
+test('choice: правила находят узел без options и вариант без variants', async (t) => {
+    quiet(t);
+    const { localPluginLoader } = await import('../local-plugin-loader.js');
+    const v = new ProjectValidator();
+    const m = managerWith(v);
+
+    for (const name of ['state', 'conditions', 'choice']) {
+        m.use(await localPluginLoader(name));
+    }
+
+    const r = await v.validate(project([
+        { id: 'a', type: 'choice', text: 'Пусто' },
+        { id: 'b', type: 'choice', options: [{ id: 'o1', variants: [] }] },
+        { id: 'c', type: 'choice', options: [{ id: 'o2', variants: [{ text: 'ок' }] }] }
+    ], { plugins: ['state', 'conditions', 'choice'] }), { plugins: m.getManifests() });
+
+    assert.ok(r.errors.some(e => /нет вариантов/.test(e.message) && e.path === 'scenes[0].nodes[0]'));
+    assert.ok(r.errors.some(e => /нет variants/.test(e.message) && e.path === 'scenes[0].nodes[1]'));
+    assert.equal(r.errors.length, 2);
+    assert.ok(r.errors.every(e => e.plugin === 'choice'));
+    assert.deepEqual(
+        r.errors.map(e => e.code),
+        ['choice.no-options', 'choice.no-variants']
+    );
+});
+
+test('choice: переменная условия берётся из config.state и даёт только предупреждение', async (t) => {
+    quiet(t);
+    const { localPluginLoader } = await import('../local-plugin-loader.js');
+    const v = new ProjectValidator();
+    const m = managerWith(v);
+
+    for (const name of ['state', 'conditions', 'choice']) {
+        m.use(await localPluginLoader(name));
+    }
+
+    const nodes = [{
+        id: 'a',
+        type: 'choice',
+        options: [
+            { id: 'o1', variants: [{ text: 'x', condition: { variable: 'health', operator: '>', value: 1 } }] },
+            { id: 'o2', variants: [{ text: 'y', condition: { variable: 'gold', operator: '>', value: 1 } }] }
+        ]
+    }];
+
+    const r = await v.validate(
+        project(nodes, {
+            plugins: ['state', 'conditions', 'choice'],
+            config: { state: { health: 3 } }
+        }),
+        { plugins: m.getManifests() }
+    );
+
+    assert.equal(r.valid, true);
+    assert.equal(r.warnings.length, 1);
+    assert.match(r.warnings[0].message, /gold/);
+    assert.equal(r.warnings[0].severity, 'warning');
+});

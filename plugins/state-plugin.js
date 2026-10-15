@@ -12,6 +12,13 @@
  * и доступно другим плагинам через:
  *
  * `api.plugins.state.api`
+ *
+ * @example
+ * const state = api.plugins.state.api;
+ *
+ * state.set('health', 3);
+ * state.update({ gold: 10 });
+ * state.get(); // { health: 3, gold: 10 }
  */
 export const StatePlugin = {
     name: 'state',
@@ -94,6 +101,11 @@ export const StatePlugin = {
          *
          * Инициализирует runtime-состояние из конфигурации проекта
          * после загрузки истории.
+         *
+         * @example
+         * // Срабатывает само. После загрузки проекта:
+         * // config: { state: { health: 3 } }
+         * api.plugins.state.api.getValue('health'); // 3
          */
         const unsubscribeStoryLoaded =
             api.events.on(

@@ -36,6 +36,10 @@ export class Logger {
      * Создаёт журнал.
      * @param {Object} [options] Параметры: `level` (по умолчанию info) и `prefix`.
      * @param {Object} [shared] Общее состояние уровня (используется методом child).
+     *
+     * @example
+     * const log = new Logger({ level: 'warn', prefix: 'Моё' });
+     * log.warn('Что-то не так'); // [Моё] Что-то не так
      */
     constructor(options = {}, shared = null) {
         const level = options.level ?? 'info';
@@ -54,6 +58,10 @@ export class Logger {
      * Меняет уровень для этого журнала и всех его дочерних.
      * @param {string} level Один из уровней: debug, info, warn, error, silent.
      * @throws {Error} Если уровень неизвестен.
+     *
+     * @example
+     * logger.setLevel('debug'); // показывать всё
+     * logger.setLevel('silent'); // ничего не показывать
      */
     setLevel(level) {
         if (!(level in LOG_LEVELS)) {
@@ -67,6 +75,11 @@ export class Logger {
      * @apiName Logger.getLevel
      * @apiGroup Logger
      * @returns {string} Текущий уровень.
+     *
+     * @example
+     * if (logger.getLevel() === 'debug') {
+     *     console.log('Включён подробный режим');
+     * }
      */
     getLevel() {
         return this.#shared.level;
@@ -78,6 +91,10 @@ export class Logger {
      * Создаёт журнал с другим префиксом и общим уровнем.
      * @param {string} prefix Префикс сообщений, например имя класса или плагина.
      * @returns {Logger}
+     *
+     * @example
+     * const log = logger.child('inventory');
+     * log.info('Готово'); // [inventory] Готово
      */
     child(prefix) {
         return new Logger({ prefix }, this.#shared);
@@ -98,6 +115,9 @@ export class Logger {
      * @apiGroup Logger
      * Подробное сообщение для отладки (по умолчанию скрыто).
      * @param {*} args Что вывести.
+     *
+     * @example
+     * log.debug('Состояние', { health: 3 });
      */
     debug(...args) {
         this.#write('debug', 'log', args);
@@ -108,6 +128,9 @@ export class Logger {
      * @apiGroup Logger
      * Обычное сообщение о ходе работы.
      * @param {*} args Что вывести.
+     *
+     * @example
+     * log.info('Проект загружен');
      */
     info(...args) {
         this.#write('info', 'log', args);
@@ -118,6 +141,9 @@ export class Logger {
      * @apiGroup Logger
      * Предупреждение: работа продолжается.
      * @param {*} args Что вывести.
+     *
+     * @example
+     * log.warn('Узел не найден:', nodeId);
      */
     warn(...args) {
         this.#write('warn', 'warn', args);
@@ -128,6 +154,9 @@ export class Logger {
      * @apiGroup Logger
      * Ошибка.
      * @param {*} args Что вывести.
+     *
+     * @example
+     * log.error('Не удалось загрузить плагин', error);
      */
     error(...args) {
         this.#write('error', 'error', args);
