@@ -82,8 +82,8 @@ export const DialoguePlugin = {
                         }
                     );
 
-                console.log(
-                    '[DialoguePlugin] Создан блок:',
+                api.log.debug(
+                    'Создан блок:',
                     block
                 );
 

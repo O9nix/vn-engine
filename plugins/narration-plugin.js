@@ -68,8 +68,8 @@ export const NarrationPlugin = {
                         }
                     );
 
-                console.log(
-                    '[NarrationPlugin] Создан блок:',
+                api.log.debug(
+                    'Создан блок:',
                     block
                 );
 

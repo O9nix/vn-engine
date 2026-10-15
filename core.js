@@ -1,4 +1,7 @@
 import { EventBus } from './events.js';
+import { logger } from './logger.js';
+
+const log = logger.child('VN');
 
 export class VN {
     #bus = new EventBus();
@@ -69,7 +72,7 @@ export class VN {
 
         const scenes = project.getScenes();
 
-        console.log(
+        log.info(
             'Проект загружен, сцен:',
             scenes.length
         );
@@ -77,7 +80,7 @@ export class VN {
         const firstScene = scenes[0];
 
         if (!firstScene?.nodes?.length) {
-            console.warn(
+            log.warn(
                 'Проект не содержит узлов'
             );
 
@@ -102,7 +105,7 @@ export class VN {
         if (!node) {
             this.#bus.emit('story:end');
 
-            console.log(
+            log.info(
                 'История завершена'
             );
 
@@ -119,8 +122,8 @@ export class VN {
     const node = this.#project.getNode(nodeId);
 
     if (!node) {
-        console.warn(
-            `VN.goto(): узел "${nodeId}" не найден`
+        log.warn(
+            `goto(): узел "${nodeId}" не найден`
         );
 
         return;
@@ -139,7 +142,7 @@ export class VN {
             this.#nodeTypes.get(node.type);
 
         if (!handler) {
-            console.warn(
+            log.warn(
                 `Неизвестный тип узла: ${node.type}`
             );
 
@@ -167,7 +170,7 @@ export class VN {
         this.#isWaiting = false;
         this.#isLocked = false;
 
-        console.error(
+        log.error(
             `Ошибка в узле "${node?.id}" (тип "${node?.type}"):`,
             error
         );
@@ -201,7 +204,7 @@ export class VN {
 
         this.#bus.emit('story:end');
 
-        console.log(
+        log.info(
             'История завершена'
         );
 
@@ -216,7 +219,7 @@ export class VN {
 
         this.#bus.emit('story:end');
 
-        console.log(
+        log.info(
             'История завершена'
         );
 

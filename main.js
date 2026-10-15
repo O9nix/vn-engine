@@ -8,6 +8,14 @@ import { localPluginLoader } from './local-plugin-loader.js';
 import { loadProjectPlugins } from './plugin-loader.js';
 import { PluginManager } from './plugin-manager.js';
 import {AST} from './AST.js'
+import { logger, LOG_LEVELS } from './logger.js';
+
+// Уровень журнала можно выбрать в адресе страницы: ?log=debug
+const requestedLevel = new URLSearchParams(location.search).get('log');
+
+if (requestedLevel in LOG_LEVELS) {
+    logger.setLevel(requestedLevel);
+}
 
 // 1. Создаем парсер
 const parser = new AST();
@@ -172,7 +180,7 @@ async function start() {
 
     // Интерфейс плеера и плагины уведомлений уже работают; сообщаем о сбоях.
     for (const failure of report.failed) {
-        console.error(
+        logger.error(
             `Плагин "${failure.name}" (${failure.stage}):`,
             failure.error
         );
@@ -290,7 +298,7 @@ game.loadProject(project);
 }
 
 start().catch((error) => {
-    console.error(error);
+    logger.error(error);
 
     showFatal(`Не удалось запустить проект:\n${error.message}`);
 });

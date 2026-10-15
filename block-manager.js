@@ -1,3 +1,7 @@
+import { logger } from './logger.js';
+
+const log = logger.child('BlockManager');
+
 /**
  * @class BlockManager
  * @apiGroup BlockManager
@@ -119,8 +123,8 @@ export class BlockManager {
         const block = this.#blocks.get(id);
 
         if (!block) {
-            console.warn(
-                `BlockManager.show(): блок "${id}" не найден`
+            log.warn(
+                `show(): блок "${id}" не найден`
             );
             return;
         }
@@ -133,8 +137,8 @@ export class BlockManager {
         const block = this.#blocks.get(id);
 
         if (!block) {
-            console.warn(
-                `BlockManager.hide(): блок "${id}" не найден`
+            log.warn(
+                `hide(): блок "${id}" не найден`
             );
             return;
         }
@@ -147,8 +151,8 @@ export class BlockManager {
         const block = this.#blocks.get(id);
 
         if (!block) {
-            console.warn(
-                `BlockManager.remove(): блок "${id}" не найден`
+            log.warn(
+                `remove(): блок "${id}" не найден`
             );
             return;
         }

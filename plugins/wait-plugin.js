@@ -22,14 +22,14 @@ export const WaitPlugin = {
                     api.blocks.getCurrent('content');
 
                 if (!block) {
-                    console.warn(
-                        '[WaitPlugin] Нет текущего content-блока'
+                    api.log.warn(
+                        'Нет текущего content-блока'
                     );
                     return;
                 }
 
-                console.log(
-                    '[WaitPlugin] Текущий блок:',
+                api.log.debug(
+                    'Текущий блок:',
                     block
                 );
 

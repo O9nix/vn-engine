@@ -83,8 +83,8 @@ function resolveVariant(option, state) {
             'choice',
             (node, context) => {
                 if (!Array.isArray(node.options)) {
-                    console.warn(
-                        '[ChoicePlugin] У choice нет options'
+                    api.log.warn(
+                        'У choice нет options'
                     );
 
                     context.resume();
@@ -148,8 +148,8 @@ function resolveVariant(option, state) {
                         );
 
                     if (!variant) {
-                        console.warn(
-                            `[ChoicePlugin] Для option "${option.id}" нет подходящего variant`
+                        api.log.warn(
+                            `Для option "${option.id}" нет подходящего variant`
                         );
 
                         continue;

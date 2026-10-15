@@ -1,3 +1,7 @@
+import { logger } from './logger.js';
+
+const log = logger.child('PluginManager');
+
 /**
  * Версия Plugin API, которую поддерживает движок. Плагин может указать
  * `apiVersion` в манифесте; несовпадение версии — ошибка установки.
@@ -88,8 +92,8 @@ export class PluginManager {
                     const entry = this.#plugins.get(name);
 
                     if (!entry) {
-                        console.warn(
-                            `[PluginManager] Плагин "${String(name)}" не установлен`
+                        log.warn(
+                            `Плагин "${String(name)}" не установлен`
                         );
 
                         return null;
@@ -114,6 +118,7 @@ export class PluginManager {
         const player = this.#player;
         const ast = this.#ast;
         const blocks = this.#blocks;
+        const pluginLog = logger.child(pluginName);
 
         const track = (fn) => {
             release.push(fn);
@@ -175,31 +180,39 @@ export class PluginManager {
              * @apiName api.log
              * @apiGroup PluginAPI
              * Сообщения в консоль с именем плагина: `[имя] сообщение`.
-             * Методы: info, warn, error.
+             * Методы: debug, info, warn, error. Уровень общий для движка (logger.setLevel).
              * @example
              * api.log.info('Плагин установлен');
              */
             log: {
                 /**
+                 * @apiName api.log.debug
+                 * @apiGroup PluginAPI
+                 * Подробное сообщение для отладки (по умолчанию скрыто).
+                 * @param {*} args Что вывести.
+                 */
+                debug: (...args) => pluginLog.debug(...args),
+
+                /**
                  * @apiName api.log.info
                  * @apiGroup PluginAPI
                  * @param {*} args Что вывести.
                  */
-                info: (...args) => console.log(`[${pluginName}]`, ...args),
+                info: (...args) => pluginLog.info(...args),
 
                 /**
                  * @apiName api.log.warn
                  * @apiGroup PluginAPI
                  * @param {*} args Что вывести.
                  */
-                warn: (...args) => console.warn(`[${pluginName}]`, ...args),
+                warn: (...args) => pluginLog.warn(...args),
 
                 /**
                  * @apiName api.log.error
                  * @apiGroup PluginAPI
                  * @param {*} args Что вывести.
                  */
-                error: (...args) => console.error(`[${pluginName}]`, ...args)
+                error: (...args) => pluginLog.error(...args)
             },
 
             /**
@@ -410,8 +423,8 @@ export class PluginManager {
                 try {
                     release.pop()();
                 } catch (error) {
-                    console.warn(
-                        `[PluginManager] Ошибка при освобождении ресурсов плагина "${pluginName}":`,
+                    log.warn(
+                        `Ошибка при освобождении ресурсов плагина "${pluginName}":`,
                         error
                     );
                 }
@@ -531,8 +544,8 @@ use(plugin) {
         dispose: scope.dispose
     });
 
-    console.log(
-        `[PluginManager] Плагин "${name}" установлен`
+    log.info(
+        `Плагин "${name}" установлен`
     );
 
     return this;
@@ -588,8 +601,8 @@ remove(name) {
     try {
         entry.cleanup?.();
     } catch (error) {
-        console.warn(
-            `[PluginManager] Ошибка в cleanup плагина "${name}":`,
+        log.warn(
+            `Ошибка в cleanup плагина "${name}":`,
             error
         );
     }
@@ -599,8 +612,8 @@ remove(name) {
 
     this.#plugins.delete(name);
 
-    console.log(
-        `[PluginManager] Плагин "${name}" удалён`
+    log.info(
+        `Плагин "${name}" удалён`
     );
 
     return true;

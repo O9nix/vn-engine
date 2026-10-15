@@ -1,6 +1,6 @@
 # VN Engine API
 
-**Версия 0.1.4** · Дата 2026-10-15 · 76 записей
+**Версия 0.1.4** · Дата 2026-10-15 · 86 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
@@ -31,6 +31,16 @@
     - [PluginRegistry.resolve(name, version)](#pluginregistry-resolve)
     - [PluginRegistry.has(name)](#pluginregistry-has)
     - [PluginRegistry.list()](#pluginregistry-list)
+- **Logger**
+  - [Logger](#logger)
+    - [Logger.constructor(options, shared)](#logger-constructor)
+    - [Logger.setLevel(level)](#logger-setlevel)
+    - [Logger.getLevel()](#logger-getlevel)
+    - [Logger.child(prefix)](#logger-child)
+    - [Logger.debug(args)](#logger-debug)
+    - [Logger.info(args)](#logger-info)
+    - [Logger.warn(args)](#logger-warn)
+    - [Logger.error(args)](#logger-error)
 - **PluginLoader**
   - [normalizePluginRefs(refs)](#normalizepluginrefs)
   - [orderPlugins(plugins)](#orderplugins)
@@ -46,6 +56,7 @@
 - **PluginAPI**
   - [api.plugin](#api-plugin)
   - [api.log](#api-log)
+    - [api.log.debug(args)](#api-log-debug)
     - [api.log.info(args)](#api-log-info)
     - [api.log.warn(args)](#api-log-warn)
     - [api.log.error(args)](#api-log-error)
@@ -255,7 +266,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 | --- | --- |
 | [`BlockManager.create(type, options)`](#blockmanager-create) | Создаёт блок и добавляет его элемент в корень. |
 
-<sub>Исходник: block-manager.js:1</sub>
+<sub>Исходник: block-manager.js:5</sub>
 
 <a id="blockmanager-create"></a>
 
@@ -280,7 +291,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 
 `Object` — Созданный блок.
 
-<sub>Исходник: block-manager.js:22</sub>
+<sub>Исходник: block-manager.js:26</sub>
 
 ## VN
 
@@ -303,7 +314,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 
 `boolean` — true, если тип был зарегистрирован.
 
-<sub>Исходник: core.js:45</sub>
+<sub>Исходник: core.js:48</sub>
 
 ## EventBus
 
@@ -325,7 +336,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 | [`EventBus.off(type, handler)`](#eventbus-off) | Снимает обработчик с события. |
 | [`EventBus.emit(type, payload)`](#eventbus-emit) | Вызывает всех подписчиков события по порядку подписки. |
 
-<sub>Исходник: events.js:1</sub>
+<sub>Исходник: events.js:5</sub>
 
 <a id="eventbus-on"></a>
 
@@ -346,7 +357,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 
 `function` — Функция отписки.
 
-<sub>Исходник: events.js:12</sub>
+<sub>Исходник: events.js:16</sub>
 
 <a id="eventbus-off"></a>
 
@@ -363,7 +374,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 | `type` *(обязательное)* | `string` | Имя события. |
 | `handler` *(обязательное)* | `function` | Ранее добавленный обработчик. |
 
-<sub>Исходник: events.js:32</sub>
+<sub>Исходник: events.js:36</sub>
 
 <a id="eventbus-emit"></a>
 
@@ -380,7 +391,7 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 | `type` *(обязательное)* | `string` | Имя события. |
 | `payload` *(необязательное)* | `*` | Данные события. |
 
-<sub>Исходник: events.js:45</sub>
+<sub>Исходник: events.js:49</sub>
 
 ## PluginRegistry
 
@@ -580,6 +591,177 @@ const plugin = await registry.resolve('choice');
 
 <sub>Исходник: plugin-registry.js:214</sub>
 
+## Logger
+
+<a id="logger"></a>
+
+### `Logger`
+
+*Класс*
+
+Журнал с уровнями и префиксом. Все журналы, созданные через `child`,
+делят один уровень с исходным, поэтому его можно менять в одном месте.
+
+Сообщения выводятся в консоль в виде `[префикс] сообщение`.
+
+#### Примеры
+
+```js
+import { logger } from './logger.js';
+
+const log = logger.child('VN');
+log.warn('Узел не найден');
+logger.setLevel('debug');
+```
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`Logger.constructor(options, shared)`](#logger-constructor) | Создаёт журнал. |
+| [`Logger.setLevel(level)`](#logger-setlevel) | Меняет уровень для этого журнала и всех его дочерних. |
+| [`Logger.getLevel()`](#logger-getlevel) |  |
+| [`Logger.child(prefix)`](#logger-child) | Создаёт журнал с другим префиксом и общим уровнем. |
+| [`Logger.debug(args)`](#logger-debug) | Подробное сообщение для отладки (по умолчанию скрыто). |
+| [`Logger.info(args)`](#logger-info) | Обычное сообщение о ходе работы. |
+| [`Logger.warn(args)`](#logger-warn) | Предупреждение: работа продолжается. |
+| [`Logger.error(args)`](#logger-error) | Ошибка. |
+
+<sub>Исходник: logger.js:13</sub>
+
+<a id="logger-constructor"></a>
+
+#### `Logger.constructor(options, shared)`
+
+*Метод*
+
+Создаёт журнал.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `options` *(необязательное)* | `Object` | Параметры: `level` (по умолчанию info) и `prefix`. |
+| `shared` *(необязательное)* | `Object` | Общее состояние уровня (используется методом child). |
+
+<sub>Исходник: logger.js:33</sub>
+
+<a id="logger-setlevel"></a>
+
+#### `Logger.setLevel(level)`
+
+*Метод*
+
+Меняет уровень для этого журнала и всех его дочерних.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `level` *(обязательное)* | `string` | Один из уровней: debug, info, warn, error, silent. |
+
+##### Исключения
+
+- `Error` — Если уровень неизвестен.
+
+<sub>Исходник: logger.js:51</sub>
+
+<a id="logger-getlevel"></a>
+
+#### `Logger.getLevel()`
+
+*Метод*
+
+##### Возвращает
+
+`string` — Текущий уровень.
+
+<sub>Исходник: logger.js:66</sub>
+
+<a id="logger-child"></a>
+
+#### `Logger.child(prefix)`
+
+*Метод*
+
+Создаёт журнал с другим префиксом и общим уровнем.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `prefix` *(обязательное)* | `string` | Префикс сообщений, например имя класса или плагина. |
+
+##### Возвращает
+
+`Logger`
+
+<sub>Исходник: logger.js:75</sub>
+
+<a id="logger-debug"></a>
+
+#### `Logger.debug(args)`
+
+*Метод*
+
+Подробное сообщение для отладки (по умолчанию скрыто).
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: logger.js:96</sub>
+
+<a id="logger-info"></a>
+
+#### `Logger.info(args)`
+
+*Метод*
+
+Обычное сообщение о ходе работы.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: logger.js:106</sub>
+
+<a id="logger-warn"></a>
+
+#### `Logger.warn(args)`
+
+*Метод*
+
+Предупреждение: работа продолжается.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: logger.js:116</sub>
+
+<a id="logger-error"></a>
+
+#### `Logger.error(args)`
+
+*Метод*
+
+Ошибка.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: logger.js:126</sub>
+
 ## PluginLoader
 
 <a id="normalizepluginrefs"></a>
@@ -729,7 +911,7 @@ if (report.failed.length === 0) {
 | [`PluginManager.get(name)`](#pluginmanager-get) |  |
 | [`PluginManager.list()`](#pluginmanager-list) |  |
 
-<sub>Исходник: plugin-manager.js:7</sub>
+<sub>Исходник: plugin-manager.js:11</sub>
 
 <a id="pluginmanager-constructor"></a>
 
@@ -782,7 +964,7 @@ api
 | `blocks` *(обязательное)* | `BlockManager` | Менеджер визуальных блоков. |
 | `ast` *(необязательное)* | `AST` | Парсер сценария. Без него `api.ast.addCommand` выбрасывает ошибку. |
 
-<sub>Исходник: plugin-manager.js:26</sub>
+<sub>Исходник: plugin-manager.js:30</sub>
 
 <a id="pluginmanager-use"></a>
 
@@ -813,7 +995,7 @@ plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:424</sub>
+<sub>Исходник: plugin-manager.js:437</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -845,7 +1027,7 @@ plugins.use(ChoicePlugin);
 plugins.remove('choice');
 ```
 
-<sub>Исходник: plugin-manager.js:543</sub>
+<sub>Исходник: plugin-manager.js:556</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -863,7 +1045,7 @@ plugins.remove('choice');
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:609</sub>
+<sub>Исходник: plugin-manager.js:622</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -881,7 +1063,7 @@ plugins.remove('choice');
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:619</sub>
+<sub>Исходник: plugin-manager.js:632</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -893,7 +1075,7 @@ plugins.remove('choice');
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:629</sub>
+<sub>Исходник: plugin-manager.js:642</sub>
 
 ## PluginAPI
 
@@ -911,7 +1093,7 @@ plugins.remove('choice');
 | --- | --- | --- |
 | `name` | `string` | Имя плагина из манифеста. |
 
-<sub>Исходник: plugin-manager.js:166</sub>
+<sub>Исходник: plugin-manager.js:171</sub>
 
 <a id="api-log"></a>
 
@@ -920,7 +1102,7 @@ plugins.remove('choice');
 *Группа*
 
 Сообщения в консоль с именем плагина: `[имя] сообщение`.
-Методы: info, warn, error.
+Методы: debug, info, warn, error. Уровень общий для движка (logger.setLevel).
 
 #### Примеры
 
@@ -932,11 +1114,28 @@ api.log.info('Плагин установлен');
 
 | Имя | Описание |
 | --- | --- |
+| [`api.log.debug(args)`](#api-log-debug) | Подробное сообщение для отладки (по умолчанию скрыто). |
 | [`api.log.info(args)`](#api-log-info) |  |
 | [`api.log.warn(args)`](#api-log-warn) |  |
 | [`api.log.error(args)`](#api-log-error) |  |
 
-<sub>Исходник: plugin-manager.js:174</sub>
+<sub>Исходник: plugin-manager.js:179</sub>
+
+<a id="api-log-debug"></a>
+
+#### `api.log.debug(args)`
+
+*Метод*
+
+Подробное сообщение для отладки (по умолчанию скрыто).
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `args` *(обязательное)* | `*` | Что вывести. |
+
+<sub>Исходник: plugin-manager.js:188</sub>
 
 <a id="api-log-info"></a>
 
@@ -950,7 +1149,7 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:183</sub>
+<sub>Исходник: plugin-manager.js:196</sub>
 
 <a id="api-log-warn"></a>
 
@@ -964,7 +1163,7 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:190</sub>
+<sub>Исходник: plugin-manager.js:203</sub>
 
 <a id="api-log-error"></a>
 
@@ -978,7 +1177,7 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:197</sub>
+<sub>Исходник: plugin-manager.js:210</sub>
 
 <a id="api-events"></a>
 
@@ -996,7 +1195,7 @@ api.log.info('Плагин установлен');
 | [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
 | [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
 
-<sub>Исходник: plugin-manager.js:205</sub>
+<sub>Исходник: plugin-manager.js:218</sub>
 
 <a id="api-events-on"></a>
 
@@ -1025,7 +1224,7 @@ api.events.on('story:loaded', (data) => {
 });
 ```
 
-<sub>Исходник: plugin-manager.js:212</sub>
+<sub>Исходник: plugin-manager.js:225</sub>
 
 <a id="api-events-emit"></a>
 
@@ -1042,7 +1241,7 @@ api.events.on('story:loaded', (data) => {
 | `event` *(обязательное)* | `string` | Имя события. |
 | `payload` *(необязательное)* | `*` | Данные события. |
 
-<sub>Исходник: plugin-manager.js:232</sub>
+<sub>Исходник: plugin-manager.js:245</sub>
 
 <a id="api-game"></a>
 
@@ -1064,7 +1263,7 @@ api.events.on('story:loaded', (data) => {
 | [`api.game.hide(name)`](#api-game-hide) |  |
 | [`api.game.isVisible(name)`](#api-game-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:242</sub>
+<sub>Исходник: plugin-manager.js:255</sub>
 
 <a id="api-game-getpluginlayer"></a>
 
@@ -1076,7 +1275,7 @@ api.events.on('story:loaded', (data) => {
 
 `HTMLElement` — DOM-слой плагинов.
 
-<sub>Исходник: plugin-manager.js:249</sub>
+<sub>Исходник: plugin-manager.js:262</sub>
 
 <a id="api-game-registerlayer"></a>
 
@@ -1095,7 +1294,7 @@ api.events.on('story:loaded', (data) => {
 
 `function` — Функция, удаляющая слой.
 
-<sub>Исходник: plugin-manager.js:256</sub>
+<sub>Исходник: plugin-manager.js:269</sub>
 
 <a id="api-game-registernodetype"></a>
 
@@ -1114,7 +1313,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | `type` *(обязательное)* | `string` | Имя типа узла. |
 | `handler` *(обязательное)* | `function` | (node, context) => void |
 
-<sub>Исходник: plugin-manager.js:265</sub>
+<sub>Исходник: plugin-manager.js:278</sub>
 
 <a id="api-game-show"></a>
 
@@ -1128,7 +1327,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:280</sub>
+<sub>Исходник: plugin-manager.js:293</sub>
 
 <a id="api-game-hide"></a>
 
@@ -1142,7 +1341,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:287</sub>
+<sub>Исходник: plugin-manager.js:300</sub>
 
 <a id="api-game-isvisible"></a>
 
@@ -1160,7 +1359,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:294</sub>
+<sub>Исходник: plugin-manager.js:307</sub>
 
 <a id="api-player"></a>
 
@@ -1180,7 +1379,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | [`api.player.hide(name)`](#api-player-hide) |  |
 | [`api.player.isVisible(name)`](#api-player-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:303</sub>
+<sub>Исходник: plugin-manager.js:316</sub>
 
 <a id="api-player-getpluginlayer"></a>
 
@@ -1192,7 +1391,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `HTMLElement`
 
-<sub>Исходник: plugin-manager.js:309</sub>
+<sub>Исходник: plugin-manager.js:322</sub>
 
 <a id="api-player-registerlayer"></a>
 
@@ -1211,7 +1410,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `function` — Функция, удаляющая слой.
 
-<sub>Исходник: plugin-manager.js:316</sub>
+<sub>Исходник: plugin-manager.js:329</sub>
 
 <a id="api-player-show"></a>
 
@@ -1225,7 +1424,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:325</sub>
+<sub>Исходник: plugin-manager.js:338</sub>
 
 <a id="api-player-hide"></a>
 
@@ -1239,7 +1438,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:332</sub>
+<sub>Исходник: plugin-manager.js:345</sub>
 
 <a id="api-player-isvisible"></a>
 
@@ -1257,7 +1456,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:339</sub>
+<sub>Исходник: plugin-manager.js:352</sub>
 
 <a id="api-blocks"></a>
 
@@ -1270,7 +1469,7 @@ getActiveByChannel, getCurrent, show, hide, remove.
 Блоки, созданные плагином, удаляются вместе с ним.
 `create(type, { replace: true })` сначала убирает блоки того же канала.
 
-<sub>Исходник: plugin-manager.js:348</sub>
+<sub>Исходник: plugin-manager.js:361</sub>
 
 <a id="api-ast"></a>
 
@@ -1287,7 +1486,7 @@ getActiveByChannel, getCurrent, show, hide, remove.
 | --- | --- |
 | [`api.ast.addCommand(pattern, nodeType, handler)`](#api-ast-addcommand) | Регистрирует текстовую команду парсера. |
 
-<sub>Исходник: plugin-manager.js:359</sub>
+<sub>Исходник: plugin-manager.js:372</sub>
 
 <a id="api-ast-addcommand"></a>
 
@@ -1318,7 +1517,7 @@ api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
 }));
 ```
 
-<sub>Исходник: plugin-manager.js:366</sub>
+<sub>Исходник: plugin-manager.js:379</sub>
 
 <a id="api-plugins"></a>
 
@@ -1337,7 +1536,7 @@ const state = api.plugins.state.api.get();
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugin-manager.js:395</sub>
+<sub>Исходник: plugin-manager.js:408</sub>
 
 ## Plugins
 
@@ -1787,7 +1986,7 @@ const result = validator.validateGotos();
 
 ### 0.1.4 (2026-10-15)
 
-**Добавлено (40)**
+**Добавлено (50)**
 
 - `AST`
 - `AST.constructor`
@@ -1803,11 +2002,21 @@ const result = validator.validateGotos();
 - `EventBus.off`
 - `EventBus.emit`
 - `localPluginLoader`
+- `Logger`
+- `Logger.constructor`
+- `Logger.setLevel`
+- `Logger.getLevel`
+- `Logger.child`
+- `Logger.debug`
+- `Logger.info`
+- `Logger.warn`
+- `Logger.error`
 - `normalizePluginRefs`
 - `orderPlugins`
 - `loadProjectPlugins`
 - `api.plugin`
 - `api.log`
+- `api.log.debug`
 - `api.log.info`
 - `api.log.warn`
 - `api.log.error`

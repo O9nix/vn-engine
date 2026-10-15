@@ -3593,7 +3593,7 @@
     {
       "version": "0.1.4",
       "date": "2026-10-15",
-      "updatedAt": "2026-10-15T04:19:52.197Z",
+      "updatedAt": "2026-10-15T06:09:33.287Z",
       "endpoints": [
         {
           "key": "AST",
@@ -3872,7 +3872,7 @@
           "errorExamples": [],
           "source": {
             "file": "block-manager.js",
-            "line": 1
+            "line": 5
           },
           "doc": true
         },
@@ -3915,7 +3915,7 @@
           "errorExamples": [],
           "source": {
             "file": "block-manager.js",
-            "line": 22
+            "line": 26
           },
           "returns": {
             "type": "Object",
@@ -3956,7 +3956,7 @@
           "errorExamples": [],
           "source": {
             "file": "core.js",
-            "line": 45
+            "line": 48
           },
           "returns": {
             "type": "boolean",
@@ -3989,7 +3989,7 @@
           "errorExamples": [],
           "source": {
             "file": "events.js",
-            "line": 1
+            "line": 5
           },
           "doc": true
         },
@@ -4032,7 +4032,7 @@
           "errorExamples": [],
           "source": {
             "file": "events.js",
-            "line": 12
+            "line": 16
           },
           "returns": {
             "type": "function",
@@ -4080,7 +4080,7 @@
           "errorExamples": [],
           "source": {
             "file": "events.js",
-            "line": 32
+            "line": 36
           },
           "sig": "(type, handler)",
           "doc": true
@@ -4124,7 +4124,7 @@
           "errorExamples": [],
           "source": {
             "file": "events.js",
-            "line": 45
+            "line": 49
           },
           "sig": "(type, payload)",
           "doc": true
@@ -4180,6 +4180,349 @@
             }
           ],
           "sig": "(name)",
+          "doc": true
+        },
+        {
+          "key": "Logger",
+          "method": "CLASS",
+          "path": "Logger",
+          "title": "Logger",
+          "group": "Logger",
+          "description": "Журнал с уровнями и префиксом. Все журналы, созданные через `child`,\nделят один уровень с исходным, поэтому его можно менять в одном месте.\n\nСообщения выводятся в консоль в виде `[префикс] сообщение`.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [
+            {
+              "type": "",
+              "title": "",
+              "content": "import { logger } from './logger.js';\n\nconst log = logger.child('VN');\nlog.warn('Узел не найден');\nlogger.setLevel('debug');"
+            }
+          ],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 13
+          },
+          "doc": true
+        },
+        {
+          "key": "Logger.constructor",
+          "method": "METHOD",
+          "path": "Logger.constructor",
+          "title": "Logger.constructor(options, shared)",
+          "group": "Logger",
+          "description": "Создаёт журнал.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "Object",
+                "name": "options",
+                "optional": true,
+                "description": "Параметры: `level` (по умолчанию info) и `prefix`."
+              },
+              {
+                "group": null,
+                "type": "Object",
+                "name": "shared",
+                "optional": true,
+                "description": "Общее состояние уровня (используется методом child)."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 33
+          },
+          "sig": "(options, shared)",
+          "doc": true
+        },
+        {
+          "key": "Logger.setLevel",
+          "method": "METHOD",
+          "path": "Logger.setLevel",
+          "title": "Logger.setLevel(level)",
+          "group": "Logger",
+          "description": "Меняет уровень для этого журнала и всех его дочерних.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "level",
+                "optional": false,
+                "description": "Один из уровней: debug, info, warn, error, silent."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 51
+          },
+          "throws": [
+            {
+              "type": "Error",
+              "description": "Если уровень неизвестен."
+            }
+          ],
+          "sig": "(level)",
+          "doc": true
+        },
+        {
+          "key": "Logger.getLevel",
+          "method": "METHOD",
+          "path": "Logger.getLevel",
+          "title": "Logger.getLevel()",
+          "group": "Logger",
+          "description": "",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": []
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 66
+          },
+          "returns": {
+            "type": "string",
+            "description": "Текущий уровень."
+          },
+          "sig": "()",
+          "doc": true
+        },
+        {
+          "key": "Logger.child",
+          "method": "METHOD",
+          "path": "Logger.child",
+          "title": "Logger.child(prefix)",
+          "group": "Logger",
+          "description": "Создаёт журнал с другим префиксом и общим уровнем.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "string",
+                "name": "prefix",
+                "optional": false,
+                "description": "Префикс сообщений, например имя класса или плагина."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 75
+          },
+          "returns": {
+            "type": "Logger",
+            "description": ""
+          },
+          "sig": "(prefix)",
+          "doc": true
+        },
+        {
+          "key": "Logger.debug",
+          "method": "METHOD",
+          "path": "Logger.debug",
+          "title": "Logger.debug(args)",
+          "group": "Logger",
+          "description": "Подробное сообщение для отладки (по умолчанию скрыто).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "*",
+                "name": "args",
+                "optional": false,
+                "description": "Что вывести."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 96
+          },
+          "sig": "(args)",
+          "doc": true
+        },
+        {
+          "key": "Logger.info",
+          "method": "METHOD",
+          "path": "Logger.info",
+          "title": "Logger.info(args)",
+          "group": "Logger",
+          "description": "Обычное сообщение о ходе работы.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "*",
+                "name": "args",
+                "optional": false,
+                "description": "Что вывести."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 106
+          },
+          "sig": "(args)",
+          "doc": true
+        },
+        {
+          "key": "Logger.warn",
+          "method": "METHOD",
+          "path": "Logger.warn",
+          "title": "Logger.warn(args)",
+          "group": "Logger",
+          "description": "Предупреждение: работа продолжается.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "*",
+                "name": "args",
+                "optional": false,
+                "description": "Что вывести."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 116
+          },
+          "sig": "(args)",
+          "doc": true
+        },
+        {
+          "key": "Logger.error",
+          "method": "METHOD",
+          "path": "Logger.error",
+          "title": "Logger.error(args)",
+          "group": "Logger",
+          "description": "Ошибка.",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "*",
+                "name": "args",
+                "optional": false,
+                "description": "Что вывести."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "logger.js",
+            "line": 126
+          },
+          "sig": "(args)",
           "doc": true
         },
         {
@@ -4379,7 +4722,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 7
+            "line": 11
           },
           "doc": true
         },
@@ -4443,7 +4786,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 26
+            "line": 30
           },
           "sig": "(bus, game, player, blocks, ast)",
           "doc": true
@@ -4472,7 +4815,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 166
+            "line": 171
           },
           "properties": [
             {
@@ -4491,7 +4834,7 @@
           "path": "api.log",
           "title": "api.log",
           "group": "PluginAPI",
-          "description": "Сообщения в консоль с именем плагина: `[имя] сообщение`.\nМетоды: info, warn, error.",
+          "description": "Сообщения в консоль с именем плагина: `[имя] сообщение`.\nМетоды: debug, info, warn, error. Уровень общий для движка (logger.setLevel).",
           "since": null,
           "deprecated": null,
           "permissions": [],
@@ -4515,8 +4858,45 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 174
+            "line": 179
           },
+          "doc": true
+        },
+        {
+          "key": "api.log.debug",
+          "method": "METHOD",
+          "path": "api.log.debug",
+          "title": "api.log.debug(args)",
+          "group": "PluginAPI",
+          "description": "Подробное сообщение для отладки (по умолчанию скрыто).",
+          "since": null,
+          "deprecated": null,
+          "permissions": [],
+          "params": {
+            "header": [],
+            "path": [],
+            "query": [],
+            "body": [],
+            "param": [
+              {
+                "group": null,
+                "type": "*",
+                "name": "args",
+                "optional": false,
+                "description": "Что вывести."
+              }
+            ]
+          },
+          "success": [],
+          "error": [],
+          "examples": [],
+          "successExamples": [],
+          "errorExamples": [],
+          "source": {
+            "file": "plugin-manager.js",
+            "line": 188
+          },
+          "sig": "(args)",
           "doc": true
         },
         {
@@ -4551,7 +4931,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 183
+            "line": 196
           },
           "sig": "(args)",
           "doc": true
@@ -4588,7 +4968,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 190
+            "line": 203
           },
           "sig": "(args)",
           "doc": true
@@ -4625,7 +5005,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 197
+            "line": 210
           },
           "sig": "(args)",
           "doc": true
@@ -4654,7 +5034,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 205
+            "line": 218
           },
           "doc": true
         },
@@ -4703,7 +5083,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 212
+            "line": 225
           },
           "returns": {
             "type": "function",
@@ -4751,7 +5131,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 232
+            "line": 245
           },
           "sig": "(event, payload)",
           "doc": true
@@ -4780,7 +5160,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 242
+            "line": 255
           },
           "doc": true
         },
@@ -4808,7 +5188,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 249
+            "line": 262
           },
           "returns": {
             "type": "HTMLElement",
@@ -4856,7 +5236,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 256
+            "line": 269
           },
           "returns": {
             "type": "function",
@@ -4904,7 +5284,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 265
+            "line": 278
           },
           "sig": "(type, handler)",
           "doc": true
@@ -4941,7 +5321,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 280
+            "line": 293
           },
           "sig": "(name)",
           "doc": true
@@ -4978,7 +5358,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 287
+            "line": 300
           },
           "sig": "(name)",
           "doc": true
@@ -5015,7 +5395,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 294
+            "line": 307
           },
           "returns": {
             "type": "boolean",
@@ -5048,7 +5428,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 303
+            "line": 316
           },
           "doc": true
         },
@@ -5076,7 +5456,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 309
+            "line": 322
           },
           "returns": {
             "type": "HTMLElement",
@@ -5124,7 +5504,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 316
+            "line": 329
           },
           "returns": {
             "type": "function",
@@ -5165,7 +5545,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 325
+            "line": 338
           },
           "sig": "(name)",
           "doc": true
@@ -5202,7 +5582,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 332
+            "line": 345
           },
           "sig": "(name)",
           "doc": true
@@ -5239,7 +5619,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 339
+            "line": 352
           },
           "returns": {
             "type": "boolean",
@@ -5272,7 +5652,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 348
+            "line": 361
           },
           "type": "BlockManager",
           "doc": true
@@ -5301,7 +5681,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 359
+            "line": 372
           },
           "doc": true
         },
@@ -5357,7 +5737,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 366
+            "line": 379
           },
           "throws": [
             {
@@ -5398,7 +5778,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 395
+            "line": 408
           },
           "doc": true
         },
@@ -5440,7 +5820,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 424
+            "line": 437
           },
           "returns": {
             "type": "PluginManager",
@@ -5493,7 +5873,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 543
+            "line": 556
           },
           "returns": {
             "type": "boolean",
@@ -5540,7 +5920,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 609
+            "line": 622
           },
           "returns": {
             "type": "boolean",
@@ -5581,7 +5961,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 619
+            "line": 632
           },
           "returns": {
             "type": "Object|undefined",
@@ -5614,7 +5994,7 @@
           "errorExamples": [],
           "source": {
             "file": "plugin-manager.js",
-            "line": 629
+            "line": 642
           },
           "returns": {
             "type": "string[]",

@@ -1,3 +1,7 @@
+import { logger } from './logger.js';
+
+const log = logger.child('EventBus');
+
 /**
  * @class EventBus
  * @apiGroup EventBus
@@ -57,8 +61,8 @@ export class EventBus {
             try {
                 handler(payload);
             } catch (error) {
-                console.error(
-                    `[EventBus] Ошибка в обработчике события "${type}":`,
+                log.error(
+                    `Ошибка в обработчике события "${type}":`,
                     error
                 );
 

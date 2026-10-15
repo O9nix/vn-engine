@@ -1,3 +1,7 @@
+import { logger } from './logger.js';
+
+const log = logger.child('Player');
+
 export class Player {
     #root;
     #pluginLayer;
@@ -52,7 +56,7 @@ export class Player {
         const element = this.#layers.get(name);
 
         if (!element) {
-            console.warn(
+            log.warn(
                 `Визуальный слой "${name}" не зарегистрирован`
             );
             return;
@@ -65,7 +69,7 @@ export class Player {
         const element = this.#layers.get(name);
 
         if (!element) {
-            console.warn(
+            log.warn(
                 `Визуальный слой "${name}" не зарегистрирован`
             );
             return;

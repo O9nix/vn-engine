@@ -22,15 +22,15 @@ export const BackgroundPlugin = {
             'background',
             (node) => {
                 if (!node.image) {
-                    console.warn(
-                        '[BackgroundPlugin] Не указано изображение'
+                    api.log.warn(
+                        'Не указано изображение'
                     );
                     return;
                 }
 
                 if (!isSafeImageUrl(node.image)) {
                     throw new Error(
-                        `[BackgroundPlugin] Недопустимый адрес изображения: ${node.image}`
+                        `Недопустимый адрес изображения: ${node.image}`
                     );
                 }
 
@@ -46,8 +46,8 @@ export const BackgroundPlugin = {
                 document.body.style.backgroundRepeat =
                     'no-repeat';
 
-                console.log(
-                    '[BackgroundPlugin] Установлен фон:',
+                api.log.debug(
+                    'Установлен фон:',
                     node.image
                 );
             }
