@@ -1,6 +1,6 @@
 # VN Engine API
 
-**Версия 0.1.4** · Дата 2026-10-15 · 86 записей
+**Версия 0.1.4** · Дата 2026-10-14 · 86 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
@@ -1984,9 +1984,9 @@ const result = validator.validateGotos();
 
 ## История изменений
 
-### 0.1.4 (2026-10-15)
+### 0.1.4 (2026-10-14)
 
-**Добавлено (50)**
+**Добавлено (32)**
 
 - `AST`
 - `AST.constructor`
@@ -2001,7 +2001,6 @@ const result = validator.validateGotos();
 - `EventBus.on`
 - `EventBus.off`
 - `EventBus.emit`
-- `localPluginLoader`
 - `Logger`
 - `Logger.constructor`
 - `Logger.setLevel`
@@ -2011,9 +2010,6 @@ const result = validator.validateGotos();
 - `Logger.info`
 - `Logger.warn`
 - `Logger.error`
-- `normalizePluginRefs`
-- `orderPlugins`
-- `loadProjectPlugins`
 - `api.plugin`
 - `api.log`
 - `api.log.debug`
@@ -2022,25 +2018,12 @@ const result = validator.validateGotos();
 - `api.log.error`
 - `api.ast`
 - `api.ast.addCommand`
-- `PluginRegistry`
-- `PluginRegistry.constructor`
-- `PluginRegistry.register`
-- `PluginRegistry.resolve`
-- `PluginRegistry.has`
-- `PluginRegistry.list`
 - `ChoicePlugin`
 - `NotyPlugin`
-- `TopLeftHUDPlugin`
-- `TopLeftHUDPlugin.set`
-- `TopLeftHUDPlugin.setTitle`
-- `TopLeftHUDPlugin.update`
-- `TopLeftHUDPlugin.show`
-- `TopLeftHUDPlugin.hide`
-- `Project`
-- `Project.getPlugins`
 
-**Изменено (18)**
+**Изменено (19)**
 
+- `loadProjectPlugins`
 - `PluginManager`
 - `PluginManager.constructor`
 - `api.events`
@@ -2059,6 +2042,29 @@ const result = validator.validateGotos();
 - `api.player.isVisible`
 - `api.blocks`
 - `api.plugins`
+
+### 0.1.3 (2026-10-13)
+
+**Добавлено (18)**
+
+- `localPluginLoader`
+- `normalizePluginRefs`
+- `orderPlugins`
+- `loadProjectPlugins`
+- `PluginRegistry`
+- `PluginRegistry.constructor`
+- `PluginRegistry.register`
+- `PluginRegistry.resolve`
+- `PluginRegistry.has`
+- `PluginRegistry.list`
+- `TopLeftHUDPlugin`
+- `TopLeftHUDPlugin.set`
+- `TopLeftHUDPlugin.setTitle`
+- `TopLeftHUDPlugin.update`
+- `TopLeftHUDPlugin.show`
+- `TopLeftHUDPlugin.hide`
+- `Project`
+- `Project.getPlugins`
 
 ### 0.1.2 (2026-10-08)
 
