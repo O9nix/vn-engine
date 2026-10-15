@@ -1,6 +1,6 @@
 # VN Engine API
 
-**Версия 0.1.4** · Дата 2026-10-14 · 86 записей
+**Версия 0.1.5** · Дата 2026-10-15 · 97 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
@@ -16,6 +16,17 @@
 - **BlockManager**
   - [BlockManager](#blockmanager)
     - [BlockManager.create(type, options)](#blockmanager-create)
+- **ProjectValidator**
+  - [validateProjectScenes(scenes)](#validateprojectscenes)
+  - [ProjectValidator](#projectvalidator)
+    - [ProjectValidator.constructor(bus)](#projectvalidator-constructor)
+    - [ProjectValidator.register(check)](#projectvalidator-register)
+    - [ProjectValidator.registerNodeRule(nodeType, rule)](#projectvalidator-registernoderule)
+    - [ProjectValidator.unregister(id)](#projectvalidator-unregister)
+    - [ProjectValidator.unregisterPlugin(plugin)](#projectvalidator-unregisterplugin)
+    - [ProjectValidator.list()](#projectvalidator-list)
+    - [ProjectValidator.validate(project, context, options)](#projectvalidator-validate)
+    - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - **VN**
   - [VN.unregisterNodeType(type)](#vn-unregisternodetype)
 - **EventBus**
@@ -47,11 +58,12 @@
   - [loadProjectPlugins(project, registry, manager)](#loadprojectplugins)
 - **PluginManager**
   - [PluginManager](#pluginmanager)
-    - [PluginManager.constructor(bus, game, player, blocks, ast)](#pluginmanager-constructor)
+    - [PluginManager.constructor(bus, game, player, blocks, ast, validator)](#pluginmanager-constructor)
     - [PluginManager.use(plugin)](#pluginmanager-use)
     - [PluginManager.remove(name)](#pluginmanager-remove)
     - [PluginManager.has(name)](#pluginmanager-has)
     - [PluginManager.get(name)](#pluginmanager-get)
+    - [PluginManager.getManifests()](#pluginmanager-getmanifests)
     - [PluginManager.list()](#pluginmanager-list)
 - **PluginAPI**
   - [api.plugin](#api-plugin)
@@ -79,6 +91,9 @@
   - [api.blocks](#api-blocks)
   - [api.ast](#api-ast)
     - [api.ast.addCommand(pattern, nodeType, handler)](#api-ast-addcommand)
+  - [api.validation](#api-validation)
+    - [api.validation.register(check)](#api-validation-register)
+    - [api.validation.registerNodeRule(nodeType, rule)](#api-validation-registernoderule)
   - [api.plugins](#api-plugins)
 - **Plugins**
   - [ChoicePlugin](#choiceplugin)
@@ -103,10 +118,6 @@
 - **Project**
   - [Project](#project)
     - [Project.getPlugins()](#project-getplugins)
-- **ProjectValidator**
-  - [ProjectValidator](#projectvalidator)
-    - [ProjectValidator.constructor(project)](#projectvalidator-constructor)
-    - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - [История изменений](#changelog)
 
 ## AST
@@ -292,6 +303,270 @@ const result = parser.parse('# Сцена\n[Анна] Привет');
 `Object` — Созданный блок.
 
 <sub>Исходник: block-manager.js:26</sub>
+
+## ProjectValidator
+
+<a id="validateprojectscenes"></a>
+
+### `validateProjectScenes(scenes)`
+
+*Метод*
+
+Проверяет метки goto в сценах: каждая должна вести на существующий узел.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `scenes` *(обязательное)* | `Object[]` | Сцены проекта. |
+
+#### Возвращает
+
+`Object` — Объект `{ valid, hasGoto, gotoCount, nodeCount, errors }`,
+где `errors` — массив записей `{ target, path, message }`.
+
+#### Примеры
+
+```js
+const result = validateProjectScenes(project.getScenes());
+```
+
+<sub>Исходник: builtin-checks.js:34</sub>
+
+<a id="projectvalidator"></a>
+
+### `ProjectValidator`
+
+*Класс*
+
+Проверяет проект. Ядро регистрирует общие проверки (метки goto, дубли id,
+неизвестные типы узлов, необъявленные зависимости плагинов), а плагины
+добавляют свои через `api.validation`.
+
+Запись о проблеме: `{ code, message, path, plugin, severity }`,
+где `severity` — `error` или `warning`. Ошибки означают, что проект
+запускать нельзя, предупреждения не блокируют запуск.
+
+Проверка, которая упала или не уложилась во время, не ломает проверку проекта:
+она превращается в предупреждение с кодом `check.crashed` или `check.timeout`.
+
+#### Примеры
+
+```js
+const validator = new ProjectValidator(bus);
+const result = await validator.validate(project, { plugins: plugins.getManifests() });
+if (!result.valid) {
+    // result.errors, result.warnings
+}
+```
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`ProjectValidator.constructor(bus)`](#projectvalidator-constructor) | Создаёт валидатор со встроенными проверками ядра. |
+| [`ProjectValidator.register(check)`](#projectvalidator-register) | Регистрирует проверку всего проекта. |
+| [`ProjectValidator.registerNodeRule(nodeType, rule)`](#projectvalidator-registernoderule) | Регистрирует правило для узлов одного типа. Валидатор сам обходит проект и вызывает `run(node, context)` только для узлов этого типа. Пут... |
+| [`ProjectValidator.unregister(id)`](#projectvalidator-unregister) | Снимает проверку по id. |
+| [`ProjectValidator.unregisterPlugin(plugin)`](#projectvalidator-unregisterplugin) | Снимает все проверки плагина. |
+| [`ProjectValidator.list()`](#projectvalidator-list) |  |
+| [`ProjectValidator.validate(project, context, options)`](#projectvalidator-validate) | Запускает все проверки по очереди и собирает результат. После завершения шлёт событие `validator:done` с полным результатом; если есть ош... |
+| [`ProjectValidator.validateGotos()`](#projectvalidator-validategotos) | Проверяет только метки goto. Оставлено для совместимости: работает с проектом, переданным в конструктор `new ProjectValidator(project, bu... |
+
+<sub>Исходник: project-validator.js:14</sub>
+
+<a id="projectvalidator-constructor"></a>
+
+#### `ProjectValidator.constructor(bus)`
+
+*Метод*
+
+Создаёт валидатор со встроенными проверками ядра.
+
+Старая форма `new ProjectValidator(project, bus)` по-прежнему работает
+вместе с методом validateGotos().
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `bus` *(необязательное)* | `EventBus` | Шина событий: валидатор шлёт validator:done. |
+
+<sub>Исходник: project-validator.js:41</sub>
+
+<a id="projectvalidator-register"></a>
+
+#### `ProjectValidator.register(check)`
+
+*Метод*
+
+Регистрирует проверку всего проекта.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `check` *(обязательное)* | `Object` | Проверка: `id` (уникальная строка), `run(project, context)`, необязательные `plugin`, `severity` (error или warning, по умолчанию error) и `timeout` в миллисекундах. Функция `run` (может быть async) возвращает массив записей. |
+
+##### Возвращает
+
+`function` — Функция, снимающая проверку.
+
+##### Исключения
+
+- `Error` — Если проверка некорректна или её id уже занят.
+
+##### Примеры
+
+```js
+validator.register({
+    id: 'inventory:items',
+    plugin: 'inventory',
+    run(project) {
+        return [];
+    }
+});
+```
+
+<sub>Исходник: project-validator.js:97</sub>
+
+<a id="projectvalidator-registernoderule"></a>
+
+#### `ProjectValidator.registerNodeRule(nodeType, rule)`
+
+*Метод*
+
+Регистрирует правило для узлов одного типа. Валидатор сам обходит
+проект и вызывает `run(node, context)` только для узлов этого типа.
+Путь к узлу подставляется в запись, если её `path` пуст.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `nodeType` *(обязательное)* | `string` | Тип узла, например choice. |
+| `rule` *(обязательное)* | `Object` | Правило: те же поля, что у register(). |
+
+##### Возвращает
+
+`function` — Функция, снимающая правило.
+
+<sub>Исходник: project-validator.js:123</sub>
+
+<a id="projectvalidator-unregister"></a>
+
+#### `ProjectValidator.unregister(id)`
+
+*Метод*
+
+Снимает проверку по id.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `id` *(обязательное)* | `string` | Id проверки. |
+
+##### Возвращает
+
+`boolean` — true, если проверка была зарегистрирована.
+
+<sub>Исходник: project-validator.js:145</sub>
+
+<a id="projectvalidator-unregisterplugin"></a>
+
+#### `ProjectValidator.unregisterPlugin(plugin)`
+
+*Метод*
+
+Снимает все проверки плагина.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `plugin` *(обязательное)* | `string` | Имя плагина. |
+
+##### Возвращает
+
+`number` — Сколько проверок снято.
+
+<sub>Исходник: project-validator.js:158</sub>
+
+<a id="projectvalidator-list"></a>
+
+#### `ProjectValidator.list()`
+
+*Метод*
+
+##### Возвращает
+
+`Object[]` — Зарегистрированные проверки: `{ id, plugin, kind }`.
+
+<sub>Исходник: project-validator.js:180</sub>
+
+<a id="projectvalidator-validate"></a>
+
+#### `ProjectValidator.validate(project, context, options)`
+
+*Метод*
+
+Запускает все проверки по очереди и собирает результат.
+После завершения шлёт событие `validator:done` с полным результатом;
+если есть ошибки, дополнительно шлёт `validator:errors` с `{ errors }`
+(для совместимости).
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `project` *(обязательное)* | `Object` | Проект (`Project` или объект со сценами). |
+| `context` *(необязательное)* | `Object` | Дополнительные данные для проверок. Поле `plugins` — манифесты установленных плагинов (`PluginManager.getManifests()`): без него проверки типов узлов и зависимостей пропускаются. |
+| `options` *(необязательное)* | `Object` | Параметры: `timeout` — предел времени на одну проверку в миллисекундах (по умолчанию 3000). |
+
+##### Возвращает
+
+`Promise` — Результат `{ valid, errors, warnings, checksRun }`.
+
+##### Исключения
+
+- `TypeError` — Если проект не передан.
+
+##### Примеры
+
+```js
+const result = await validator.validate(project, { plugins: plugins.getManifests() });
+```
+
+<sub>Исходник: project-validator.js:282</sub>
+
+<a id="projectvalidator-validategotos"></a>
+
+#### `ProjectValidator.validateGotos()`
+
+*Метод*
+
+Проверяет только метки goto. Оставлено для совместимости:
+работает с проектом, переданным в конструктор `new ProjectValidator(project, bus)`.
+Новый код использует validate().
+
+##### Возвращает
+
+`Object` — Объект `{ valid, hasGoto, gotoCount, nodeCount, errors }`,
+где `errors` — массив `{ target, path, message }`.
+
+##### Исключения
+
+- `Error` — Если проект не был передан в конструктор.
+
+##### Примеры
+
+```js
+const validator = new ProjectValidator(project, bus);
+const result = validator.validateGotos();
+```
+
+<sub>Исходник: project-validator.js:341</sub>
 
 ## VN
 
@@ -894,28 +1169,29 @@ if (report.failed.length === 0) {
 *Класс*
 
 Устанавливает плагины и выдаёт каждому из них собственный Plugin API
-(`plugin`, `log`, `events`, `game`, `player`, `blocks`, `ast`, `plugins`).
+(`plugin`, `log`, `events`, `game`, `player`, `blocks`, `ast`, `validation`, `plugins`).
 
 Всё, что плагин занял через свой `api` (подписки на события, слои,
-типы узлов, блоки, команды парсера), движок снимает сам при удалении
+типы узлов, блоки, команды парсера, проверки валидатора), движок снимает сам при удалении
 плагина или при сбое его установки.
 
 #### Содержимое
 
 | Имя | Описание |
 | --- | --- |
-| [`PluginManager.constructor(bus, game, player, blocks, ast)`](#pluginmanager-constructor) | Запоминает зависимости движка. Для каждого плагина при установке создаётся собственный `api`, который передаётся в `install(api)`. |
+| [`PluginManager.constructor(bus, game, player, blocks, ast, validator)`](#pluginmanager-constructor) | Запоминает зависимости движка. Для каждого плагина при установке создаётся собственный `api`, который передаётся в `install(api)`. |
 | [`PluginManager.use(plugin)`](#pluginmanager-use) | Устанавливает плагин после проверки его зависимостей. |
 | [`PluginManager.remove(name)`](#pluginmanager-remove) | Удаляет установленный плагин, если от него не зависят другие установленные плагины. |
 | [`PluginManager.has(name)`](#pluginmanager-has) |  |
 | [`PluginManager.get(name)`](#pluginmanager-get) |  |
+| [`PluginManager.getManifests()`](#pluginmanager-getmanifests) | Описывает установленные плагины для валидатора. |
 | [`PluginManager.list()`](#pluginmanager-list) |  |
 
-<sub>Исходник: plugin-manager.js:11</sub>
+<sub>Исходник: plugin-manager.js:29</sub>
 
 <a id="pluginmanager-constructor"></a>
 
-#### `PluginManager.constructor(bus, game, player, blocks, ast)`
+#### `PluginManager.constructor(bus, game, player, blocks, ast, validator)`
 
 *Метод*
 
@@ -950,6 +1226,9 @@ api
 ├── blocks                  → BlockManager
 ├── ast
 │   └── addCommand(pattern, nodeType, handler)
+├── validation
+│   ├── register(check) → unregister
+│   └── registerNodeRule(nodeType, rule) → unregister
 └── plugins                 → Proxy
     └── <name>.api          → публичный API плагина
 ```
@@ -963,8 +1242,9 @@ api
 | `player` *(обязательное)* | `Player` | Плеер со слоями страницы. |
 | `blocks` *(обязательное)* | `BlockManager` | Менеджер визуальных блоков. |
 | `ast` *(необязательное)* | `AST` | Парсер сценария. Без него `api.ast.addCommand` выбрасывает ошибку. |
+| `validator` *(необязательное)* | `ProjectValidator` | Валидатор проекта. Без него `api.validation` выбрасывает ошибку. |
 
-<sub>Исходник: plugin-manager.js:30</sub>
+<sub>Исходник: plugin-manager.js:49</sub>
 
 <a id="pluginmanager-use"></a>
 
@@ -995,7 +1275,7 @@ plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:437</sub>
+<sub>Исходник: plugin-manager.js:527</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -1027,7 +1307,7 @@ plugins.use(ChoicePlugin);
 plugins.remove('choice');
 ```
 
-<sub>Исходник: plugin-manager.js:556</sub>
+<sub>Исходник: plugin-manager.js:647</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -1045,7 +1325,7 @@ plugins.remove('choice');
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:622</sub>
+<sub>Исходник: plugin-manager.js:713</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -1063,7 +1343,29 @@ plugins.remove('choice');
 
 `Object|undefined` — Исходный объект плагина
 
-<sub>Исходник: plugin-manager.js:632</sub>
+<sub>Исходник: plugin-manager.js:723</sub>
+
+<a id="pluginmanager-getmanifests"></a>
+
+#### `PluginManager.getManifests()`
+
+*Метод*
+
+Описывает установленные плагины для валидатора.
+
+##### Возвращает
+
+`Object[]` — Массив `{ name, version, dependencies, nodeTypes }`.
+В `nodeTypes` входят типы из манифеста и типы, которые плагин
+реально зарегистрировал через `api.game.registerNodeType`.
+
+##### Примеры
+
+```js
+const result = await validator.validate(project, { plugins: plugins.getManifests() });
+```
+
+<sub>Исходник: plugin-manager.js:733</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -1075,7 +1377,7 @@ plugins.remove('choice');
 
 `string[]` — Имена установленных плагинов
 
-<sub>Исходник: plugin-manager.js:642</sub>
+<sub>Исходник: plugin-manager.js:757</sub>
 
 ## PluginAPI
 
@@ -1093,7 +1395,7 @@ plugins.remove('choice');
 | --- | --- | --- |
 | `name` | `string` | Имя плагина из манифеста. |
 
-<sub>Исходник: plugin-manager.js:171</sub>
+<sub>Исходник: plugin-manager.js:198</sub>
 
 <a id="api-log"></a>
 
@@ -1119,7 +1421,7 @@ api.log.info('Плагин установлен');
 | [`api.log.warn(args)`](#api-log-warn) |  |
 | [`api.log.error(args)`](#api-log-error) |  |
 
-<sub>Исходник: plugin-manager.js:179</sub>
+<sub>Исходник: plugin-manager.js:206</sub>
 
 <a id="api-log-debug"></a>
 
@@ -1135,7 +1437,7 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:188</sub>
+<sub>Исходник: plugin-manager.js:215</sub>
 
 <a id="api-log-info"></a>
 
@@ -1149,7 +1451,7 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:196</sub>
+<sub>Исходник: plugin-manager.js:223</sub>
 
 <a id="api-log-warn"></a>
 
@@ -1163,7 +1465,7 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:203</sub>
+<sub>Исходник: plugin-manager.js:230</sub>
 
 <a id="api-log-error"></a>
 
@@ -1177,7 +1479,7 @@ api.log.info('Плагин установлен');
 | --- | --- | --- |
 | `args` *(обязательное)* | `*` | Что вывести. |
 
-<sub>Исходник: plugin-manager.js:210</sub>
+<sub>Исходник: plugin-manager.js:237</sub>
 
 <a id="api-events"></a>
 
@@ -1195,7 +1497,7 @@ api.log.info('Плагин установлен');
 | [`api.events.on(event, handler)`](#api-events-on) | Подписка на событие. |
 | [`api.events.emit(event, payload)`](#api-events-emit) | Эмит события. |
 
-<sub>Исходник: plugin-manager.js:218</sub>
+<sub>Исходник: plugin-manager.js:245</sub>
 
 <a id="api-events-on"></a>
 
@@ -1224,7 +1526,7 @@ api.events.on('story:loaded', (data) => {
 });
 ```
 
-<sub>Исходник: plugin-manager.js:225</sub>
+<sub>Исходник: plugin-manager.js:252</sub>
 
 <a id="api-events-emit"></a>
 
@@ -1241,7 +1543,7 @@ api.events.on('story:loaded', (data) => {
 | `event` *(обязательное)* | `string` | Имя события. |
 | `payload` *(необязательное)* | `*` | Данные события. |
 
-<sub>Исходник: plugin-manager.js:245</sub>
+<sub>Исходник: plugin-manager.js:272</sub>
 
 <a id="api-game"></a>
 
@@ -1263,7 +1565,7 @@ api.events.on('story:loaded', (data) => {
 | [`api.game.hide(name)`](#api-game-hide) |  |
 | [`api.game.isVisible(name)`](#api-game-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:255</sub>
+<sub>Исходник: plugin-manager.js:282</sub>
 
 <a id="api-game-getpluginlayer"></a>
 
@@ -1275,7 +1577,7 @@ api.events.on('story:loaded', (data) => {
 
 `HTMLElement` — DOM-слой плагинов.
 
-<sub>Исходник: plugin-manager.js:262</sub>
+<sub>Исходник: plugin-manager.js:289</sub>
 
 <a id="api-game-registerlayer"></a>
 
@@ -1294,7 +1596,7 @@ api.events.on('story:loaded', (data) => {
 
 `function` — Функция, удаляющая слой.
 
-<sub>Исходник: plugin-manager.js:269</sub>
+<sub>Исходник: plugin-manager.js:296</sub>
 
 <a id="api-game-registernodetype"></a>
 
@@ -1313,7 +1615,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | `type` *(обязательное)* | `string` | Имя типа узла. |
 | `handler` *(обязательное)* | `function` | (node, context) => void |
 
-<sub>Исходник: plugin-manager.js:278</sub>
+<sub>Исходник: plugin-manager.js:305</sub>
 
 <a id="api-game-show"></a>
 
@@ -1327,7 +1629,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:293</sub>
+<sub>Исходник: plugin-manager.js:322</sub>
 
 <a id="api-game-hide"></a>
 
@@ -1341,7 +1643,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:300</sub>
+<sub>Исходник: plugin-manager.js:329</sub>
 
 <a id="api-game-isvisible"></a>
 
@@ -1359,7 +1661,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:307</sub>
+<sub>Исходник: plugin-manager.js:336</sub>
 
 <a id="api-player"></a>
 
@@ -1379,7 +1681,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | [`api.player.hide(name)`](#api-player-hide) |  |
 | [`api.player.isVisible(name)`](#api-player-isvisible) |  |
 
-<sub>Исходник: plugin-manager.js:316</sub>
+<sub>Исходник: plugin-manager.js:345</sub>
 
 <a id="api-player-getpluginlayer"></a>
 
@@ -1391,7 +1693,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `HTMLElement`
 
-<sub>Исходник: plugin-manager.js:322</sub>
+<sub>Исходник: plugin-manager.js:351</sub>
 
 <a id="api-player-registerlayer"></a>
 
@@ -1410,7 +1712,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `function` — Функция, удаляющая слой.
 
-<sub>Исходник: plugin-manager.js:329</sub>
+<sub>Исходник: plugin-manager.js:358</sub>
 
 <a id="api-player-show"></a>
 
@@ -1424,7 +1726,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:338</sub>
+<sub>Исходник: plugin-manager.js:367</sub>
 
 <a id="api-player-hide"></a>
 
@@ -1438,7 +1740,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 | --- | --- | --- |
 | `name` *(обязательное)* | `string` | Имя слоя. |
 
-<sub>Исходник: plugin-manager.js:345</sub>
+<sub>Исходник: plugin-manager.js:374</sub>
 
 <a id="api-player-isvisible"></a>
 
@@ -1456,7 +1758,7 @@ context: { wait(options), resume(), goto(nodeId) }.
 
 `boolean`
 
-<sub>Исходник: plugin-manager.js:352</sub>
+<sub>Исходник: plugin-manager.js:381</sub>
 
 <a id="api-blocks"></a>
 
@@ -1469,7 +1771,7 @@ getActiveByChannel, getCurrent, show, hide, remove.
 Блоки, созданные плагином, удаляются вместе с ним.
 `create(type, { replace: true })` сначала убирает блоки того же канала.
 
-<sub>Исходник: plugin-manager.js:361</sub>
+<sub>Исходник: plugin-manager.js:390</sub>
 
 <a id="api-ast"></a>
 
@@ -1486,7 +1788,7 @@ getActiveByChannel, getCurrent, show, hide, remove.
 | --- | --- |
 | [`api.ast.addCommand(pattern, nodeType, handler)`](#api-ast-addcommand) | Регистрирует текстовую команду парсера. |
 
-<sub>Исходник: plugin-manager.js:372</sub>
+<sub>Исходник: plugin-manager.js:401</sub>
 
 <a id="api-ast-addcommand"></a>
 
@@ -1517,7 +1819,87 @@ api.ast.addCommand(/^\/\/\s*(.*)$/, 'narration', (match, line, index) => ({
 }));
 ```
 
-<sub>Исходник: plugin-manager.js:379</sub>
+<sub>Исходник: plugin-manager.js:408</sub>
+
+<a id="api-validation"></a>
+
+### `api.validation`
+
+*Группа*
+
+Доступ к валидатору проекта: плагин добавляет собственные проверки.
+Проверки плагина снимаются при его удалении, а их id получают
+префикс `имя-плагина:`.
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`api.validation.register(check)`](#api-validation-register) | Регистрирует проверку всего проекта. |
+| [`api.validation.registerNodeRule(nodeType, rule)`](#api-validation-registernoderule) | Регистрирует правило для узлов одного типа: валидатор сам обходит проект и вызывает `run(node, context)`. |
+
+<sub>Исходник: plugin-manager.js:437</sub>
+
+<a id="api-validation-register"></a>
+
+#### `api.validation.register(check)`
+
+*Метод*
+
+Регистрирует проверку всего проекта.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `check` *(обязательное)* | `Object` | Проверка: `id`, `run(project, context)`, необязательные `severity` (error или warning) и `timeout`. Функция run возвращает массив записей `{ code, message, path }`. |
+
+##### Возвращает
+
+`function` — Функция, снимающая проверку.
+
+##### Исключения
+
+- `Error` — Если PluginManager создан без валидатора.
+
+##### Примеры
+
+```js
+api.validation.register({
+    id: 'items',
+    run(project) {
+        return [];
+    }
+});
+```
+
+<sub>Исходник: plugin-manager.js:445</sub>
+
+<a id="api-validation-registernoderule"></a>
+
+#### `api.validation.registerNodeRule(nodeType, rule)`
+
+*Метод*
+
+Регистрирует правило для узлов одного типа: валидатор сам
+обходит проект и вызывает `run(node, context)`.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `nodeType` *(обязательное)* | `string` | Тип узла. |
+| `rule` *(обязательное)* | `Object` | Правило: те же поля, что у register(). |
+
+##### Возвращает
+
+`function` — Функция, снимающая правило.
+
+##### Исключения
+
+- `Error` — Если PluginManager создан без валидатора.
+
+<sub>Исходник: plugin-manager.js:474</sub>
 
 <a id="api-plugins"></a>
 
@@ -1536,7 +1918,7 @@ const state = api.plugins.state.api.get();
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugin-manager.js:408</sub>
+<sub>Исходник: plugin-manager.js:498</sub>
 
 ## Plugins
 
@@ -1586,7 +1968,7 @@ api.plugins.state.api.set('health', 10);
 Показывает всплывающие уведомления в правом верхнем углу.
 
 Сам реагирует на события движка:
-`validator:errors` (ошибки проверки проекта),
+`validator:done` (результат проверки проекта: ошибки и предупреждения),
 `plugin:error` (плагин не загрузился или не установился),
 `story:error` (ошибка во время выполнения узла).
 
@@ -1913,76 +2295,34 @@ project.getPlugins();
 
 <sub>Исходник: project.js:23</sub>
 
-## ProjectValidator
-
-<a id="projectvalidator"></a>
-
-### `ProjectValidator`
-
-*Класс*
-
-Проверяет проект на типовые и базовые ошибки. Такие как:
-1. Метка (goto) не ведет ни к одному из существующих узлов
-
-#### Содержимое
-
-| Имя | Описание |
-| --- | --- |
-| [`ProjectValidator.constructor(project)`](#projectvalidator-constructor) | Получает проект для валидации |
-| [`ProjectValidator.validateGotos()`](#projectvalidator-validategotos) | Проверяет метки goto |
-
-<sub>Исходник: ProjectValidator.js:4</sub>
-
-<a id="projectvalidator-constructor"></a>
-
-#### `ProjectValidator.constructor(project)`
-
-*Метод*
-
-Получает проект для валидации
-
-##### Параметры
-
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `project` *(обязательное)* | `project` |  |
-
-<sub>Исходник: ProjectValidator.js:13</sub>
-
-<a id="projectvalidator-validategotos"></a>
-
-#### `ProjectValidator.validateGotos()`
-
-*Метод*
-
-Проверяет метки goto
-
-##### Примеры
-
-**Возвращает объект**
-
-```js
-const validator = new ProjectValidator(project);
-const result = validator.validateGotos();
-//Возвращяет объект
-{
-  valid: boolean,       // прошла ли валидация успешно
-  hasGoto: boolean,     // найден ли хотя бы один goto
-  gotoCount: number,    // сколько всего найдено goto
-  nodeCount: number,    // сколько уникальных узлов найдено
-  errors: Array<{       // список ошибок
-      target: any,
-      path: string,
-      message: string
-  }>
-}
-```
-
-<sub>Исходник: ProjectValidator.js:24</sub>
-
 <a id="changelog"></a>
 
 ## История изменений
+
+### 0.1.5 (2026-10-15)
+
+**Добавлено (11)**
+
+- `validateProjectScenes`
+- `api.validation`
+- `api.validation.register`
+- `api.validation.registerNodeRule`
+- `PluginManager.getManifests`
+- `ProjectValidator.register`
+- `ProjectValidator.registerNodeRule`
+- `ProjectValidator.unregister`
+- `ProjectValidator.unregisterPlugin`
+- `ProjectValidator.list`
+- `ProjectValidator.validate`
+
+**Изменено (6)**
+
+- `PluginManager`
+- `PluginManager.constructor`
+- `NotyPlugin`
+- `ProjectValidator`
+- `ProjectValidator.constructor`
+- `ProjectValidator.validateGotos`
 
 ### 0.1.4 (2026-10-14)
 

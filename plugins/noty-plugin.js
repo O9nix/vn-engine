@@ -5,7 +5,7 @@
  * Показывает всплывающие уведомления в правом верхнем углу.
  *
  * Сам реагирует на события движка:
- * `validator:errors` (ошибки проверки проекта),
+ * `validator:done` (результат проверки проекта: ошибки и предупреждения),
  * `plugin:error` (плагин не загрузился или не установился),
  * `story:error` (ошибка во время выполнения узла).
  *
@@ -140,34 +140,45 @@ export const NotyPlugin = {
             return notification;
         }
 
-        api.events.on('validator:errors', (data) => {
-            const errors = data?.errors ?? (Array.isArray(data) ? data : []);
-
-            if (errors.length === 0) {
-                return;
-            }
-
-            createNotification(
-                `Найдено проблем: ${errors.length}. Подробности в консоли.`,
-                { type: 'error', title: 'Ошибка проверки проекта', duration: 5000 }
-            );
-
-            errors.slice(0, MAX_DETAILS).forEach((err, index) => {
-                const msg = err.message ?? (typeof err === 'string' ? err : JSON.stringify(err));
-                const full = err.path ? `${msg}\n(${err.path})` : msg;
+        // Результат проверки проекта: ошибки блокируют запуск, предупреждения нет.
+        function showEntries(entries, type, title) {
+            entries.slice(0, MAX_DETAILS).forEach((entry, index) => {
+                const msg = entry.message ?? (typeof entry === 'string' ? entry : JSON.stringify(entry));
+                const full = entry.path ? `${msg}\n(${entry.path})` : msg;
 
                 later(() => createNotification(full, {
-                    type: 'error',
-                    title: `Ошибка #${index + 1}`,
+                    type,
+                    title: `${title} #${index + 1}`,
                     duration: 6000
                 }), index * 250);
             });
 
-            if (errors.length > MAX_DETAILS) {
+            if (entries.length > MAX_DETAILS) {
                 later(() => createNotification(
-                    `И ещё ${errors.length - MAX_DETAILS} скрытых ошибок`,
+                    `И ещё ${entries.length - MAX_DETAILS} скрытых`,
                     { type: 'warning', title: 'Внимание', duration: 4000 }
                 ), MAX_DETAILS * 250 + 100);
+            }
+        }
+
+        api.events.on('validator:done', (result) => {
+            const errors = result?.errors ?? [];
+            const warnings = result?.warnings ?? [];
+
+            if (errors.length > 0) {
+                createNotification(
+                    `Найдено ошибок: ${errors.length}. Подробности в консоли.`,
+                    { type: 'error', title: 'Ошибка проверки проекта', duration: 5000 }
+                );
+
+                showEntries(errors, 'error', 'Ошибка');
+            } else if (warnings.length > 0) {
+                createNotification(
+                    `Предупреждений: ${warnings.length}. Проект запущен.`,
+                    { type: 'warning', title: 'Проверка проекта', duration: 4000 }
+                );
+
+                showEntries(warnings, 'warning', 'Предупреждение');
             }
         });
 

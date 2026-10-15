@@ -2,7 +2,7 @@ import { VN } from './core.js';
 import { Player } from './player.js';
 import { BlockManager } from './block-manager.js';
 import { Project } from './project.js';
-import { ProjectValidator } from './ProjectValidator.js';
+import { ProjectValidator } from './project-validator.js';
 import { PluginRegistry } from './plugin-registry.js';
 import { localPluginLoader } from './local-plugin-loader.js';
 import { loadProjectPlugins } from './plugin-loader.js';
@@ -89,7 +89,7 @@ const project = new Project({
                                    
                                     text: 'Пойдём домой',
 
-                                    goto: 'home1'
+                                    goto: 'home'
                                 }
                             ]
                         }
@@ -135,12 +135,15 @@ const blocks = new BlockManager(
     player.getPluginLayer()
 );
 
+const validator = new ProjectValidator(bus);
+
 const plugins = new PluginManager(
     bus,
     game,
     player,
     blocks,
-    parser
+    parser,
+    validator
 );
 
 document.addEventListener(
@@ -204,9 +207,26 @@ async function start() {
         return;
     }
 
-    const validator = new ProjectValidator(project, bus);
+    // Ошибки проекта блокируют запуск, предупреждения не мешают.
+    const validation = await validator.validate(
+        project,
+        { plugins: plugins.getManifests() }
+    );
 
-    validator.validateGotos();
+    if (!validation.valid) {
+        logger.error(
+            `Проект содержит ошибки (${validation.errors.length}), история не запущена`
+        );
+
+        if (!plugins.has('noty')) {
+            showFatal(
+                'Проект не запущен, найдены ошибки:\n' +
+                validation.errors.map(e => `- ${e.message} (${e.path})`).join('\n')
+            );
+        }
+
+        return;
+    }
 
 
 

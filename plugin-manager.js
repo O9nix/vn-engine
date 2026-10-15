@@ -8,14 +8,32 @@ const log = logger.child('PluginManager');
  */
 export const PLUGIN_API_VERSION = 1;
 
+function requireValidator(pluginName, validator) {
+    if (!validator) {
+        throw new Error(
+            `PluginManager: плагин "${pluginName}" использует api.validation, ` +
+            'но менеджер создан без валидатора'
+        );
+    }
+}
+
+// Проверка плагина получает его имя и id с префиксом, чтобы id разных плагинов не пересекались.
+function scopedCheck(pluginName, check) {
+    return {
+        ...check,
+        plugin: pluginName,
+        id: `${pluginName}:${check?.id}`
+    };
+}
+
 /**
  * @class PluginManager
  * @apiGroup PluginManager
  * Устанавливает плагины и выдаёт каждому из них собственный Plugin API
- * (`plugin`, `log`, `events`, `game`, `player`, `blocks`, `ast`, `plugins`).
+ * (`plugin`, `log`, `events`, `game`, `player`, `blocks`, `ast`, `validation`, `plugins`).
  *
  * Всё, что плагин занял через свой `api` (подписки на события, слои,
- * типы узлов, блоки, команды парсера), движок снимает сам при удалении
+ * типы узлов, блоки, команды парсера, проверки валидатора), движок снимает сам при удалении
  * плагина или при сбое его установки.
  */
 export class PluginManager {
@@ -25,6 +43,7 @@ export class PluginManager {
     #player;
     #blocks;
     #ast;
+    #validator;
     #pluginsProxy;
 
     /**
@@ -61,6 +80,9 @@ export class PluginManager {
      * ├── blocks                  → BlockManager
      * ├── ast
      * │   └── addCommand(pattern, nodeType, handler)
+     * ├── validation
+     * │   ├── register(check) → unregister
+     * │   └── registerNodeRule(nodeType, rule) → unregister
      * └── plugins                 → Proxy
      *     └── <name>.api          → публичный API плагина
      * ```
@@ -70,19 +92,22 @@ export class PluginManager {
      * @param {Player} player Плеер со слоями страницы.
      * @param {BlockManager} blocks Менеджер визуальных блоков.
      * @param {AST} [ast] Парсер сценария. Без него `api.ast.addCommand` выбрасывает ошибку.
+     * @param {ProjectValidator} [validator] Валидатор проекта. Без него `api.validation` выбрасывает ошибку.
      */
     constructor(
         bus,
         game,
         player,
         blocks,
-        ast
+        ast,
+        validator
     ) {
         this.#bus = bus;
         this.#game = game;
         this.#player = player;
         this.#blocks = blocks;
         this.#ast = ast ?? null;
+        this.#validator = validator ?? null;
 
         // Общий для всех плагинов доступ к публичным API друг друга.
         this.#pluginsProxy = new Proxy(
@@ -117,6 +142,8 @@ export class PluginManager {
         const game = this.#game;
         const player = this.#player;
         const ast = this.#ast;
+        const validator = this.#validator;
+        const nodeTypes = new Set();
         const blocks = this.#blocks;
         const pluginLog = logger.child(pluginName);
 
@@ -287,6 +314,8 @@ export class PluginManager {
                 registerNodeType: (type, handler) => {
                     game.registerNodeType(type, handler);
 
+                    nodeTypes.add(type);
+
                     track(() => game.unregisterNodeType?.(type));
                 },
 
@@ -406,6 +435,67 @@ export class PluginManager {
             },
 
             /**
+             * @apiName api.validation
+             * @apiGroup PluginAPI
+             * Доступ к валидатору проекта: плагин добавляет собственные проверки.
+             * Проверки плагина снимаются при его удалении, а их id получают
+             * префикс `имя-плагина:`.
+             */
+            validation: {
+                /**
+                 * @apiName api.validation.register
+                 * @apiGroup PluginAPI
+                 * Регистрирует проверку всего проекта.
+                 * @param {Object} check Проверка: `id`, `run(project, context)`,
+                 * необязательные `severity` (error или warning) и `timeout`.
+                 * Функция run возвращает массив записей `{ code, message, path }`.
+                 * @returns {function} Функция, снимающая проверку.
+                 * @throws {Error} Если PluginManager создан без валидатора.
+                 * @example
+                 * api.validation.register({
+                 *     id: 'items',
+                 *     run(project) {
+                 *         return [];
+                 *     }
+                 * });
+                 */
+                register: (check) => {
+                    requireValidator(pluginName, validator);
+
+                    const off = validator.register(
+                        scopedCheck(pluginName, check)
+                    );
+
+                    track(off);
+
+                    return off;
+                },
+
+                /**
+                 * @apiName api.validation.registerNodeRule
+                 * @apiGroup PluginAPI
+                 * Регистрирует правило для узлов одного типа: валидатор сам
+                 * обходит проект и вызывает `run(node, context)`.
+                 * @param {string} nodeType Тип узла.
+                 * @param {Object} rule Правило: те же поля, что у register().
+                 * @returns {function} Функция, снимающая правило.
+                 * @throws {Error} Если PluginManager создан без валидатора.
+                 */
+                registerNodeRule: (nodeType, rule) => {
+                    requireValidator(pluginName, validator);
+
+                    const off = validator.registerNodeRule(
+                        nodeType,
+                        scopedCheck(pluginName, rule)
+                    );
+
+                    track(off);
+
+                    return off;
+                }
+            },
+
+            /**
              * @apiName api.plugins
              * @apiGroup PluginAPI
              * Proxy к API установленных плагинов.
@@ -431,7 +521,7 @@ export class PluginManager {
             }
         };
 
-        return { api, dispose };
+        return { api, dispose, nodeTypes };
     }
 
 /**
@@ -541,7 +631,8 @@ use(plugin) {
         plugin,
         api: pluginApi,
         cleanup,
-        dispose: scope.dispose
+        dispose: scope.dispose,
+        nodeTypes: scope.nodeTypes
     });
 
     log.info(
@@ -637,6 +728,30 @@ remove(name) {
      */
     get(name) {
         return this.#plugins.get(name)?.plugin;
+    }
+
+    /**
+     * @apiName PluginManager.getManifests
+     * @apiGroup PluginManager
+     *
+     * Описывает установленные плагины для валидатора.
+     *
+     * @returns {Object[]} Массив `{ name, version, dependencies, nodeTypes }`.
+     * В `nodeTypes` входят типы из манифеста и типы, которые плагин
+     * реально зарегистрировал через `api.game.registerNodeType`.
+     *
+     * @example
+     * const result = await validator.validate(project, { plugins: plugins.getManifests() });
+     */
+    getManifests() {
+        return [...this.#plugins.values()].map(({ plugin, nodeTypes }) => ({
+            name: plugin.name,
+            version: plugin.version,
+            dependencies: [...(plugin.dependencies ?? [])],
+            nodeTypes: [
+                ...new Set([...(plugin.nodeTypes ?? []), ...nodeTypes])
+            ]
+        }));
     }
 
     /**
