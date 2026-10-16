@@ -18,6 +18,7 @@ export const WaitPlugin = {
         let timeoutId = null;
         let animationId = null;
         let currentTimer = null;
+        let activeNode = null;
 
         api.game.registerNodeType(
             'wait',
@@ -43,6 +44,8 @@ export const WaitPlugin = {
                     'Текущий блок:',
                     block
                 );
+
+                activeNode = node;
 
                 context.wait();
 
@@ -145,7 +148,10 @@ export const WaitPlugin = {
             }
         );
 
-        return () => {
+        // Таймер нельзя оставлять после того, как игрок пропустил паузу
+        // кликом или игра вернулась к снимку: иначе он «досрочно» пропустит
+        // уже другой узел.
+        const stopTimers = () => {
             if (timeoutId !== null) {
                 clearTimeout(timeoutId);
                 timeoutId = null;
@@ -163,6 +169,16 @@ export const WaitPlugin = {
                 currentTimer = null;
             }
         };
+
+        api.events.on('node:start', (startedNode) => {
+            if (startedNode !== activeNode) {
+                stopTimers();
+            }
+        });
+
+        api.events.on('story:restoring', stopTimers);
+
+        return stopTimers;
     }
 };
 

@@ -11,7 +11,11 @@ const log = logger.child('VN');
  * которые зарегистрировали плагины. Само ничего не рисует.
  *
  * Если обработчик узла бросает ошибку, история останавливается
- * и приходит событие `story:error`.
+ * и приходит событие `story:error`. Когда сцена заканчивается, история
+ * продолжается с первого узла следующей; о смене сцены сообщают события
+ * `scene:start` и `scene:end`. Метка `goto` может вести на узел или на сцену.
+ *
+ * Игру можно сохранить и вернуть к сохранённой точке: `snapshot()` и `restore()`.
  *
  * @example
  * const game = new VN();
@@ -29,7 +33,10 @@ export class VN {
     #failed = false;
     #isLocked = false;
 
+    #currentSceneId = null;
+
     #nodeTypes = new Map();
+    #snapshotProviders = new Map();
 
     constructor() {
         this.#bus.on('click-game', () => {
@@ -108,6 +115,149 @@ export class VN {
     }
 
     /**
+     * @apiName VN.registerSnapshotProvider
+     * @apiGroup VN
+     *
+     * Подключает источник данных для снимка. Плагин, у которого есть
+     * состояние (переменные, инвентарь), сообщает, как его сохранить
+     * и как восстановить. Плагинам удобнее `api.snapshot.register`:
+     * имя берётся из плагина, а при удалении плагина источник снимается.
+     *
+     * @param {string} name Имя источника, обычно имя плагина.
+     * @param {Object} provider Объект `{ save(), load(data) }`. Функция `save`
+     * возвращает данные, которые можно сериализовать в JSON; `load` принимает их же.
+     * @returns {function} Функция, снимающая источник.
+     * @throws {Error} Если имя занято или у источника нет save и load.
+     *
+     * @example
+     * let gold = 0;
+     *
+     * game.registerSnapshotProvider('purse', {
+     *     save: () => ({ gold }),
+     *     load: (data) => { gold = data.gold; }
+     * });
+     */
+    registerSnapshotProvider(name, provider) {
+        if (this.#snapshotProviders.has(name)) {
+            throw new Error(
+                `Источник снимка "${name}" уже зарегистрирован`
+            );
+        }
+
+        if (
+            typeof provider?.save !== 'function' ||
+            typeof provider?.load !== 'function'
+        ) {
+            throw new TypeError(
+                `Источник снимка "${name}" должен иметь функции save и load`
+            );
+        }
+
+        this.#snapshotProviders.set(name, provider);
+
+        return () => this.#snapshotProviders.delete(name);
+    }
+
+    /**
+     * @apiName VN.snapshot
+     * @apiGroup VN
+     *
+     * Делает снимок игры: текущий узел плюс данные всех источников
+     * (например, состояние из плагина `state`). Результат не связан
+     * с живыми объектами игры и пригоден для JSON.
+     *
+     * @returns {Object} Снимок `{ version, nodeId, data }`.
+     * @throws {Error} Если проект ещё не загружен.
+     *
+     * @example
+     * const saved = game.snapshot();
+     * localStorage.setItem('save', JSON.stringify(saved));
+     */
+    snapshot() {
+        if (!this.#project) {
+            throw new Error('snapshot(): проект ещё не загружен');
+        }
+
+        const data = {};
+
+        for (const [name, provider] of this.#snapshotProviders) {
+            data[name] = provider.save();
+        }
+
+        return structuredClone({
+            version: 1,
+            nodeId: this.#currentNodeId,
+            data
+        });
+    }
+
+    /**
+     * @apiName VN.restore
+     * @apiGroup VN
+     *
+     * Возвращает игру к снимку: загружает данные источников и заново
+     * запускает узел, на котором был сделан снимок. Состояние ошибки
+     * сбрасывается, поэтому восстановление помогает продолжить игру
+     * после `story:error`.
+     *
+     * Перед восстановлением приходит событие `story:restoring`: плагины
+     * убирают с экрана то, что относилось к старой позиции (кнопки выбора,
+     * таймеры). После загрузки данных приходит `story:restored`.
+     *
+     * @param {Object} snapshot Снимок из `snapshot()`.
+     * @throws {Error} Если проект не загружен, снимок неверен
+     * или его узла в проекте нет. В этих случаях игра не меняется.
+     *
+     * @example
+     * const saved = JSON.parse(localStorage.getItem('save'));
+     * game.restore(saved);
+     */
+    restore(snapshot) {
+        if (!this.#project) {
+            throw new Error('restore(): проект ещё не загружен');
+        }
+
+        if (snapshot?.version !== 1 || typeof snapshot.data !== 'object' || snapshot.data === null) {
+            throw new Error('restore(): неверный формат снимка');
+        }
+
+        const nodeId = snapshot.nodeId ?? null;
+
+        if (nodeId !== null && !this.#project.getNode(nodeId)) {
+            throw new Error(
+                `restore(): узла "${nodeId}" нет в проекте`
+            );
+        }
+
+        this.#bus.emit('story:restoring', { snapshot });
+
+        this.#isWaiting = false;
+        this.#isLocked = false;
+        this.#failed = false;
+
+        for (const name of Object.keys(snapshot.data)) {
+            const provider = this.#snapshotProviders.get(name);
+
+            if (!provider) {
+                log.warn(
+                    `restore(): источник "${name}" не установлен, его данные пропущены`
+                );
+
+                continue;
+            }
+
+            provider.load(structuredClone(snapshot.data[name]));
+        }
+
+        this.#currentSceneId = null;
+        this.#setCurrent(nodeId);
+
+        this.#bus.emit('story:restored', { snapshot });
+
+        this.next();
+    }
+
+    /**
      * @apiName VN.loadProject
      * @apiGroup VN
      *
@@ -122,6 +272,7 @@ export class VN {
     loadProject(project) {
         this.#project = project;
         this.#currentNodeId = null;
+        this.#currentSceneId = null;
         this.#isWaiting = false;
         this.#isLocked = false;
         this.#failed = false;
@@ -147,10 +298,45 @@ export class VN {
             return;
         }
 
-        this.#currentNodeId =
-            firstScene.nodes[0].id;
+        this.#setCurrent(firstScene.nodes[0].id);
 
         this.next();
+    }
+
+    // Меняет текущий узел и сообщает о смене сцены.
+    #setCurrent(nodeId) {
+        this.#currentNodeId = nodeId;
+
+        const scene = nodeId === null
+            ? null
+            : this.#project?.getSceneForNode(nodeId);
+
+        const sceneId = scene?.id ?? null;
+
+        if (sceneId === this.#currentSceneId) {
+            return;
+        }
+
+        if (this.#currentSceneId !== null) {
+            this.#bus.emit('scene:end', { sceneId: this.#currentSceneId });
+        }
+
+        this.#currentSceneId = sceneId;
+
+        if (sceneId !== null) {
+            this.#bus.emit('scene:start', { sceneId, scene });
+        }
+    }
+
+    // Узел, с которого начинается переход: узел по id или первый узел сцены.
+    #resolveTarget(target) {
+        const node = this.#project.getNode(target);
+
+        if (node) {
+            return node;
+        }
+
+        return this.#project.getScene(target)?.nodes?.[0] ?? null;
     }
 
     /**
@@ -189,17 +375,17 @@ export class VN {
         return;
     }
 
-    const node = this.#project.getNode(nodeId);
+    const node = this.#resolveTarget(nodeId);
 
     if (!node) {
         log.warn(
-            `goto(): узел "${nodeId}" не найден`
+            `goto(): узел или сцена "${nodeId}" не найдены`
         );
 
         return;
     }
 
-    this.#currentNodeId = nodeId;
+    this.#setCurrent(node.id);
     this.#isWaiting = false;
     this.#isLocked = false;
 
@@ -226,6 +412,12 @@ export class VN {
         } catch (error) {
             this.#fail(node, error);
 
+            return;
+        }
+
+        // Если обработчик сам перешёл на другой узел (goto), история
+        // уже пошла оттуда: двигаться дальше от этого узла не нужно.
+        if (this.#currentNodeId !== node.id) {
             return;
         }
 
@@ -270,7 +462,7 @@ export class VN {
 
     #moveToNextNode(node) {
     if (node.end === true) {
-        this.#currentNodeId = null;
+        this.#setCurrent(null);
 
         this.#bus.emit('story:end');
 
@@ -282,10 +474,11 @@ export class VN {
     }
 
     const nextNode =
-        this.#project.getNextNode(node.id);
+        this.#project.getNextNode(node.id) ??
+        this.#firstNodeOfNextScene(node.id);
 
     if (!nextNode) {
-        this.#currentNodeId = null;
+        this.#setCurrent(null);
 
         this.#bus.emit('story:end');
 
@@ -296,10 +489,26 @@ export class VN {
         return;
     }
 
-    this.#currentNodeId = nextNode.id;
+    this.#setCurrent(nextNode.id);
 
     this.next();
 }
+
+    // Когда сцена закончилась, история продолжается с начала следующей.
+    #firstNodeOfNextScene(nodeId) {
+        const scenes = this.#project.getScenes();
+        const index = scenes.findIndex(
+            scene => scene.nodes?.some(node => node.id === nodeId)
+        );
+
+        for (let i = index + 1; index !== -1 && i < scenes.length; i++) {
+            if (scenes[i].nodes?.length) {
+                return scenes[i].nodes[0];
+            }
+        }
+
+        return null;
+    }
 
     #continue() {
         if (!this.#isWaiting) {

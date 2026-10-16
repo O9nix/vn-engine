@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Snake AI — Smooth 10px Canvas</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050b14;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #f8fafc;
+        }
+
+        #snakeCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+        }
+
+        .hud-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.3s ease;
+        }
+
+        .hud-layer * {
+            pointer-events: auto;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            width: 260px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        h1 {
+            font-size: 16px;
+            margin: 0;
+            color: #38bdf8;
+        }
+
+        p {
+            font-size: 11px;
+            color: #94a3b8;
+            margin: 0;
+        }
+
+        .btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn:hover { background-color: #2563eb; }
+        .btn-success { background-color: #22c55e; }
+        .btn-success:hover { background-color: #16a34a; }
+        .btn-warning { background-color: #f59e0b; }
+        .btn-warning:hover { background-color: #d97706; }
+
+        .stats {
+            font-family: monospace;
+            font-size: 11px;
+            color: #fbbf24;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 8px;
+            border-radius: 6px;
+            line-height: 1.4;
+        }
+
+        .control-group {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 6px 8px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        .control-group input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #38bdf8;
+            padding: 4px;
+            border-radius: 4px;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .bottom-bar {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .box {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px;
+            padding: 10px 15px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .box-title {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .hidden-ui .hud-layer > *:not(.floating-toggle) {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .floating-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+        }
+        .floating-toggle:hover {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="snakeCanvas"></canvas>
+    <button class="floating-toggle" onclick="toggleUI()">Скрыть интерфейс (H)</button>
+
+    <div class="hud-layer" id="hudLayer">
+        <div class="top-bar">
+            <div class="panel">
+                <h1>Snake Smooth AI</h1>
+                <p>Клетка 10px + Рой 30 агентов (Canvas)</p>
+                
+                <div class="stats" id="stats">
+                    Режим: Обучение роя<br>
+                    Поколение: 1 | Живых: 30/30<br>
+                    Рекорд: 0 | Абсолют: 0
+                </div>
+
+                <div class="control-group">
+                    <label>Скорость цикла (мс):</label>
+                    <input type="number" id="speedInput" value="20" min="1" max="500" onchange="updateSpeed(this.value)">
+                </div>
+                
+                <button class="btn" onclick="toggleSimulation()">Запустить рой</button>
+                <button class="btn btn-success" onclick="exportBrain()">Скачать мозг (JSON)</button>
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Загрузить из файла</button>
+                <input type="file" id="fileInput" style="display: none;" onchange="importFromFile(event)">
+                
+                <button class="btn btn-warning" onclick="saveToStorage()">Сохранить в браузер</button>
+                <button class="btn btn-success" onclick="loadFromStorage()">Загрузить легенду</button>
+                <button class="btn" onclick="importBrain()">Вставить JSON текст</button>
+            </div>
+            <div></div>
+        </div>
+
+        <div class="bottom-bar">
+            <div class="box" style="width: 320px;">
+                <div class="box-title">График рекордов по поколениям</div>
+                <canvas id="chartCanvas" width="290" height="90"></canvas>
+            </div>
+            <div class="box" style="flex-grow: 1; max-width: 600px;">
+                <div class="box-title">Мозг лидера роя (7 входов ➔ 10 скрытых ➔ 4 выхода)</div>
+                <canvas id="netCanvas" width="570" height="90"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("snakeCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const chartCanvas = document.getElementById("chartCanvas");
+        const chartCtx = chartCanvas.getContext("2d");
+        const netCanvas = document.getElementById("netCanvas");
+        const netCtx = netCanvas.getContext("2d");
+
+        let gridSize = 10; // Строго 10px для огромного поля
+        let tileCountX, tileCountY;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            tileCountX = Math.floor(canvas.width / gridSize);
+            tileCountY = Math.floor(canvas.height / gridSize);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const POPULATION_SIZE = 30;
+        let snakes = [];
+        let food = { x: 5, y: 5 };
+        let obstacles = []; 
+        let generation = 1;
+        let allTimeHighScore = 0;
+        let isRunning = false;
+        let gameInterval = 20; 
+        let timerId = null;
+        let historyScores = []; 
+        let uiVisible = true;
+
+        function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+        function dSigmoid(y) { return y * (1 - y); }
+
+        class NeuralNetwork {
+            constructor(inputSize, hiddenSize, outputSize) {
+                this.inputSize = inputSize;
+                this.hiddenSize = hiddenSize;
+                this.outputSize = outputSize;
+                this.weightsIH = Array.from({ length: hiddenSize }, () => Array.from({ length: inputSize }, () => Math.random() * 2 - 1));
+                this.weightsHO = Array.from({ length: outputSize }, () => Array.from({ length: hiddenSize }, () => Math.random() * 2 - 1));
+                this.biasH = Array.from({ length: hiddenSize }, () => Math.random() * 2 - 1);
+                this.biasO = Array.from({ length: outputSize }, () => Math.random() * 2 - 1);
+            }
+
+            predict(inputs) {
+                let hidden = this.biasH.map((b, i) => {
+                    let sum = b;
+                    for (let j = 0; j < inputs.length; j++) sum += inputs[j] * this.weightsIH[i][j];
+                    return sigmoid(sum);
+                });
+                let output = this.biasO.map((b, i) => {
+                    let sum = b;
+                    for (let j = 0; j < hidden.length; j++) sum += hidden[j] * this.weightsHO[i][j];
+                    return sigmoid(sum);
+                });
+                return { hidden, output };
+            }
+
+            train(inputs, targetArray, lr) {
+                let { hidden, output: outputs } = this.predict(inputs);
+                let outputErrors = targetArray.map((target, i) => target - outputs[i]);
+                for (let i = 0; i < outputs.length; i++) {
+                    let gradient = dSigmoid(outputs[i]) * outputErrors[i] * lr;
+                    this.biasO[i] += gradient;
+                    for (let j = 0; j < hidden.length; j++) this.weightsHO[i][j] += gradient * hidden[j];
+                }
+                let hiddenErrors = Array(hidden.length).fill(0);
+                for (let i = 0; i < hidden.length; i++) {
+                    for (let j = 0; j < outputs.length; j++) hiddenErrors[i] += outputErrors[j] * this.weightsHO[j][i];
+                }
+                for (let i = 0; i < hidden.length; i++) {
+                    let gradient = dSigmoid(hidden[i]) * hiddenErrors[i] * lr;
+                    this.biasH[i] += gradient;
+                    for (let j = 0; j < inputs.length; j++) this.weightsIH[i][j] += gradient * inputs[j];
+                }
+            }
+
+            clone() {
+                let baby = new NeuralNetwork(this.inputSize, this.hiddenSize, this.outputSize);
+                baby.weightsIH = this.weightsIH.map(row => row.map(w => Math.random() < 0.15 ? w + (Math.random() * 0.5 - 0.25) : w));
+                baby.weightsHO = this.weightsHO.map(row => row.map(w => Math.random() < 0.15 ? w + (Math.random() * 0.5 - 0.25) : w));
+                baby.biasH = this.biasH.map(b => Math.random() < 0.15 ? b + (Math.random() * 0.5 - 0.25) : b);
+                baby.biasO = this.biasO.map(b => Math.random() < 0.15 ? b + (Math.random() * 0.5 - 0.25) : b);
+                return baby;
+            }
+        }
+
+        class Snake {
+            constructor(brain) {
+                this.reset();
+                this.brain = brain || new NeuralNetwork(7, 10, 4);
+                this.memory = [];
+            }
+
+            reset() {
+                let startX = Math.floor(tileCountX / 2);
+                let startY = Math.floor(tileCountY / 2);
+                this.body = [{ x: startX, y: startY }, { x: startX - 1, y: startY }, { x: startX - 2, y: startY }];
+                this.dx = 1; this.dy = 0;
+                this.score = 0;
+                this.alive = true;
+                this.lifeTimer = 250;
+                this.lastInputs = Array(7).fill(0);
+                this.lastHidden = [];
+                this.lastOutputs = [0, 0, 0, 0];
+            }
+
+            look(dx, dy) {
+                let head = this.body[0];
+                let nextX = head.x + dx;
+                let nextY = head.y + dy;
+                if (nextX < 0 || nextX >= tileCountX || nextY < 0 || nextY >= tileCountY) return 1.0;
+                for (let part of this.body) if (nextX === part.x && nextY === part.y) return 1.0;
+                for (let obs of obstacles) if (nextX === obs.x && nextY === obs.y) return 1.0;
+                return 0.0;
+            }
+
+            getInputs() {
+                let leftDx = -this.dy, leftDy = this.dx;
+                let rightDx = this.dy, rightDy = -this.dx;
+                return [
+                    this.look(this.dx, this.dy),
+                    this.look(leftDx, leftDy),
+                    this.look(rightDx, rightDy),
+                    (food.x - this.body[0].x) / tileCountX,
+                    (food.y - this.body[0].y) / tileCountY,
+                    this.dx,
+                    this.dy
+                ];
+            }
+
+            update() {
+                if (!this.alive) return;
+                let inputs = this.getInputs();
+                this.lastInputs = inputs;
+                let pred = this.brain.predict(inputs);
+                this.lastHidden = pred.hidden;
+                this.lastOutputs = pred.output;
+
+                let actionIndex;
+                let epsilon = 0.1;
+                if (Math.random() < epsilon) {
+                    actionIndex = Math.floor(Math.random() * 4);
+                } else {
+                    actionIndex = this.lastOutputs.indexOf(Math.max(...this.lastOutputs));
+                }
+
+                const actions = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+                let nextDx = actions[actionIndex].x;
+                let nextDy = actions[actionIndex].y;
+                if ((nextDx === -this.dx && nextDx !== 0) || (nextDy === -this.dy && nextDy !== 0)) {
+                    actionIndex = actions.findIndex(a => a.x === this.dx && a.y === this.dy);
+                    if (actionIndex === -1) actionIndex = 0;
+                }
+
+                this.dx = actions[actionIndex].x;
+                this.dy = actions[actionIndex].y;
+
+                let head = this.body[0];
+                let newHead = { x: head.x + this.dx, y: head.y + this.dy };
+                let reward = 0;
+                let gameOver = false;
+
+                if (newHead.x < 0 || newHead.x >= tileCountX || newHead.y < 0 || newHead.y >= tileCountY) gameOver = true;
+                for (let part of this.body) if (newHead.x === part.x && newHead.y === part.y) gameOver = true;
+                for (let obs of obstacles) if (newHead.x === obs.x && newHead.y === obs.y) gameOver = true;
+
+                if (gameOver) {
+                    this.alive = false;
+                    reward = -20;
+                    this.remember(inputs, actionIndex, reward, null, true);
+                    this.replayMemory();
+                } else {
+                    this.body.unshift(newHead);
+                    if (newHead.x === food.x && newHead.y === food.y) {
+                        this.score += 10;
+                        reward = 20;
+                        this.lifeTimer += 180;
+                        spawnFood();
+                    } else {
+                        this.body.pop();
+                        reward = -0.05;
+                    }
+                    let nextInputs = this.getInputs();
+                    this.remember(inputs, actionIndex, reward, nextInputs, false);
+                    this.replayMemory();
+
+                    this.lifeTimer--;
+                    if (this.lifeTimer <= 0) this.alive = false;
+                }
+            }
+
+            remember(state, action, reward, nextState, done) {
+                this.memory.push({ state, action, reward, nextState, done });
+                if (this.memory.length > 300) this.memory.shift();
+            }
+
+            replayMemory() {
+                if (this.memory.length < 10) return;
+                let sample = this.memory[Math.floor(Math.random() * this.memory.length)];
+                let qValues = this.brain.predict(sample.state).output;
+                let targetQ = [...qValues];
+                if (sample.done) {
+                    targetQ[sample.action] = sample.reward;
+                } else {
+                    let nextMaxQ = Math.max(...this.brain.predict(sample.nextState).output);
+                    targetQ[sample.action] = sample.reward + 0.9 * nextMaxQ;
+                }
+                this.brain.train(sample.state, targetQ, 0.15);
+            }
+        }
+
+        function generateObstacles() {
+            obstacles = [];
+            for (let i = 0; i < 20; i++) {
+                obstacles.push({
+                    x: Math.floor(Math.random() * (tileCountX - 10)) + 5,
+                    y: Math.floor(Math.random() * (tileCountY - 10)) + 5
+                });
+            }
+        }
+
+        function spawnFood() {
+            food.x = Math.floor(Math.random() * tileCountX);
+            food.y = Math.floor(Math.random() * tileCountY);
+            for (let obs of obstacles) {
+                if (obs.x === food.x && obs.y === food.y) spawnFood();
+            }
+        }
+
+        function initPopulation() {
+            snakes = [];
+            for (let i = 0; i < POPULATION_SIZE; i++) snakes.push(new Snake());
+            generateObstacles();
+        }
+
+        function nextGeneration() {
+            generation++;
+            if (!snakes || snakes.length === 0) {
+                initPopulation();
+                return;
+            }
+
+            snakes.sort((a, b) => b.score - a.score);
+            let bestScore = snakes[0] ? snakes[0].score : 0;
+            if (bestScore > allTimeHighScore) allTimeHighScore = bestScore;
+
+            historyScores.push(bestScore);
+            if (historyScores.length > 30) historyScores.shift();
+
+            let newSnakes = [];
+            for (let i = 0; i < POPULATION_SIZE; i++) {
+                let parent = snakes[i % 5] || snakes[0];
+                if (parent && parent.brain) {
+                    newSnakes.push(new Snake(parent.brain.clone()));
+                } else {
+                    newSnakes.push(new Snake());
+                }
+            }
+            snakes = newSnakes;
+            spawnFood();
+        }
+
+        function gameLoop() {
+            if (!isRunning) return;
+
+            let aliveCount = 0;
+            let currentMaxScore = 0;
+
+            for (let snake of snakes) {
+                if (snake && snake.alive) {
+                    snake.update();
+                    aliveCount++;
+                    if (snake.score > currentMaxScore) currentMaxScore = snake.score;
+                }
+            }
+
+            if (aliveCount === 0) {
+                nextGeneration();
+            }
+
+            drawCanvas();
+            let aliveSnakes = snakes.filter(s => s && s.alive);
+            let bestAlive = aliveSnakes.sort((a, b) => b.score - a.score)[0] || snakes[0];
+            if (bestAlive && bestAlive.brain) {
+                drawNetwork(bestAlive);
+            }
+            drawChart();
+            updateStats(aliveCount, currentMaxScore);
+
+            timerId = setTimeout(gameLoop, gameInterval);
+        }
+
+        function updateSpeed(val) {
+            gameInterval = parseInt(val) || 20;
+        }
+
+        function toggleUI() {
+            uiVisible = !uiVisible;
+            document.body.classList.toggle('hidden-ui', !uiVisible);
+            document.querySelector('.floating-toggle').innerText = uiVisible ? "Скрыть интерфейс (H)" : "Показать интерфейс (H)";
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'h') toggleUI();
+        });
+
+        // Высокоскоростной 2D Canvas рендер без лагов
+        function drawCanvas() {
+            ctx.fillStyle = "#050b14";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Препятствия
+            ctx.fillStyle = "#1e293b";
+            for (let obs of obstacles) {
+                ctx.fillRect(obs.x * gridSize, obs.y * gridSize, gridSize - 1, gridSize - 1);
+            }
+
+            // Еда
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
+
+            // Змейки роя
+            for (let snake of snakes) {
+                if (!snake || !snake.alive) continue;
+                ctx.fillStyle = "rgba(56, 189, 248, 0.45)";
+                for (let part of snake.body) {
+                    ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 1, gridSize - 1);
+                }
+            }
+        }
+
+        function drawChart() {
+            chartCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+            if (historyScores.length < 2) return;
+
+            chartCtx.strokeStyle = "#38bdf8";
+            chartCtx.lineWidth = 2;
+            chartCtx.beginPath();
+
+            let maxVal = Math.max(...historyScores, 10);
+            let dx = chartCanvas.width / (historyScores.length - 1);
+
+            for (let i = 0; i < historyScores.length; i++) {
+                let x = i * dx;
+                let y = chartCanvas.height - (historyScores[i] / maxVal) * (chartCanvas.height - 10) - 5;
+                if (i === 0) chartCtx.moveTo(x, y);
+                else chartCtx.lineTo(x, y);
+            }
+            chartCtx.stroke();
+        }
+
+        function drawNetwork(snake) {
+            netCtx.clearRect(0, 0, netCanvas.width, netCanvas.height);
+            let nn = snake.brain;
+            let inputX = 20, hiddenX = 270, outputX = 540;
+            let inputY = [10, 23, 36, 49, 62, 75, 88];
+            let hiddenY = [8, 20, 32, 44, 56, 68, 80, 92, 100, 106];
+            let outputY = [12, 40, 68, 96];
+
+            for (let i = 0; i < 7; i++) {
+                for (let j = 0; j < 10; j++) {
+                    let w = nn.weightsIH[j][i];
+                    netCtx.strokeStyle = w > 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)";
+                    netCtx.lineWidth = Math.min(Math.abs(w), 1.5);
+                    netCtx.beginPath();
+                    netCtx.moveTo(inputX, inputY[i]);
+                    netCtx.lineTo(hiddenX, hiddenY[j]);
+                    netCtx.stroke();
+                }
+            }
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 4; j++) {
+                    let w = nn.weightsHO[j][i];
+                    netCtx.strokeStyle = w > 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)";
+                    netCtx.lineWidth = Math.min(Math.abs(w), 1.5);
+                    netCtx.beginPath();
+                    netCtx.moveTo(hiddenX, hiddenY[i]);
+                    netCtx.lineTo(outputX, outputY[j]);
+                    netCtx.stroke();
+                }
+            }
+            for (let i = 0; i < 7; i++) {
+                netCtx.fillStyle = "#38bdf8";
+                netCtx.beginPath(); netCtx.arc(inputX, inputY[i], 3.5, 0, Math.PI * 2); netCtx.fill();
+            }
+            for (let i = 0; i < 10; i++) {
+                let act = snake.lastHidden[i] || 0;
+                netCtx.fillStyle = `rgb(56, 189, ${Math.floor(100 + act * 155)})`;
+                netCtx.beginPath(); netCtx.arc(hiddenX, hiddenY[i], 3.5, 0, Math.PI * 2); netCtx.fill();
+            }
+            let maxOut = Math.max(...snake.lastOutputs);
+            for (let i = 0; i < 4; i++) {
+                netCtx.fillStyle = snake.lastOutputs[i] === maxOut ? "#22c55e" : "#64748b";
+                netCtx.beginPath(); netCtx.arc(outputX, outputY[i], 5, 0, Math.PI * 2); netCtx.fill();
+            }
+        }
+
+        function updateStats(aliveCount, currentMaxScore) {
+            document.getElementById("stats").innerHTML = `
+                Режим: 10px Canvas (Smooth)<br>
+                Поколение: ${generation} | Живых: ${aliveCount}/${POPULATION_SIZE}<br>
+                Рекорд: ${currentMaxScore} | Абсолют: ${allTimeHighScore}
+            `;
+        }
+
+        function exportBrain() {
+            let best = snakes.sort((a, b) => b.score - a.score)[0];
+            if (!best) {
+                alert("Сначала запустите симуляцию!");
+                return;
+            }
+            let brainData = JSON.stringify({
+                weightsIH: best.brain.weightsIH,
+                weightsHO: best.brain.weightsHO,
+                biasH: best.brain.biasH,
+                biasO: best.brain.biasO
+            }, null, 2);
+
+            let blob = new Blob([brainData], { type: "application/json" });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "snake_champion_brain.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function loadBrainData(data) {
+            if (!data.weightsIH || !data.weightsHO || !data.biasH || !data.biasO) {
+                alert("Ошибка: Неверный формат данных нейросети!");
+                return;
+            }
+            let importedBrain = new NeuralNetwork(7, 10, 4);
+            importedBrain.weightsIH = data.weightsIH; 
+            importedBrain.weightsHO = data.weightsHO;
+            importedBrain.biasH = data.biasH; 
+            importedBrain.biasO = data.biasO;
+
+            snakes = [];
+            for (let i = 0; i < POPULATION_SIZE; i++) {
+                let brainClone = i === 0 ? importedBrain : importedBrain.clone();
+                snakes.push(new Snake(brainClone));
+            }
+            spawnFood();
+            alert("Мозг чемпиона успешно импортирован на весь рой!");
+        }
+
+        function importBrain() {
+            let text = prompt("Вставьте JSON мозга:");
+            if (!text) return;
+            try {
+                let data = JSON.parse(text);
+                loadBrainData(data);
+            } catch(e) {
+                alert("Ошибка чтения JSON! Проверьте текст.");
+                console.error(e);
+            }
+        }
+
+        function importFromFile(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = JSON.parse(e.target.result);
+                    loadBrainData(data);
+                } catch(err) {
+                    alert("Ошибка чтения файла JSON!");
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function saveToStorage() {
+            let best = snakes.sort((a, b) => b.score - a.score)[0];
+            if (!best) return;
+            localStorage.setItem("snake_legend_smooth", JSON.stringify({
+                weightsIH: best.brain.weightsIH,
+                weightsHO: best.brain.weightsHO,
+                biasH: best.brain.biasH,
+                biasO: best.brain.biasO,
+                score: best.score
+            }));
+            alert("Легендарный мозг сохранен в память браузера!");
+        }

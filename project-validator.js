@@ -325,9 +325,10 @@ export class ProjectValidator {
      * (для совместимости).
      *
      * @param {Object} project Проект (`Project` или объект со сценами).
-     * @param {Object} [context] Дополнительные данные для проверок. Поле
+     * @param {Object} [extra] Дополнительные данные для проверок. Поле
      * `plugins` — манифесты установленных плагинов (`PluginManager.getManifests()`):
-     * без него проверки типов узлов и зависимостей пропускаются.
+     * без него проверки типов узлов и зависимостей пропускаются. Поле `project`
+     * валидатор добавляет сам.
      * @param {Object} [options] Параметры: `timeout` — предел времени на одну
      * проверку в миллисекундах (по умолчанию 3000).
      * @returns {Promise} Результат `{ valid, errors, warnings, checksRun }`.
@@ -336,10 +337,14 @@ export class ProjectValidator {
      * @example
      * const result = await validator.validate(project, { plugins: plugins.getManifests() });
      */
-    async validate(project, context = {}, options = {}) {
+    async validate(project, extra = {}, options = {}) {
         if (!project) {
             throw new TypeError('ProjectValidator.validate(): не передан проект');
         }
+
+        // Проверки получают проект и в контексте: правилам для узлов он нужен,
+        // чтобы смотреть настройки (config) и соседние узлы.
+        const context = { ...extra, project };
 
         const timeoutMs = options.timeout ?? DEFAULT_TIMEOUT_MS;
         const errors = [];

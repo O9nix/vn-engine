@@ -1,6 +1,6 @@
 # VN Engine API
 
-**Версия 0.1.5** · Дата 2026-10-15 · 133 записей
+**Версия 0.1.6** · Дата 2026-10-16 · 147 записей
 
 <!-- Файл создан автоматически: apiscribe 0.4.0. Вручную не редактируйте. -->
 
@@ -33,13 +33,16 @@
     - [ProjectValidator.unregister(id)](#projectvalidator-unregister)
     - [ProjectValidator.unregisterPlugin(plugin)](#projectvalidator-unregisterplugin)
     - [ProjectValidator.list()](#projectvalidator-list)
-    - [ProjectValidator.validate(project, context, options)](#projectvalidator-validate)
+    - [ProjectValidator.validate(project, extra, options)](#projectvalidator-validate)
     - [ProjectValidator.validateGotos()](#projectvalidator-validategotos)
 - **VN**
   - [VN](#vn)
     - [VN.getBus()](#vn-getbus)
     - [VN.registerNodeType(type, handler)](#vn-registernodetype)
     - [VN.unregisterNodeType(type)](#vn-unregisternodetype)
+    - [VN.registerSnapshotProvider(name, provider)](#vn-registersnapshotprovider)
+    - [VN.snapshot()](#vn-snapshot)
+    - [VN.restore(snapshot)](#vn-restore)
     - [VN.loadProject(project)](#vn-loadproject)
     - [VN.next()](#vn-next)
 - **EventBus**
@@ -114,12 +117,16 @@
   - [api.validation](#api-validation)
     - [api.validation.register(check)](#api-validation-register)
     - [api.validation.registerNodeRule(nodeType, rule)](#api-validation-registernoderule)
+  - [api.snapshot](#api-snapshot)
+    - [api.snapshot.register(provider)](#api-snapshot-register)
+  - [api.hasPlugin(name)](#api-hasplugin)
   - [api.plugins](#api-plugins)
 - **Plugins**
   - [BackgroundPlugin](#backgroundplugin)
   - [ChoicePlugin](#choiceplugin)
   - [ConditionsPlugin](#conditionsplugin)
   - [DialoguePlugin](#dialogueplugin)
+  - [JumpPlugin](#jumpplugin)
   - [NarrationPlugin](#narrationplugin)
   - [NotyPlugin](#notyplugin)
   - [StatePlugin](#stateplugin)
@@ -127,6 +134,8 @@
   - [WaitPlugin](#waitplugin)
 - **ConditionsPlugin**
   - [ConditionsPlugin.evaluate(condition, state)](#conditionsplugin-evaluate)
+  - [ConditionsPlugin.validate(condition)](#conditionsplugin-validate)
+  - [ConditionsPlugin.variables(condition)](#conditionsplugin-variables)
 - **NotyPlugin**
   - [NotyPlugin.notify(message, options)](#notyplugin-notify)
   - [NotyPlugin.success(message, title)](#notyplugin-success)
@@ -136,9 +145,14 @@
 - **StatePlugin**
   - [StatePlugin.get()](#stateplugin-get)
   - [StatePlugin.getValue(name)](#stateplugin-getvalue)
+  - [StatePlugin.has(name)](#stateplugin-has)
   - [StatePlugin.set(name, value)](#stateplugin-set)
   - [StatePlugin.update(values)](#stateplugin-update)
+  - [StatePlugin.add(name, delta)](#stateplugin-add)
+  - [StatePlugin.format(text)](#stateplugin-format)
   - [StatePlugin.storyLoaded](#stateplugin-storyloaded)
+  - [StatePlugin.setvar](#stateplugin-setvar)
+  - [StatePlugin.setflag](#stateplugin-setflag)
 - **TopLeftHUDPlugin**
   - [TopLeftHUDPlugin.set(key, value)](#toplefthudplugin-set)
   - [TopLeftHUDPlugin.setTitle(title)](#toplefthudplugin-settitle)
@@ -622,7 +636,8 @@ blocks.remove(block.id);
 
 *Метод*
 
-Проверяет метки goto в сценах: каждая должна вести на существующий узел.
+Проверяет переходы в сценах (`goto` и `timeoutGoto`): каждый должен вести
+на существующий узел или на сцену.
 
 #### Параметры
 
@@ -641,7 +656,7 @@ blocks.remove(block.id);
 const result = validateProjectScenes(project.getScenes());
 ```
 
-<sub>Исходник: builtin-checks.js:34</sub>
+<sub>Исходник: builtin-checks.js:39</sub>
 
 <a id="projectvalidator"></a>
 
@@ -680,7 +695,7 @@ if (!result.valid) {
 | [`ProjectValidator.unregister(id)`](#projectvalidator-unregister) | Снимает проверку по id. |
 | [`ProjectValidator.unregisterPlugin(plugin)`](#projectvalidator-unregisterplugin) | Снимает все проверки плагина. |
 | [`ProjectValidator.list()`](#projectvalidator-list) |  |
-| [`ProjectValidator.validate(project, context, options)`](#projectvalidator-validate) | Запускает все проверки по очереди и собирает результат. После завершения шлёт событие `validator:done` с полным результатом; если есть ош... |
+| [`ProjectValidator.validate(project, extra, options)`](#projectvalidator-validate) | Запускает все проверки по очереди и собирает результат. После завершения шлёт событие `validator:done` с полным результатом; если есть ош... |
 | [`ProjectValidator.validateGotos()`](#projectvalidator-validategotos) | Проверяет только метки goto. Оставлено для совместимости: работает с проектом, переданным в конструктор `new ProjectValidator(project, bu... |
 
 <sub>Исходник: project-validator.js:14</sub>
@@ -871,7 +886,7 @@ for (const check of validator.list()) {
 
 <a id="projectvalidator-validate"></a>
 
-#### `ProjectValidator.validate(project, context, options)`
+#### `ProjectValidator.validate(project, extra, options)`
 
 *Метод*
 
@@ -885,7 +900,7 @@ for (const check of validator.list()) {
 | Поле | Тип | Описание |
 | --- | --- | --- |
 | `project` *(обязательное)* | `Object` | Проект (`Project` или объект со сценами). |
-| `context` *(необязательное)* | `Object` | Дополнительные данные для проверок. Поле `plugins` — манифесты установленных плагинов (`PluginManager.getManifests()`): без него проверки типов узлов и зависимостей пропускаются. |
+| `extra` *(необязательное)* | `Object` | Дополнительные данные для проверок. Поле `plugins` — манифесты установленных плагинов (`PluginManager.getManifests()`): без него проверки типов узлов и зависимостей пропускаются. Поле `project` валидатор добавляет сам. |
 | `options` *(необязательное)* | `Object` | Параметры: `timeout` — предел времени на одну проверку в миллисекундах (по умолчанию 3000). |
 
 ##### Возвращает
@@ -930,7 +945,7 @@ const validator = new ProjectValidator(project, bus);
 const result = validator.validateGotos();
 ```
 
-<sub>Исходник: project-validator.js:377</sub>
+<sub>Исходник: project-validator.js:382</sub>
 
 ## VN
 
@@ -944,7 +959,11 @@ const result = validator.validateGotos();
 которые зарегистрировали плагины. Само ничего не рисует.
 
 Если обработчик узла бросает ошибку, история останавливается
-и приходит событие `story:error`.
+и приходит событие `story:error`. Когда сцена заканчивается, история
+продолжается с первого узла следующей; о смене сцены сообщают события
+`scene:start` и `scene:end`. Метка `goto` может вести на узел или на сцену.
+
+Игру можно сохранить и вернуть к сохранённой точке: `snapshot()` и `restore()`.
 
 #### Примеры
 
@@ -963,6 +982,9 @@ game.loadProject(project);
 | [`VN.getBus()`](#vn-getbus) | Возвращает шину событий игры. Через неё приходят события `story:loaded`, `node:start`, `story:end`, `story:error` и событие клика `click-... |
 | [`VN.registerNodeType(type, handler)`](#vn-registernodetype) | Регистрирует обработчик типа узла. Без `wait()` история сама идёт дальше, с `wait()` останавливается до `resume()` или клика. Плагинам уд... |
 | [`VN.unregisterNodeType(type)`](#vn-unregisternodetype) | Снимает обработчик типа узла. Нужен, чтобы плагин можно было удалить и поставить заново. |
+| [`VN.registerSnapshotProvider(name, provider)`](#vn-registersnapshotprovider) | Подключает источник данных для снимка. Плагин, у которого есть состояние (переменные, инвентарь), сообщает, как его сохранить и как восст... |
+| [`VN.snapshot()`](#vn-snapshot) | Делает снимок игры: текущий узел плюс данные всех источников (например, состояние из плагина `state`). Результат не связан с живыми объек... |
+| [`VN.restore(snapshot)`](#vn-restore) | Возвращает игру к снимку: загружает данные источников и заново запускает узел, на котором был сделан снимок. Состояние ошибки сбрасываетс... |
 | [`VN.loadProject(project)`](#vn-loadproject) | Загружает проект, шлёт `story:loaded` и запускает историю с первого узла первой сцены. Плагины и проверку проекта нужно выполнить до этог... |
 | [`VN.next()`](#vn-next) | Выполняет текущий узел. Ничего не делает, пока история ждёт или остановлена ошибкой. Обычно вызывать не нужно: ядро идёт дальше само и по... |
 
@@ -987,7 +1009,7 @@ const bus = game.getBus();
 bus.on('story:end', () => console.log('Конец'));
 ```
 
-<sub>Исходник: core.js:45</sub>
+<sub>Исходник: core.js:52</sub>
 
 <a id="vn-registernodetype"></a>
 
@@ -1013,7 +1035,7 @@ game.registerNodeType('pause', (node, context) => {
 });
 ```
 
-<sub>Исходник: core.js:61</sub>
+<sub>Исходник: core.js:68</sub>
 
 <a id="vn-unregisternodetype"></a>
 
@@ -1041,7 +1063,107 @@ game.registerNodeType('flash', () => {});
 game.unregisterNodeType('flash'); // true
 ```
 
-<sub>Исходник: core.js:92</sub>
+<sub>Исходник: core.js:99</sub>
+
+<a id="vn-registersnapshotprovider"></a>
+
+#### `VN.registerSnapshotProvider(name, provider)`
+
+*Метод*
+
+Подключает источник данных для снимка. Плагин, у которого есть
+состояние (переменные, инвентарь), сообщает, как его сохранить
+и как восстановить. Плагинам удобнее `api.snapshot.register`:
+имя берётся из плагина, а при удалении плагина источник снимается.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя источника, обычно имя плагина. |
+| `provider` *(обязательное)* | `Object` | Объект `{ save(), load(data) }`. Функция `save` возвращает данные, которые можно сериализовать в JSON; `load` принимает их же. |
+
+##### Возвращает
+
+`function` — Функция, снимающая источник.
+
+##### Исключения
+
+- `Error` — Если имя занято или у источника нет save и load.
+
+##### Примеры
+
+```js
+let gold = 0;
+
+game.registerSnapshotProvider('purse', {
+    save: () => ({ gold }),
+    load: (data) => { gold = data.gold; }
+});
+```
+
+<sub>Исходник: core.js:117</sub>
+
+<a id="vn-snapshot"></a>
+
+#### `VN.snapshot()`
+
+*Метод*
+
+Делает снимок игры: текущий узел плюс данные всех источников
+(например, состояние из плагина `state`). Результат не связан
+с живыми объектами игры и пригоден для JSON.
+
+##### Возвращает
+
+`Object` — Снимок `{ version, nodeId, data }`.
+
+##### Исключения
+
+- `Error` — Если проект ещё не загружен.
+
+##### Примеры
+
+```js
+const saved = game.snapshot();
+localStorage.setItem('save', JSON.stringify(saved));
+```
+
+<sub>Исходник: core.js:161</sub>
+
+<a id="vn-restore"></a>
+
+#### `VN.restore(snapshot)`
+
+*Метод*
+
+Возвращает игру к снимку: загружает данные источников и заново
+запускает узел, на котором был сделан снимок. Состояние ошибки
+сбрасывается, поэтому восстановление помогает продолжить игру
+после `story:error`.
+
+Перед восстановлением приходит событие `story:restoring`: плагины
+убирают с экрана то, что относилось к старой позиции (кнопки выбора,
+таймеры). После загрузки данных приходит `story:restored`.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `snapshot` *(обязательное)* | `Object` | Снимок из `snapshot()`. |
+
+##### Исключения
+
+- `Error` — Если проект не загружен, снимок неверен или его узла в проекте нет. В этих случаях игра не меняется.
+
+##### Примеры
+
+```js
+const saved = JSON.parse(localStorage.getItem('save'));
+game.restore(saved);
+```
+
+<sub>Исходник: core.js:194</sub>
 
 <a id="vn-loadproject"></a>
 
@@ -1064,7 +1186,7 @@ const project = new Project({ scenes });
 game.loadProject(project);
 ```
 
-<sub>Исходник: core.js:110</sub>
+<sub>Исходник: core.js:260</sub>
 
 <a id="vn-next"></a>
 
@@ -1080,7 +1202,7 @@ game.loadProject(project);
 game.next();
 ```
 
-<sub>Исходник: core.js:156</sub>
+<sub>Исходник: core.js:342</sub>
 
 ## EventBus
 
@@ -2051,7 +2173,7 @@ plugins.use(ConditionsPlugin);
 plugins.use(ChoicePlugin);
 ```
 
-<sub>Исходник: plugin-manager.js:716</sub>
+<sub>Исходник: plugin-manager.js:777</sub>
 
 <a id="pluginmanager-remove"></a>
 
@@ -2083,7 +2205,7 @@ plugins.use(ChoicePlugin);
 plugins.remove('choice');
 ```
 
-<sub>Исходник: plugin-manager.js:836</sub>
+<sub>Исходник: plugin-manager.js:897</sub>
 
 <a id="pluginmanager-has"></a>
 
@@ -2109,7 +2231,7 @@ if (!plugins.has('noty')) {
 }
 ```
 
-<sub>Исходник: plugin-manager.js:902</sub>
+<sub>Исходник: plugin-manager.js:963</sub>
 
 <a id="pluginmanager-get"></a>
 
@@ -2134,7 +2256,7 @@ const plugin = plugins.get('state');
 console.log(plugin.version);
 ```
 
-<sub>Исходник: plugin-manager.js:916</sub>
+<sub>Исходник: plugin-manager.js:977</sub>
 
 <a id="pluginmanager-getmanifests"></a>
 
@@ -2156,7 +2278,7 @@ console.log(plugin.version);
 const result = await validator.validate(project, { plugins: plugins.getManifests() });
 ```
 
-<sub>Исходник: plugin-manager.js:929</sub>
+<sub>Исходник: plugin-manager.js:990</sub>
 
 <a id="pluginmanager-list"></a>
 
@@ -2174,7 +2296,7 @@ const result = await validator.validate(project, { plugins: plugins.getManifests
 console.log(plugins.list()); // ['state', 'conditions', 'choice']
 ```
 
-<sub>Исходник: plugin-manager.js:953</sub>
+<sub>Исходник: plugin-manager.js:1014</sub>
 
 ## PluginAPI
 
@@ -2848,7 +2970,7 @@ install(api) {
 (пустой массив значит «всё хорошо»). В записи можно указать
 `code`, `message`, `path` и `severity`; имя плагина валидатор
 подставит сам. `context.plugins` содержит манифесты
-установленных плагинов.
+установленных плагинов, `context.project` — проверяемый проект.
 
 Проверка выполняется до запуска истории, поэтому читать нужно
 данные проекта (`project.getConfig()`, `project.getScenes()`),
@@ -2955,6 +3077,97 @@ api.validation.registerNodeRule('take', {
 
 <sub>Исходник: plugin-manager.js:634</sub>
 
+<a id="api-snapshot"></a>
+
+### `api.snapshot`
+
+*Группа*
+
+Участие плагина в снимках игры (`game.snapshot()` и `game.restore()`).
+Если у плагина есть собственное состояние, он говорит, как его
+сохранить и вернуть. Источник снимается при удалении плагина.
+
+#### Примеры
+
+```js
+api.snapshot.register({
+    save: () => ({ keys: 2 }),
+    load: (data) => api.log.info('Ключей:', data.keys)
+});
+```
+
+#### Содержимое
+
+| Имя | Описание |
+| --- | --- |
+| [`api.snapshot.register(provider)`](#api-snapshot-register) | Подключает источник данных снимка под именем плагина. |
+
+<sub>Исходник: plugin-manager.js:687</sub>
+
+<a id="api-snapshot-register"></a>
+
+#### `api.snapshot.register(provider)`
+
+*Метод*
+
+Подключает источник данных снимка под именем плагина.
+
+##### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `provider` *(обязательное)* | `Object` | Объект `{ save(), load(data) }`. Данные должны сериализоваться в JSON. |
+
+##### Возвращает
+
+`function` — Функция, снимающая источник.
+
+##### Исключения
+
+- `Error` — Если игра не умеет делать снимки или у плагина уже есть источник.
+
+##### Примеры
+
+```js
+let gold = 0;
+
+api.snapshot.register({
+    save: () => ({ gold }),
+    load: (data) => { gold = data.gold; }
+});
+```
+
+<sub>Исходник: plugin-manager.js:701</sub>
+
+<a id="api-hasplugin"></a>
+
+### `api.hasPlugin(name)`
+
+*Метод*
+
+Проверяет, установлен ли другой плагин. В отличие от `api.plugins.<имя>`,
+ничего не пишет в консоль, поэтому подходит для необязательных зависимостей.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя плагина. |
+
+#### Возвращает
+
+`boolean` — true, если плагин установлен.
+
+#### Примеры
+
+```js
+if (api.hasPlugin('state')) {
+    text = api.plugins.state.api.format(text);
+}
+```
+
+<sub>Исходник: plugin-manager.js:734</sub>
+
 <a id="api-plugins"></a>
 
 ### `api.plugins`
@@ -2972,7 +3185,7 @@ const state = api.plugins.state.api.get();
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugin-manager.js:687</sub>
+<sub>Исходник: plugin-manager.js:748</sub>
 
 ## Plugins
 
@@ -2983,8 +3196,9 @@ api.plugins.state.api.set('health', 10);
 *Класс*
 
 Узел `background`: ставит картинку фоном страницы.
-Допустимы относительные пути, http(s) и data:image. Небезопасный
-адрес останавливает историю с ошибкой.
+Допустимы относительные пути, http(s) и data:image без кавычек, скобок
+и пробелов. Небезопасный адрес находит валидатор (`background.unsafe-image`),
+а если он всё же попал в игру, историю останавливает ошибка.
 
 #### Примеры
 
@@ -3015,14 +3229,25 @@ api.plugins.state.api.set('health', 10);
 без перехода: история просто продолжится со следующего узла.
 Условия в текстовой записи пока не поддерживаются.
 
-Пока выбор не сделан, клик по экрану историю не продолжает.
+Пока выбор не сделан, клик по экрану историю не продолжает. Блоки диалога
+и повествования на время выбора скрываются.
+
+Выбор с таймером: поле `timeout` (миллисекунды) включает отсчёт, который
+виден на экране. Если игрок не успел, история переходит к `timeoutGoto`
+(узел или сцена) или, если поля нет, идёт дальше по порядку.
+
+Условия вариантов: см. плагин `conditions` (сравнения, флаги, all, any, not).
+Текст вопроса и вариантов поддерживает подстановку `{имя}` из состояния.
 
 Проверки проекта (через `api.validation`):
 
 - `choice.no-options` (ошибка): у узла нет `options`;
 - `choice.no-variants` (ошибка): у варианта нет `variants`;
+- `choice.bad-condition` (ошибка): условие записано неверно;
+- `choice.bad-timeout` (ошибка): `timeout` не положительное число;
 - `choice.unknown-variable` (предупреждение): условие ссылается
-  на переменную, которой нет в `config.state`.
+  на переменную, которой нет ни в `config.state`, ни среди узлов
+  `setvar` и `setflag`.
 
 #### Примеры
 
@@ -3059,11 +3284,20 @@ CHOICE: Куда пойдём? | В подвал → basement | На улицу 
 
 Проверяет игровые условия.
 
-Предоставляет другим плагинам метод evaluate()
-через api.plugins.conditions.api.
+Предоставляет другим плагинам методы evaluate(), validate()
+и variables() через api.plugins.conditions.api.
 
-Поддерживаемые операторы:
-==, !=, >, >=, <, <=
+Виды условий:
+
+- сравнение: `{ variable, operator, value }`, операторы
+  ==, !=, >, >=, <, <=;
+- флаг: `{ flag: 'met_anna' }` (истинно, если флаг поставлен)
+  или `{ flag: 'met_anna', value: false }` (истинно, если не поставлен);
+- «и»: `{ all: [условие, условие] }`;
+- «или»: `{ any: [условие, условие] }`;
+- «не»: `{ not: условие }`.
+
+Условия можно вкладывать друг в друга. Пустое условие считается истинным.
 
 #### Примеры
 
@@ -3071,9 +3305,16 @@ CHOICE: Куда пойдём? | В подвал → basement | На улицу 
 const { evaluate } = api.plugins.conditions.api;
 
 evaluate({ variable: 'health', operator: '>=', value: 3 }, { health: 3 }); // true
+
+evaluate({
+    all: [
+        { flag: 'met_anna' },
+        { not: { variable: 'gold', operator: '<', value: 5 } }
+    ]
+}, { met_anna: true, gold: 7 }); // true
 ```
 
-<sub>Исходник: plugins/conditions-plugin.js:1</sub>
+<sub>Исходник: plugins/conditions-plugin.js:3</sub>
 
 <a id="dialogueplugin"></a>
 
@@ -3096,6 +3337,29 @@ evaluate({ variable: 'health', operator: '>=', value: 3 }, { health: 3 }); // tr
 ```
 
 <sub>Исходник: plugins/dialogue-plugin.js:1</sub>
+
+<a id="jumpplugin"></a>
+
+### `JumpPlugin`
+
+*Класс*
+
+Узел `jump`: безусловный переход на другой узел или на сцену.
+Поле `goto` — id узла или id сцены (тогда история продолжится
+с первого узла сцены).
+
+Метки `goto` проверяет валидатор ещё до запуска истории.
+
+Текстовая запись (AST): `JUMP home`, `JUMP scene-2`.
+
+#### Примеры
+
+```js
+{ id: 'j1', type: 'jump', goto: 'home' }
+{ id: 'j2', type: 'jump', goto: 'scene-2' }
+```
+
+<sub>Исходник: plugins/jump-plugin.js:1</sub>
 
 <a id="narrationplugin"></a>
 
@@ -3151,16 +3415,35 @@ api.plugins.noty.api.notify('Привет', { type: 'info', duration: 2000 });
 
 *Класс*
 
-Управляет runtime-состоянием игры.
+Управляет runtime-состоянием игры: переменными и флагами.
 
 Плагин хранит состояние независимо от Project.
 Начальное состояние загружается из `project.config.state`
 при событии `story:loaded`.
 
-Runtime-состояние изменяется через публичный API плагина
-и доступно другим плагинам через:
+Состояние изменяется через публичный API плагина или узлами сценария
+и доступно другим плагинам через `api.plugins.state.api`.
 
-`api.plugins.state.api`
+События плагина:
+
+- `state:changed` с данными `{ name, value, oldValue }` при изменении переменной;
+- `state:loaded` с данными `{ state }` после загрузки проекта или восстановления
+  снимка: подписчикам нужно перечитать всё состояние.
+
+Узлы:
+
+- `setvar`: `{ type: 'setvar', variable: 'gold', value: 5, op: 'add' }`,
+  где `op` равен `set` (по умолчанию), `add` или `sub`;
+- `setflag`: `{ type: 'setflag', flag: 'met_anna', value: true }`,
+  значение по умолчанию — true.
+
+Текстовый сценарий (AST):
+
+- `SET gold = 10`, `SET gold + 5`, `SET gold - 1`;
+- `FLAG met_anna`, `FLAG met_anna = false`.
+
+Плагин участвует в снимках игры: состояние сохраняется и восстанавливается
+вместе с позицией в истории.
 
 #### Примеры
 
@@ -3182,14 +3465,15 @@ state.get(); // { health: 3, gold: 10 }
 
 Показывает в левом верхнем углу панель статуса героя.
 
-После загрузки истории панель подхватывает из состояния игры
-значения `health`, `mana`, `gold`, `score` и `level`. Остальные
+Панель выводит из состояния игры значения `health`, `mana`, `gold`,
+`score` и `level`: сразу после загрузки истории (событие `state:loaded`)
+и при каждом их изменении (событие `state:changed`). Остальные
 значения можно выводить через публичный API плагина:
 
 `api.plugins['top-left-hud'].api`
 
 Плагин зависит от `state`: он должен быть установлен раньше,
-чтобы состояние уже было готово к моменту события `story:loaded`.
+чтобы подписаться на его события.
 
 #### Примеры
 
@@ -3245,7 +3529,7 @@ hud.update({ health: 3, gold: 10 });
 
 #### Исключения
 
-- `Error` — Если оператор условия неизвестен.
+- `Error` — Если оператор или вид условия неизвестен.
 
 #### Примеры
 
@@ -3261,7 +3545,71 @@ const result =
     );
 ```
 
-<sub>Исходник: plugins/conditions-plugin.js:25</sub>
+<sub>Исходник: plugins/conditions-plugin.js:44</sub>
+
+<a id="conditionsplugin-validate"></a>
+
+### `ConditionsPlugin.validate(condition)`
+
+*Метод*
+
+Проверяет форму условия, не вычисляя его. Нужна валидаторам
+проекта: ошибку в условии лучше найти до запуска игры.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `condition` *(обязательное)* | `Object` | Условие. |
+
+#### Возвращает
+
+`string[]` — Описания проблем; пустой массив, если условие верно.
+
+#### Примеры
+
+```js
+const problems = api.plugins.conditions.api.validate({
+    variable: 'health',
+    operator: '=>',
+    value: 1
+});
+// ['неизвестный оператор "=>"']
+```
+
+<sub>Исходник: plugins/conditions-plugin.js:127</sub>
+
+<a id="conditionsplugin-variables"></a>
+
+### `ConditionsPlugin.variables(condition)`
+
+*Метод*
+
+Собирает имена переменных и флагов, которые использует условие,
+в том числе во вложенных условиях.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `condition` *(обязательное)* | `Object` | Условие. |
+
+#### Возвращает
+
+`string[]` — Имена без повторов.
+
+#### Примеры
+
+```js
+api.plugins.conditions.api.variables({
+    any: [
+        { flag: 'met_anna' },
+        { variable: 'gold', operator: '>', value: 5 }
+    ]
+}); // ['met_anna', 'gold']
+```
+
+<sub>Исходник: plugins/conditions-plugin.js:206</sub>
 
 ## NotyPlugin
 
@@ -3405,7 +3753,7 @@ const state = api.plugins.state.api.get();
 console.log(state.health);
 ```
 
-<sub>Исходник: plugins/state-plugin.js:31</sub>
+<sub>Исходник: plugins/state-plugin.js:58</sub>
 
 <a id="stateplugin-getvalue"></a>
 
@@ -3432,7 +3780,35 @@ const health =
     api.plugins.state.api.getValue('health');
 ```
 
-<sub>Исходник: plugins/state-plugin.js:47</sub>
+<sub>Исходник: plugins/state-plugin.js:74</sub>
+
+<a id="stateplugin-has"></a>
+
+### `StatePlugin.has(name)`
+
+*Метод*
+
+Проверяет, есть ли переменная в состоянии.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя переменной. |
+
+#### Возвращает
+
+`boolean` — true, если переменная задана.
+
+#### Примеры
+
+```js
+if (api.plugins.state.api.has('met_anna')) {
+    api.log.info('Уже знакомы');
+}
+```
+
+<sub>Исходник: plugins/state-plugin.js:91</sub>
 
 <a id="stateplugin-set"></a>
 
@@ -3440,7 +3816,8 @@ const health =
 
 *Метод*
 
-Устанавливает значение переменной состояния.
+Устанавливает значение переменной состояния. Если значение
+изменилось, приходит событие `state:changed`.
 
 #### Параметры
 
@@ -3455,7 +3832,7 @@ const health =
 api.plugins.state.api.set('health', 10);
 ```
 
-<sub>Исходник: plugins/state-plugin.js:64</sub>
+<sub>Исходник: plugins/state-plugin.js:109</sub>
 
 <a id="stateplugin-update"></a>
 
@@ -3463,7 +3840,8 @@ api.plugins.state.api.set('health', 10);
 
 *Метод*
 
-Обновляет несколько переменных состояния.
+Обновляет несколько переменных состояния. Для каждой изменившейся
+переменной приходит своё событие `state:changed`.
 
 #### Параметры
 
@@ -3480,7 +3858,68 @@ api.plugins.state.api.update({
 });
 ```
 
-<sub>Исходник: plugins/state-plugin.js:80</sub>
+<sub>Исходник: plugins/state-plugin.js:132</sub>
+
+<a id="stateplugin-add"></a>
+
+### `StatePlugin.add(name, delta)`
+
+*Метод*
+
+Прибавляет число к числовой переменной. Если переменной нет,
+она считается нулём. Для вычитания передайте отрицательное число.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `name` *(обязательное)* | `string` | Имя переменной. |
+| `delta` *(обязательное)* | `number` | Сколько прибавить. |
+
+#### Возвращает
+
+`number` — Новое значение.
+
+#### Исключения
+
+- `TypeError` — Если переменная или delta не число.
+
+#### Примеры
+
+```js
+api.plugins.state.api.add('gold', 5);
+api.plugins.state.api.add('health', -1);
+```
+
+<sub>Исходник: plugins/state-plugin.js:153</sub>
+
+<a id="stateplugin-format"></a>
+
+### `StatePlugin.format(text)`
+
+*Метод*
+
+Подставляет значения переменных в текст: `{имя}` заменяется на
+значение. Если переменной нет, запись остаётся в тексте как есть.
+
+#### Параметры
+
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `text` *(обязательное)* | `string` | Текст с записями вида `{health}`. |
+
+#### Возвращает
+
+`string` — Текст с подставленными значениями.
+
+#### Примеры
+
+```js
+api.plugins.state.api.set('gold', 5);
+api.plugins.state.api.format('У тебя {gold} монет'); // 'У тебя 5 монет'
+```
+
+<sub>Исходник: plugins/state-plugin.js:183</sub>
 
 <a id="stateplugin-storyloaded"></a>
 
@@ -3489,7 +3928,7 @@ api.plugins.state.api.update({
 *Свойство*
 
 Инициализирует runtime-состояние из конфигурации проекта
-после загрузки истории.
+после загрузки истории и сообщает об этом событием `state:loaded`.
 
 #### Примеры
 
@@ -3499,7 +3938,51 @@ api.plugins.state.api.update({
 api.plugins.state.api.getValue('health'); // 3
 ```
 
-<sub>Исходник: plugins/state-plugin.js:98</sub>
+<sub>Исходник: plugins/state-plugin.js:204</sub>
+
+<a id="stateplugin-setvar"></a>
+
+### `StatePlugin.setvar`
+
+*Свойство*
+
+Узел `setvar` меняет переменную и сразу идёт дальше.
+
+Поля узла: `variable` (имя), `value` (значение) и необязательное `op`:
+`set` (записать, по умолчанию), `add` (прибавить) или `sub` (вычесть).
+
+Текстовая запись (AST):
+`SET gold = 10`, `SET gold + 5`, `SET gold - 1`.
+
+#### Примеры
+
+```js
+{ id: 'g1', type: 'setvar', variable: 'gold', value: 5, op: 'add' }
+```
+
+<sub>Исходник: plugins/state-plugin.js:307</sub>
+
+<a id="stateplugin-setflag"></a>
+
+### `StatePlugin.setflag`
+
+*Свойство*
+
+Узел `setflag` ставит или снимает флаг (переменную со значением
+true или false) и сразу идёт дальше.
+
+Поля узла: `flag` (имя) и `value` (по умолчанию true).
+
+Текстовая запись (AST): `FLAG met_anna`, `FLAG met_anna = false`.
+
+#### Примеры
+
+```js
+{ id: 'f1', type: 'setflag', flag: 'met_anna' }
+{ id: 'f2', type: 'setflag', flag: 'met_anna', value: false }
+```
+
+<sub>Исходник: plugins/state-plugin.js:350</sub>
 
 ## TopLeftHUDPlugin
 
@@ -3524,7 +4007,7 @@ api.plugins.state.api.getValue('health'); // 3
 api.plugins['top-left-hud'].api.set('gold', 50);
 ```
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:129</sub>
+<sub>Исходник: plugins/top-left-hud-plugin.js:142</sub>
 
 <a id="toplefthudplugin-settitle"></a>
 
@@ -3546,7 +4029,7 @@ api.plugins['top-left-hud'].api.set('gold', 50);
 api.plugins['top-left-hud'].api.setTitle('Статус героя');
 ```
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:146</sub>
+<sub>Исходник: plugins/top-left-hud-plugin.js:159</sub>
 
 <a id="toplefthudplugin-update"></a>
 
@@ -3568,7 +4051,7 @@ api.plugins['top-left-hud'].api.setTitle('Статус героя');
 api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
 ```
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:162</sub>
+<sub>Исходник: plugins/top-left-hud-plugin.js:175</sub>
 
 <a id="toplefthudplugin-show"></a>
 
@@ -3584,7 +4067,7 @@ api.plugins['top-left-hud'].api.update({ gold: 50, level: 2 });
 api.plugins['top-left-hud'].api.show();
 ```
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:178</sub>
+<sub>Исходник: plugins/top-left-hud-plugin.js:191</sub>
 
 <a id="toplefthudplugin-hide"></a>
 
@@ -3600,7 +4083,7 @@ api.plugins['top-left-hud'].api.show();
 api.plugins['top-left-hud'].api.hide();
 ```
 
-<sub>Исходник: plugins/top-left-hud-plugin.js:191</sub>
+<sub>Исходник: plugins/top-left-hud-plugin.js:204</sub>
 
 ## Project
 
@@ -3865,6 +4348,41 @@ const assets = project.getAssets();
 <a id="changelog"></a>
 
 ## История изменений
+
+### 0.1.6 (2026-10-16)
+
+**Добавлено (14)**
+
+- `VN.registerSnapshotProvider`
+- `VN.snapshot`
+- `VN.restore`
+- `api.snapshot`
+- `api.snapshot.register`
+- `api.hasPlugin`
+- `ConditionsPlugin.validate`
+- `ConditionsPlugin.variables`
+- `JumpPlugin`
+- `StatePlugin.has`
+- `StatePlugin.add`
+- `StatePlugin.format`
+- `StatePlugin.setvar`
+- `StatePlugin.setflag`
+
+**Изменено (13)**
+
+- `validateProjectScenes`
+- `VN`
+- `api.validation.register`
+- `BackgroundPlugin`
+- `ChoicePlugin`
+- `ConditionsPlugin`
+- `ConditionsPlugin.evaluate`
+- `StatePlugin`
+- `StatePlugin.set`
+- `StatePlugin.update`
+- `StatePlugin.storyLoaded`
+- `TopLeftHUDPlugin`
+- `ProjectValidator.validate`
 
 ### 0.1.5 (2026-10-15)
 

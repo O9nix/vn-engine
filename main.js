@@ -24,6 +24,18 @@ const parser = new AST();
 // заменить на получение плагинов из внешнего сервиса
 const registry = new PluginRegistry({ loader: localPluginLoader });
 
+// Фоны для демонстрации: простые градиенты, зашитые прямо в адрес.
+const gradient = (top, bottom) =>
+    ('data:image/svg+xml,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" preserveAspectRatio="none">' +
+        '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">' +
+        `<stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/>` +
+        '</linearGradient></defs><rect width="10" height="10" fill="url(#g)"/></svg>'
+    // Скобки в адресе фона запрещены плагином background: кодируем их.
+    )).replace(/\(/g, '%28').replace(/\)/g, '%29');
+
+// Демонстрация версии 0.1.6: состояние, флаги, переходы между сценами,
+// выбор с таймером, условия, подстановка значений в текст.
 const project = new Project({
     // Плагины, нужные проекту. Порядок зависимостей определяется автоматически.
     plugins: [
@@ -35,61 +47,144 @@ const project = new Project({
         'background',
         'wait',
         'conditions',
-        'choice'
+        'choice',
+        'jump'
     ],
 
-     config:{state :{
-            health: 7
-        }},
+    config: {
+        state: {
+            health: 7,
+            gold: 0
+        }
+    },
+
     scenes: [
         {
-            id: 'scene-1',
+            id: 'street',
 
             nodes: [
+                { id: 'bg1', type: 'background', image: gradient('#0b132b', '#3a506b') },
+
+                { id: 'n1', type: 'narration', text: 'Вечер. Улица пуста, только фонари горят вполнакала.' },
 
                 {
-                    id: 'start',
-
+                    id: 'd1',
                     type: 'dialogue',
-
                     character: 'Аня',
-
-                    text: 'Как себя чувствуешь?'
+                    text: 'У тебя {health} здоровья и {gold} монет. Что будем делать?'
                 },
-                {
-                    id: 'ddd',
-                    type: 'narration',
-                    text: 'sssssssssssssssssss'
-                },
-                {
-                    id: 'choice-1',
 
+                // Пауза с полосой прогресса; клик пропускает её.
+                { id: 'w1', type: 'wait', duration: 1500 },
+
+                // Выбор с таймером: не успеешь за 12 секунд — уйдёшь в too-slow.
+                {
+                    id: 'ask',
                     type: 'choice',
-
-                    text: 'Куда пойдём?',
-
+                    text: 'Куда пойдём? ({gold} монет, здоровье {health})',
+                    timeout: 12000,
+                    timeoutGoto: 'too-slow',
                     options: [
                         {
-                            id: 'go',
-
+                            id: 'coins',
+                            variants: [{ text: 'Подобрать монеты у фонаря (+5 монет, −1 здоровья)', goto: 'coins' }]
+                        },
+                        {
+                            // Условия: показывается первый подходящий вариант.
+                            id: 'rest',
+                            variants: [
+                                {
+                                    condition: { variable: 'health', operator: '<=', value: 5 },
+                                    text: 'Сначала в больницу',
+                                    goto: 'hospital'
+                                },
+                                {
+                                    condition: { variable: 'health', operator: '>', value: 5 },
+                                    text: 'Пойдём домой',
+                                    goto: 'home'
+                                }
+                            ]
+                        },
+                        {
+                            // Составное условие: all, затем запасной вариант без условия.
+                            id: 'shop',
                             variants: [
                                 {
                                     condition: {
-                                        variable: 'health',
-                                        operator: '<=',
-                                        value: 5
+                                        all: [
+                                            { variable: 'gold', operator: '>=', value: 5 },
+                                            { flag: 'has_key', value: false }
+                                        ]
                                     },
-
-                                    text: 'Сначала в больницу',
-
-                                    goto: 'hospital'
+                                    text: 'Купить ключ в лавке (5 монет)',
+                                    goto: 'shop'
                                 },
-
                                 {
-                                   
-                                    text: 'Пойдём домой',
+                                    condition: { flag: 'has_key' },
+                                    text: 'Ключ уже куплен',
+                                    goto: 'ask'
+                                },
+                                {
+                                    text: 'Лавка закрыта: нужно 5 монет',
+                                    goto: 'closed'
+                                }
+                            ]
+                        }
+                    ]
+                },
 
-                                    goto: 'home1'
+                // ── ветки ──
+                { id: 'coins', type: 'setvar', variable: 'gold', value: 5, op: 'add' },
+                { id: 'coins-hp', type: 'setvar', variable: 'health', value: 1, op: 'sub' },
+                { id: 'coins-say', type: 'dialogue', character: 'Аня', text: 'Нашла! Теперь у тебя {gold} монет, здоровье {health}.' },
+                { id: 'coins-back', type: 'jump', goto: 'ask' },
+
+                { id: 'hospital', type: 'setvar', variable: 'health', value: 3, op: 'add' },
+                { id: 'hospital-say', type: 'dialogue', character: 'Врач', text: 'Вот, выпейте. Здоровье теперь {health}.' },
+                { id: 'hospital-back', type: 'jump', goto: 'ask' },
+
+                { id: 'shop', type: 'setvar', variable: 'gold', value: 5, op: 'sub' },
+                { id: 'shop-flag', type: 'setflag', flag: 'has_key' },
+                { id: 'shop-say', type: 'narration', text: 'Ты купил старый ключ. Монет осталось: {gold}.' },
+                { id: 'shop-back', type: 'jump', goto: 'ask' },
+
+                { id: 'closed', type: 'dialogue', character: 'Аня', text: 'Лавка закрыта. Сначала нужно набрать монет.' },
+                { id: 'closed-back', type: 'jump', goto: 'ask' },
+
+                { id: 'home', type: 'dialogue', character: 'Аня', text: 'Тогда идём домой.' },
+                // Переход на другую сцену по её id.
+                { id: 'home-go', type: 'jump', goto: 'house' },
+
+                { id: 'too-slow', type: 'setvar', variable: 'health', value: 2, op: 'sub' },
+                { id: 'too-slow-say', type: 'dialogue', character: 'Аня', text: 'Ты слишком долго думал, стало холодно. Здоровье {health}. Пойдём домой.' },
+                { id: 'too-slow-go', type: 'jump', goto: 'house' }
+            ]
+        },
+
+        {
+            id: 'house',
+
+            nodes: [
+                { id: 'bg2', type: 'background', image: gradient('#432818', '#bb9457') },
+
+                { id: 'n2', type: 'narration', text: 'В доме тепло. На двери подвала висит замок.' },
+
+                {
+                    id: 'door',
+                    type: 'choice',
+                    text: 'Что сделаешь?',
+                    options: [
+                        {
+                            id: 'open',
+                            variants: [
+                                {
+                                    condition: { flag: 'has_key' },
+                                    text: 'Открыть подвал ключом',
+                                    goto: 'ending-key'
+                                },
+                                {
+                                    text: 'Постучать в подвал',
+                                    goto: 'ending-knock'
                                 }
                             ]
                         }
@@ -97,26 +192,18 @@ const project = new Project({
                 },
 
                 {
-                    id: 'hospital',
-
+                    id: 'ending-key',
                     type: 'dialogue',
-
                     character: 'Аня',
-
-                    text: 'Хорошо, сначала в больницу.',
-
+                    text: 'Замок щёлкнул! Здоровье {health}, монет {gold}. Это хорошая концовка.',
                     end: true
                 },
 
                 {
-                    id: 'home',
-
+                    id: 'ending-knock',
                     type: 'dialogue',
-
                     character: 'Аня',
-
-                    text: 'Тогда идём домой.',
-
+                    text: 'Никто не ответил. Здоровье {health}, монет {gold}. Попробуй ещё раз, но с ключом.',
                     end: true
                 }
             ]
@@ -231,22 +318,72 @@ async function start() {
 
 
 
+// --- ДЕМО: сохранение и загрузка (game.snapshot / game.restore) ---
+const SAVE_KEY = 'vnengine-demo-save';
+
+const demoPanel = document.createElement('div');
+const demoStatus = document.createElement('span');
+
+Object.assign(demoPanel.style, {
+    position: 'fixed',
+    top: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+    zIndex: '200',
+    font: '14px sans-serif',
+    color: '#fff'
+});
+
+demoStatus.style.opacity = '0.8';
+
+function addDemoButton(label, onClick) {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    demoPanel.appendChild(button);
+}
+
+addDemoButton('Сохранить', () => {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(game.snapshot()));
+    demoStatus.textContent = `Сохранено ${new Date().toLocaleTimeString()}`;
+});
+
+addDemoButton('Загрузить', () => {
+    const raw = localStorage.getItem(SAVE_KEY);
+
+    if (!raw) {
+        demoStatus.textContent = 'Сохранения нет';
+
+        return;
+    }
+
+    game.restore(JSON.parse(raw));
+    demoStatus.textContent = 'Загружено';
+});
+
+addDemoButton('Заново', () => location.reload());
+
+demoPanel.appendChild(demoStatus);
+document.body.appendChild(demoPanel);
+
 // --- ТЕСТОВЫЙ БЛОК: проверка парсера AST на DSL-синтаксисе ---
 console.group('🧪 Тест парсера AST (DSL → AST)');
 
 // 1. Создаём "сырой" текст сценария в твоём DSL-формате.
 // Здесь мы проверяем сразу три плагина: Dialogue, Narration, Choice.
 const rawSource = `
-# Сцена проверки
-
-// Туман стелется по земле, скрывая очертания домов.
-[Анна] Что это за шум? Мне страшно...
-[Макс] Не волнуйся, я рядом.
-// Макс крепче сжимает рукоять меча.
-
-CHOICE: Куда пойдём дальше? | В подвал → basement | На улицу → street | Подождать здесь → wait
-
-// Тишина повисла в воздухе.
+# Название сцены
+[Аня] У тебя {health} здоровья.
+SET gold + 10
+FLAG met_anna
+// Монета в кармане.
+CHOICE: Куда дальше? | Домой → home | Дальше → road
+JUMP home
 `;
 
 console.log('Сырой текст для парсинга:\n', rawSource);

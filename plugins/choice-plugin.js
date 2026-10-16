@@ -13,14 +13,25 @@
  * без перехода: история просто продолжится со следующего узла.
  * Условия в текстовой записи пока не поддерживаются.
  *
- * Пока выбор не сделан, клик по экрану историю не продолжает.
+ * Пока выбор не сделан, клик по экрану историю не продолжает. Блоки диалога
+ * и повествования на время выбора скрываются.
+ *
+ * Выбор с таймером: поле `timeout` (миллисекунды) включает отсчёт, который
+ * виден на экране. Если игрок не успел, история переходит к `timeoutGoto`
+ * (узел или сцена) или, если поля нет, идёт дальше по порядку.
+ *
+ * Условия вариантов: см. плагин `conditions` (сравнения, флаги, all, any, not).
+ * Текст вопроса и вариантов поддерживает подстановку `{имя}` из состояния.
  *
  * Проверки проекта (через `api.validation`):
  *
  * - `choice.no-options` (ошибка): у узла нет `options`;
  * - `choice.no-variants` (ошибка): у варианта нет `variants`;
+ * - `choice.bad-condition` (ошибка): условие записано неверно;
+ * - `choice.bad-timeout` (ошибка): `timeout` не положительное число;
  * - `choice.unknown-variable` (предупреждение): условие ссылается
- *   на переменную, которой нет в `config.state`.
+ *   на переменную, которой нет ни в `config.state`, ни среди узлов
+ *   `setvar` и `setflag`.
  *
  * @example
  * // Узел в проекте
@@ -51,6 +62,29 @@ export const ChoicePlugin = {
     dependencies: [ 'state', 'conditions' ],
     install(api) {
         let activeBlock = null;
+        let timeoutId = null;
+        let animationId = null;
+
+        // Убирает блок выбора и останавливает отсчёт.
+        function closeBlock() {
+            if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+
+            if (animationId !== null) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+
+            if (activeBlock) {
+                api.blocks.remove(activeBlock.id);
+                activeBlock = null;
+            }
+        }
+
+        // Возврат к снимку: кнопки и отсчёт старой позиции не нужны.
+        api.events.on('story:restoring', closeBlock);
 
         // Текстовая запись выбора для парсера сценария.
         api.ast.addCommand(
@@ -121,28 +155,75 @@ export const ChoicePlugin = {
             }
         });
 
-        // Предупреждение: условие ссылается на переменную, которой нет
-        // в config.state проекта. Читаем конфиг, а не runtime-состояние:
+        // Таймер и условия вариантов.
+        api.validation.registerNodeRule('choice', {
+            id: 'details',
+            run(node) {
+                const found = [];
+
+                if (
+                    node.timeout !== undefined &&
+                    !(typeof node.timeout === 'number' && node.timeout > 0)
+                ) {
+                    found.push({
+                        code: 'choice.bad-timeout',
+                        message: `У выбора "${node.id}" timeout должен быть положительным числом (миллисекунды)`
+                    });
+                }
+
+                for (const option of node.options ?? []) {
+                    for (const variant of option.variants ?? []) {
+                        for (const problem of api.plugins.conditions.api.validate(variant.condition)) {
+                            found.push({
+                                code: 'choice.bad-condition',
+                                message: `Условие варианта "${option.id}" выбора "${node.id}": ${problem}`
+                            });
+                        }
+                    }
+                }
+
+                return found;
+            }
+        });
+
+        // Предупреждение: условие ссылается на переменную, которой нет.
+        // Известны переменные из config.state и те, что задают узлы
+        // setvar и setflag. Читаем данные проекта, а не runtime-состояние:
         // при проверке история ещё не загружена, и state пуст.
         api.validation.register({
             id: 'unknown-variables',
             severity: 'warning',
             run(project) {
-                const known = project.getConfig()?.state ?? {};
+                const known = new Set(Object.keys(project.getConfig()?.state ?? {}));
+
+                for (const scene of project.getScenes()) {
+                    for (const node of scene.nodes ?? []) {
+                        if (node.type === 'setvar' && typeof node.variable === 'string') {
+                            known.add(node.variable);
+                        }
+
+                        if (node.type === 'setflag' && typeof node.flag === 'string') {
+                            known.add(node.flag);
+                        }
+                    }
+                }
+
                 const found = [];
 
                 for (const scene of project.getScenes()) {
                     for (const node of scene.nodes ?? []) {
                         for (const option of node.options ?? []) {
                             for (const variant of option.variants ?? []) {
-                                const name = variant.condition?.variable;
+                                const names = api.plugins.conditions.api.variables(variant.condition);
 
-                                if (name && !(name in known)) {
-                                    found.push({
-                                        code: 'choice.unknown-variable',
-                                        message: `Переменной "${name}" нет в config.state`,
-                                        path: `узел "${node.id}"`
-                                    });
+                                for (const name of names) {
+                                    if (!known.has(name)) {
+                                        found.push({
+                                            code: 'choice.unknown-variable',
+                                            message: `Переменной "${name}" нет в config.state и ни один узел её не задаёт`,
+                                            path: `узел "${node.id}"`
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -184,6 +265,9 @@ function resolveVariant(option, state) {
                 const state =
                     api.plugins.state.api.get();
 
+                let buttons = 0;
+                let startTimer = null;
+
                 const element =
                     document.createElement('div');
 
@@ -217,7 +301,8 @@ function resolveVariant(option, state) {
                     const title =
                         document.createElement('div');
 
-                    title.textContent = node.text;
+                    title.textContent =
+                        api.plugins.state.api.format(node.text);
 
                     Object.assign(title.style, {
                         marginBottom: '10px',
@@ -250,7 +335,9 @@ function resolveVariant(option, state) {
                     button.type = 'button';
 
                     button.textContent =
-                        variant.text ?? option.id;
+                        api.plugins.state.api.format(
+                            variant.text ?? option.id
+                        );
 
                     Object.assign(button.style, {
                         padding: '10px 15px',
@@ -265,11 +352,7 @@ function resolveVariant(option, state) {
                                 return;
                             }
 
-                            api.blocks.remove(
-                                activeBlock.id
-                            );
-
-                            activeBlock = null;
+                            closeBlock();
 
                             if (variant.goto) {
                                 context.goto(
@@ -282,6 +365,90 @@ function resolveVariant(option, state) {
                     );
 
                     element.appendChild(button);
+                    buttons++;
+                }
+
+                const timeout =
+                    typeof node.timeout === 'number' && node.timeout > 0
+                        ? node.timeout
+                        : 0;
+
+                // Без доступных вариантов и без таймера выбор завис бы навсегда.
+                if (buttons === 0 && timeout === 0) {
+                    api.log.warn(
+                        `У выбора "${node.id}" нет доступных вариантов, узел пропущен`
+                    );
+
+                    return;
+                }
+
+                if (timeout > 0) {
+                    const label =
+                        document.createElement('div');
+
+                    const track =
+                        document.createElement('div');
+
+                    const bar =
+                        document.createElement('div');
+
+                    Object.assign(label.style, {
+                        fontSize: '14px',
+                        textAlign: 'center',
+                        opacity: '0.8'
+                    });
+
+                    Object.assign(track.style, {
+                        height: '6px',
+                        background: 'rgba(255, 255, 255, 0.25)',
+                        borderRadius: '3px',
+                        overflow: 'hidden'
+                    });
+
+                    Object.assign(bar.style, {
+                        height: '100%',
+                        width: '100%',
+                        background: '#fff'
+                    });
+
+                    track.appendChild(bar);
+                    element.append(label, track);
+
+                    // Отсчёт запускается после показа блока.
+                    startTimer = () => {
+                        const start = performance.now();
+
+                        const tick = (now) => {
+                            const left = Math.max(timeout - (now - start), 0);
+
+                            bar.style.width = `${(left / timeout) * 100}%`;
+                            label.textContent =
+                                `Осталось: ${Math.ceil(left / 1000)} с`;
+
+                            animationId = left > 0
+                                ? requestAnimationFrame(tick)
+                                : null;
+                        };
+
+                        animationId = requestAnimationFrame(tick);
+
+                        timeoutId = setTimeout(() => {
+                            timeoutId = null;
+
+                            closeBlock();
+
+                            if (node.timeoutGoto) {
+                                context.goto(node.timeoutGoto);
+                            } else {
+                                context.resume();
+                            }
+                        }, timeout);
+                    };
+                }
+
+                // Текст предыдущей реплики под кнопками выбора только мешает.
+                for (const block of api.blocks.getActiveByChannel('content')) {
+                    api.blocks.hide(block.id);
                 }
 
                 activeBlock =
@@ -300,6 +467,8 @@ function resolveVariant(option, state) {
                         }
                     );
 
+                startTimer?.();
+
                 context.wait({ lock: true });
             }
         );
@@ -308,13 +477,7 @@ function resolveVariant(option, state) {
             api: {},
 
             cleanup() {
-                if (activeBlock) {
-                    api.blocks.remove(
-                        activeBlock.id
-                    );
-
-                    activeBlock = null;
-                }
+                closeBlock();
             }
         };
     }

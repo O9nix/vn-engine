@@ -65,8 +65,9 @@ export const NarrationPlugin = {
                     }
                 );
 
-                element.textContent =
-                    node.text ?? '';
+                element.textContent = api.hasPlugin('state')
+                    ? api.plugins.state.api.format(node.text ?? '')
+                    : (node.text ?? '');
 
                 const block =
                     api.blocks.create(
@@ -94,6 +95,13 @@ export const NarrationPlugin = {
         );
 
         // Блоки и типы узлов движок снимает сам.
+
+        // Возврат к снимку: текст прежней позиции на экране не нужен.
+        api.events.on('story:restoring', () => {
+            for (const block of api.blocks.getByType('narration')) {
+                api.blocks.remove(block.id);
+            }
+        });
     }
 };
 

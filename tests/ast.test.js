@@ -74,7 +74,7 @@ test('AST: команды перебираются по порядку, null и�
 // ───────────────────────── api.ast в PluginManager ─────────────────────────
 
 function manager(ast) {
-    const game = { registerNodeType() {}, unregisterNodeType() {} };
+    const game = { registerNodeType() {}, unregisterNodeType() {}, registerSnapshotProvider: () => () => {} };
     const player = { getPluginLayer: () => ({}), registerLayer: () => () => {} };
 
     return new PluginManager(new EventBus(), game, player, {}, ast, new ProjectValidator());

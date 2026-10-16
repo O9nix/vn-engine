@@ -1,3 +1,6 @@
+// Поля, которые содержат переход: обычный и по таймеру выбора.
+const GOTO_KEYS = ['goto', 'timeoutGoto'];
+
 function collectGotosFromValue(value, path, acc) {
     if (value === null || typeof value !== 'object') {
         return;
@@ -11,19 +14,21 @@ function collectGotosFromValue(value, path, acc) {
         return;
     }
 
-    if (Object.prototype.hasOwnProperty.call(value, 'goto')) {
-        const target = value.goto;
+    for (const key of GOTO_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(value, key)) {
+            const target = value[key];
 
-        if (target !== undefined && target !== null) {
-            acc.push({
-                target,
-                path: `${path}.goto`,
-            });
+            if (target !== undefined && target !== null) {
+                acc.push({
+                    target,
+                    path: `${path}.${key}`,
+                });
+            }
         }
     }
 
     for (const [key, nestedValue] of Object.entries(value)) {
-        if (key === 'goto') {
+        if (GOTO_KEYS.includes(key)) {
             continue;
         }
 
@@ -35,7 +40,8 @@ function collectGotosFromValue(value, path, acc) {
  * @apiName validateProjectScenes
  * @apiGroup ProjectValidator
  *
- * Проверяет метки goto в сценах: каждая должна вести на существующий узел.
+ * Проверяет переходы в сценах (`goto` и `timeoutGoto`): каждый должен вести
+ * на существующий узел или на сцену.
  *
  * @param {Object[]} scenes Сцены проекта.
  * @returns {Object} Объект `{ valid, hasGoto, gotoCount, nodeCount, errors }`,
@@ -48,10 +54,15 @@ export function validateProjectScenes(scenes) {
     const safeScenes = Array.isArray(scenes) ? scenes : [];
 
     const nodeIds = new Set();
+    const sceneIds = new Set();
     const gotoLinks = [];
 
     safeScenes.forEach((scene, sceneIndex) => {
         const nodes = scene?.nodes ?? [];
+
+        if (scene?.id !== undefined && scene?.id !== null) {
+            sceneIds.add(scene.id);
+        }
 
         nodes.forEach((node, nodeIndex) => {
             if (node?.id !== undefined && node?.id !== null) {
@@ -67,11 +78,11 @@ export function validateProjectScenes(scenes) {
     const errors = [];
 
     for (const link of gotoLinks) {
-        if (!nodeIds.has(link.target)) {
+        if (!nodeIds.has(link.target) && !sceneIds.has(link.target)) {
             errors.push({
                 target: link.target,
                 path: link.path,
-                message: `goto "${link.target}" не ведёт на существующий узел`,
+                message: `goto "${link.target}" не ведёт на существующий узел или сцену`,
             });
         }
     }

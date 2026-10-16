@@ -17,8 +17,9 @@ function isSafeImageUrl(value) {
  * @apiGroup Plugins
  *
  * Узел `background`: ставит картинку фоном страницы.
- * Допустимы относительные пути, http(s) и data:image. Небезопасный
- * адрес останавливает историю с ошибкой.
+ * Допустимы относительные пути, http(s) и data:image без кавычек, скобок
+ * и пробелов. Небезопасный адрес находит валидатор (`background.unsafe-image`),
+ * а если он всё же попал в игру, историю останавливает ошибка.
  *
  * @example
  * {
@@ -67,6 +68,28 @@ export const BackgroundPlugin = {
                 );
             }
         );
+
+        // Небезопасный или пропущенный адрес лучше найти до запуска истории,
+        // а не остановить проект посреди игры.
+        api.validation.registerNodeRule('background', {
+            id: 'image',
+            run(node) {
+                if (!node.image) {
+                    return [{
+                        code: 'background.no-image',
+                        message: `У узла background "${node.id}" не указано изображение (image)`,
+                        severity: 'warning'
+                    }];
+                }
+
+                return isSafeImageUrl(node.image)
+                    ? []
+                    : [{
+                        code: 'background.unsafe-image',
+                        message: `У узла background "${node.id}" недопустимый адрес изображения`
+                    }];
+            }
+        });
 
         // Типы узлов движок снимает сам.
     }

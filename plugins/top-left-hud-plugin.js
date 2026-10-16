@@ -4,14 +4,15 @@
  *
  * Показывает в левом верхнем углу панель статуса героя.
  *
- * После загрузки истории панель подхватывает из состояния игры
- * значения `health`, `mana`, `gold`, `score` и `level`. Остальные
+ * Панель выводит из состояния игры значения `health`, `mana`, `gold`,
+ * `score` и `level`: сразу после загрузки истории (событие `state:loaded`)
+ * и при каждом их изменении (событие `state:changed`). Остальные
  * значения можно выводить через публичный API плагина:
  *
  * `api.plugins['top-left-hud'].api`
  *
  * Плагин зависит от `state`: он должен быть установлен раньше,
- * чтобы состояние уже было готово к моменту события `story:loaded`.
+ * чтобы подписаться на его события.
  *
  * @example
  * const hud = api.plugins['top-left-hud'].api;
@@ -102,14 +103,15 @@ export const TopLeftHUDPlugin = {
 
         api.player.getPluginLayer().appendChild(element);
 
-        const unsubscribeStoryLoaded = api.events.on(
-            'story:loaded',
-            () => {
-                const state = api.plugins.state.api.get();
-
+        // Полное обновление: после загрузки проекта и восстановления снимка.
+        api.events.on(
+            'state:loaded',
+            ({ state }) => {
                 let found = false;
 
                 for (const key of STATE_KEYS) {
+                    delete data.items[key];
+
                     if (state[key] !== undefined) {
                         data.items[key] = state[key];
                         found = true;
@@ -121,6 +123,17 @@ export const TopLeftHUDPlugin = {
                 }
 
                 render();
+            }
+        );
+
+        // Точечное обновление: значение изменилось во время игры.
+        api.events.on(
+            'state:changed',
+            ({ name, value }) => {
+                if (STATE_KEYS.includes(name)) {
+                    data.items[name] = value;
+                    render();
+                }
             }
         );
 
@@ -203,7 +216,6 @@ export const TopLeftHUDPlugin = {
             },
 
             cleanup() {
-                unsubscribeStoryLoaded();
                 removeLayer();
             }
         };

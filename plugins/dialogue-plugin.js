@@ -40,6 +40,11 @@ export const DialoguePlugin = {
         api.game.registerNodeType(
             'dialogue',
             (node, context) => {
+                // Если есть плагин state, `{имя}` в тексте заменяется значением.
+                const text = api.hasPlugin('state')
+                    ? api.plugins.state.api.format(node.text ?? '')
+                    : (node.text ?? '');
+
                 const element =
                     document.createElement('div');
 
@@ -75,7 +80,7 @@ export const DialoguePlugin = {
                 element.append(
                     name,
                     document.createElement('br'),
-                    document.createTextNode(node.text ?? '')
+                    document.createTextNode(text)
                 );
 
                 const block =
@@ -107,6 +112,13 @@ export const DialoguePlugin = {
         );
 
         // Блоки и типы узлов движок снимает сам.
+
+        // Возврат к снимку: текст прежней позиции на экране не нужен.
+        api.events.on('story:restoring', () => {
+            for (const block of api.blocks.getByType('dialogue')) {
+                api.blocks.remove(block.id);
+            }
+        });
     }
 };
 

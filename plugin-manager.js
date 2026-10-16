@@ -584,7 +584,7 @@ export class PluginManager {
                  * (пустой массив значит «всё хорошо»). В записи можно указать
                  * `code`, `message`, `path` и `severity`; имя плагина валидатор
                  * подставит сам. `context.plugins` содержит манифесты
-                 * установленных плагинов.
+                 * установленных плагинов, `context.project` — проверяемый проект.
                  *
                  * Проверка выполняется до запуска истории, поэтому читать нужно
                  * данные проекта (`project.getConfig()`, `project.getScenes()`),
@@ -683,6 +683,67 @@ export class PluginManager {
                     return off;
                 }
             },
+
+            /**
+             * @apiName api.snapshot
+             * @apiGroup PluginAPI
+             * Участие плагина в снимках игры (`game.snapshot()` и `game.restore()`).
+             * Если у плагина есть собственное состояние, он говорит, как его
+             * сохранить и вернуть. Источник снимается при удалении плагина.
+             *
+             * @example
+             * api.snapshot.register({
+             *     save: () => ({ keys: 2 }),
+             *     load: (data) => api.log.info('Ключей:', data.keys)
+             * });
+             */
+            snapshot: {
+                /**
+                 * @apiName api.snapshot.register
+                 * @apiGroup PluginAPI
+                 * Подключает источник данных снимка под именем плагина.
+                 * @param {Object} provider Объект `{ save(), load(data) }`.
+                 * Данные должны сериализоваться в JSON.
+                 * @returns {function} Функция, снимающая источник.
+                 * @throws {Error} Если игра не умеет делать снимки
+                 * или у плагина уже есть источник.
+                 * @example
+                 * let gold = 0;
+                 *
+                 * api.snapshot.register({
+                 *     save: () => ({ gold }),
+                 *     load: (data) => { gold = data.gold; }
+                 * });
+                 */
+                register: (provider) => {
+                    if (typeof game.registerSnapshotProvider !== 'function') {
+                        throw new Error(
+                            `PluginManager: плагин "${pluginName}" использует api.snapshot, ` +
+                            'но игра не поддерживает снимки'
+                        );
+                    }
+
+                    const off = game.registerSnapshotProvider(pluginName, provider);
+
+                    track(off);
+
+                    return off;
+                }
+            },
+
+            /**
+             * @apiName api.hasPlugin
+             * @apiGroup PluginAPI
+             * Проверяет, установлен ли другой плагин. В отличие от `api.plugins.<имя>`,
+             * ничего не пишет в консоль, поэтому подходит для необязательных зависимостей.
+             * @param {string} name Имя плагина.
+             * @returns {boolean} true, если плагин установлен.
+             * @example
+             * if (api.hasPlugin('state')) {
+             *     text = api.plugins.state.api.format(text);
+             * }
+             */
+            hasPlugin: (name) => this.#plugins.has(name),
 
             /**
              * @apiName api.plugins

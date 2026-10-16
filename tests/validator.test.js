@@ -34,7 +34,7 @@ test('validate: корректный проект проходит, резуль
     assert.equal(r.checksRun, 4);
 });
 
-test('validate: goto на несуществующий узел — ошибка с кодом, путём и плагином core', async () => {
+test('validate: goto на несуществующий узел или сцену — ошибка с кодом, путём и плагином core', async () => {
     const r = await new ProjectValidator().validate(project([
         { id: 'a', type: 'say', goto: 'нет' }
     ]));
@@ -304,7 +304,7 @@ test('validateGotos (старый API): форма результата и со�
 // ───────────────────────── api.validation в PluginManager ─────────────────────────
 
 function managerWith(validator) {
-    const game = { registerNodeType() {}, unregisterNodeType() {} };
+    const game = { registerNodeType() {}, unregisterNodeType() {}, registerSnapshotProvider: () => () => {} };
     const player = { getPluginLayer: () => ({}), registerLayer: () => () => {} };
 
     return new PluginManager(new EventBus(), game, player, {}, new AST(), validator);
